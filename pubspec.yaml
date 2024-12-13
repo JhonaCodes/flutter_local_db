@@ -1,6 +1,6 @@
 name: flutter_local_db
-description: "A local database inital commit"
-version: 0.0.1
+description: "A scalable and easy-to-use NoSQL database"
+version: 0.0.2
 homepage:
 
 environment:
@@ -11,20 +11,20 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Crea rutas para alamacenamiento de archivos
-  # es diferente a acceder a rutas.
-  # esto lo que hace es usar la ruta proporcionada por path_provider y dentro de esa ruta crea una nueva
+  # Official package for create folders and initial structure of database
   path: ^1.9.0
 
-  # Esta libreria lee las rutas de las plataformas, de forma nativa
-  # La unica funcion es retornar las rutas.
+  # Official package for routes on multiplatform
   path_provider: ^2.1.5
 
-  # Para poder aprovechar la version web de almacenamiento.
+  # Official web support, used for web dabase support
   web: ^1.1.0
-  reactive_notifier: ^2.3.1
-  uuid: ^4.5.1
+
+  # Official lib for secure data saving
   crypto: ^3.0.6
+
+  # Robust package for singleton and streams management, good reactive state an debug.
+  reactive_notifier: ^2.3.1
 
 dev_dependencies:
   flutter_test:
