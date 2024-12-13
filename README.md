@@ -180,4 +180,4 @@ Contributions are welcome! If you have ideas for new features or improvements, p
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Author
-Made with ❤️ by [JhonaCodes](https://github.com/JhonaCodes)
+Made with ❤️ by [JhonaCode](https://github.com/JhonaCodes)
