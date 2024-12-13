@@ -5,7 +5,7 @@ class DirectoryModel {
   DirectoryModel({required this.id, required this.data});
 
   toJson() {
-    return {'id': this.id, 'data': this.data};
+    return {'id': id, 'data': data};
   }
 
   factory DirectoryModel.fromJson(Map json) {

@@ -1,6 +1,5 @@
 import 'dart:developer';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 
 import 'db_interface.dart';
@@ -38,8 +37,7 @@ class DataBase implements DataBaseInterface {
 
   @override
   Future<DataModel> getById(String id) {
-    print("Error");
-    print(id);
+    log("Error");
     // TODO: implement getById
     throw UnimplementedError();
   }

@@ -16,9 +16,9 @@ import 'package:reactive_notifier/reactive_notifier.dart';
 /// For now just boilerplate code that works.
 // ignore: non_constant_identifier_names
 final RepositoryNotifier = ReactiveNotifier<DBRepository>(() => DBRepository());
+bool _isOpen = false;
 
 class DBRepository implements DataBaseInterface {
-  bool _isOpen = false;
 
   DBRepository() {
     _isOpen = true;
@@ -55,8 +55,8 @@ class DBRepository implements DataBaseInterface {
         });
       }
     } catch (e, stack) {
-      print(e.toString());
-      print(stack.toString());
+      log(e.toString());
+      log(stack.toString());
     }
 
     return newDir.path;
@@ -462,11 +462,6 @@ class DBRepository implements DataBaseInterface {
     return utf8.decode(data?.readAsBytesSync() ?? []);
   }
 
-  Future<bool> _isCodeOnMainIndex(String idIndex) async {
-    final fileMap = await _decodeMainIndex;
-    return fileMap.containsKey(idIndex);
-  }
-
   Future<Map<String, dynamic>> get _decodeMainIndex async => mainIndexFile !=
           null
       ? Map<String, dynamic>.from(await jsonDecode(await mainIndexData ?? "{}"))
@@ -656,7 +651,7 @@ class DBRepository implements DataBaseInterface {
 
   @override
   Future<DataModel> getById(String id) async {
-    print(id);
+    log(id);
 
     if (!_isOpen) throw Exception('Repository must be open');
 
