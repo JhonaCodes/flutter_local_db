@@ -11,6 +11,21 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Crea rutas para alamacenamiento de archivos
+  # es diferente a acceder a rutas.
+  # esto lo que hace es usar la ruta proporcionada por path_provider y dentro de esa ruta crea una nueva
+  path: ^1.9.0
+
+  # Esta libreria lee las rutas de las plataformas, de forma nativa
+  # La unica funcion es retornar las rutas.
+  path_provider: ^2.1.5
+
+  # Para poder aprovechar la version web de almacenamiento.
+  web: ^1.1.0
+  reactive_notifier: ^2.3.1
+  uuid: ^4.5.1
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
