@@ -11,8 +11,12 @@ class MainIndexModel {
   factory MainIndexModel.fromJson(Map<String, dynamic> json) {
     // Create a map of containers, excluding the 'total_index' field
     final containersMap = Map<String, ContainerPaths>.fromEntries(
-      json.entries.where((e) => e.key != 'total_index').map((e) => MapEntry(e.key, ContainerPaths.fromJson(e.value as Map<String, dynamic>),),
-      ),
+      json.entries.where((e) => e.key != 'total_index').map(
+            (e) => MapEntry(
+              e.key,
+              ContainerPaths.fromJson(e.value as Map<String, dynamic>),
+            ),
+          ),
     );
 
     return MainIndexModel(
@@ -40,7 +44,6 @@ class MainIndexModel {
     };
   }
 }
-
 
 // Container paths model
 class ContainerPaths {
@@ -72,12 +75,11 @@ class ContainerPaths {
   }
 
   Map toJson() => {
-    'active': active,
-    'deleted': deleted,
-    'sealed': sealed,
-    'backup': backup,
-    'historical': historical,
-    'sync': sync,
-  };
+        'active': active,
+        'deleted': deleted,
+        'sealed': sealed,
+        'backup': backup,
+        'historical': historical,
+        'sync': sync,
+      };
 }
-

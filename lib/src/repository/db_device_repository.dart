@@ -13,13 +13,11 @@ import 'package:flutter_local_db/src/model/main_index_model.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
-
 /// For now just boilerplate code that works.
 // ignore: non_constant_identifier_names
 final RepositoryNotifier = ReactiveNotifier<DBRepository>(() => DBRepository());
 
 class DBRepository implements DataBaseInterface {
-
   bool _isOpen = false;
 
   DBRepository() {
@@ -45,7 +43,8 @@ class DBRepository implements DataBaseInterface {
   Future<String> directory() async {
     final appDir = await getApplicationDocumentsDirectory();
 
-    final newDir = Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
+    final newDir =
+        Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
 
     try {
       if (!newDir.existsSync()) {
@@ -59,7 +58,6 @@ class DBRepository implements DataBaseInterface {
       print(e.toString());
       print(stack.toString());
     }
-
 
     return newDir.path;
   }
@@ -84,7 +82,6 @@ class DBRepository implements DataBaseInterface {
   /// Initialization
   Future<bool> init() async {
     try {
-
       /// Creating sub-directories
       for (String dir in _suDirectories) {
         await _createSubDirectory(dir);
@@ -101,7 +98,8 @@ class DBRepository implements DataBaseInterface {
             }
 
             if (file.contains(DBFile.globalIndex.ext)) {
-              fileComponent.writeAsStringSync(jsonEncode(MainIndexModel.toInitial()));
+              fileComponent
+                  .writeAsStringSync(jsonEncode(MainIndexModel.toInitial()));
             }
           });
         } else {
@@ -117,7 +115,6 @@ class DBRepository implements DataBaseInterface {
       return false;
     }
   }
-
 
   /// Crear elementos [Post]
   @override
@@ -213,7 +210,6 @@ class DBRepository implements DataBaseInterface {
     }
   }
 
-
   @override
   Future<bool> delete(String id) async {
     if (!_isOpen) throw Exception('Repository must be open');
@@ -239,9 +235,8 @@ class DBRepository implements DataBaseInterface {
         throw Exception('Empty index file');
       }
 
-      final ActiveIndexModel prefixIndex = ActiveIndexModel.fromJson(
-          jsonDecode(indexContent)
-      );
+      final ActiveIndexModel prefixIndex =
+          ActiveIndexModel.fromJson(jsonDecode(indexContent));
 
       // Check if record exists in index
       if (!prefixIndex.records.containsKey(id)) {
@@ -258,7 +253,8 @@ class DBRepository implements DataBaseInterface {
       }
 
       // Create temporary backup before deletion
-      final tempPath = "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
+      final tempPath =
+          "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
       final tempFile = File(tempPath);
 
       List<DataModel> records;
@@ -289,8 +285,7 @@ class DBRepository implements DataBaseInterface {
         // Update block file
         await blockFile.writeAsString(
             jsonEncode(records.map((r) => r.toJson()).toList()),
-            flush: true
-        );
+            flush: true);
 
         // Update cache
         _blockCache[blockPath] = records;
@@ -315,28 +310,23 @@ class DBRepository implements DataBaseInterface {
         }
 
         // Write updated index
-        await prefixIndexFile.writeAsString(
-            jsonEncode(prefixIndex.toJson()),
-            flush: true
-        );
+        await prefixIndexFile.writeAsString(jsonEncode(prefixIndex.toJson()),
+            flush: true);
 
         // If everything is OK, delete temp file
         await tempFile.delete();
 
         return true;
-
       } catch (e) {
         // If anything fails, keep temp file for recovery
         log("Delete failed. Backup available at: $tempPath");
         rethrow;
       }
-
     } catch (e, stack) {
       log("Error in delete operation", error: e, stackTrace: stack);
       return false;
     }
   }
-
 
   @override
   Future<bool> post(DataModel model) async {
@@ -360,17 +350,16 @@ class DBRepository implements DataBaseInterface {
       // Usar caché si está disponible
       if (_prefixIndexCache.containsKey(prefixIndexPath)) {
         prefixIndex = ActiveIndexModel.fromJson(
-            jsonDecode(_prefixIndexCache[prefixIndexPath]!)
-        );
+            jsonDecode(_prefixIndexCache[prefixIndexPath]!));
       } else {
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) {
           prefixIndex = ActiveIndexModel.fromJson(ActiveIndexModel.toInitial());
         } else {
           final content = await prefixIndexFile.readAsString();
-          prefixIndex = ActiveIndexModel.fromJson(
-              content.isEmpty ? ActiveIndexModel.toInitial() : jsonDecode(content)
-          );
+          prefixIndex = ActiveIndexModel.fromJson(content.isEmpty
+              ? ActiveIndexModel.toInitial()
+              : jsonDecode(content));
         }
         // Guardar en caché
         _prefixIndexCache[prefixIndexPath] = jsonEncode(prefixIndex.toJson());
@@ -415,7 +404,7 @@ class DBRepository implements DataBaseInterface {
       await File(blockPath).writeAsString(
           jsonEncode(records.map((r) => r.toJson()).toList()),
           flush: true // Asegura escritura inmediata
-      );
+          );
 
       // Actualizar índice
       prefixIndex.blocks[currentBlock] = BlockData(
@@ -432,10 +421,8 @@ class DBRepository implements DataBaseInterface {
 
       // Actualizar caché y escribir índice
       _prefixIndexCache[prefixIndexPath] = jsonEncode(prefixIndex.toJson());
-      await File(prefixIndexPath).writeAsString(
-          _prefixIndexCache[prefixIndexPath]!,
-          flush: true
-      );
+      await File(prefixIndexPath)
+          .writeAsString(_prefixIndexCache[prefixIndexPath]!, flush: true);
 
       // Actualizar índice principal
       await _updateMainIndex(idPrefix, prefixPath);
@@ -462,14 +449,13 @@ class DBRepository implements DataBaseInterface {
     }
 
     // All blocks full, create new one
-    final lastBlock = prefixIndex.blocks.keys.toList()
-      ..sort();
+    final lastBlock = prefixIndex.blocks.keys.toList()..sort();
     final lastNum = int.parse(lastBlock.last.split('_')[1].split('.')[0]);
     return 'act_${(lastNum + 1).toString().padLeft(3, '0')}.dex';
   }
 
-
-  Future<File>? get mainIndexFile async => File("${await mainDir}/${DBFile.globalIndex.ext}");
+  Future<File>? get mainIndexFile async =>
+      File("${await mainDir}/${DBFile.globalIndex.ext}");
 
   Future<String>? get mainIndexData async {
     final File? data = await mainIndexFile;
@@ -481,30 +467,29 @@ class DBRepository implements DataBaseInterface {
     return fileMap.containsKey(idIndex);
   }
 
-  Future<Map<String, dynamic>> get _decodeMainIndex async =>
-      mainIndexFile != null
-          ? Map<String, dynamic>.from(await jsonDecode(await mainIndexData ?? "{}"))
-          : {};
-
+  Future<Map<String, dynamic>> get _decodeMainIndex async => mainIndexFile !=
+          null
+      ? Map<String, dynamic>.from(await jsonDecode(await mainIndexData ?? "{}"))
+      : {};
 
   Future<void> clearCache() async {
     _prefixIndexCache.clear();
     _blockCache.clear();
   }
 
-
   // Añadimos cache para optimizar
   final Map<String, String> _prefixIndexCache = {};
   final Map<String, List<DataModel>> _blockCache = {};
 
-
   Future<void> _updateMainIndex(String idPrefix, String prefixPath) async {
     final mainFile = await mainIndexFile;
     if (mainFile != null) {
-      MainIndexModel mainIndex = MainIndexModel.fromJson(await _decodeMainIndex);
+      MainIndexModel mainIndex =
+          MainIndexModel.fromJson(await _decodeMainIndex);
 
       mainIndex.containers[idPrefix] = ContainerPaths(
-        active: "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
+        active:
+            "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
         deleted: null,
         sealed: null,
         backup: null,
@@ -515,8 +500,6 @@ class DBRepository implements DataBaseInterface {
       await mainFile.writeAsString(jsonEncode(mainIndex.toJson()));
     }
   }
-
-
 
   /// Obtiene una lista paginada de registros ordenados por fecha (más reciente a más antiguo)
   ///
@@ -576,7 +559,8 @@ class DBRepository implements DataBaseInterface {
       // Recorrer cada prefijo en el índice principal
       for (final prefix in mainIndex.containers.keys) {
         final String prefixPath = "$activePath/$prefix";
-        final String prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
+        final String prefixIndexPath =
+            "$prefixPath/${DBFile.activeSubIndex.ext}";
 
         // Verificar y leer índice del prefijo
         final prefixIndexFile = File(prefixIndexPath);
@@ -590,9 +574,8 @@ class DBRepository implements DataBaseInterface {
           continue;
         }
 
-        final ActiveIndexModel prefixIndex = ActiveIndexModel.fromJson(
-            jsonDecode(indexContent)
-        );
+        final ActiveIndexModel prefixIndex =
+            ActiveIndexModel.fromJson(jsonDecode(indexContent));
 
         // Agrupar registros por bloque para optimizar lecturas
         final Map<String, List<String>> blockToIds = {};
@@ -625,8 +608,7 @@ class DBRepository implements DataBaseInterface {
             // Verificar si el ID está en la lista de IDs del bloque
             if (blockToIds[blockEntry.key]!.contains(recordModel.id)) {
               final DateTime recordDate = DateTime.parse(
-                  prefixIndex.records[recordModel.id]!.lastUpdate
-              );
+                  prefixIndex.records[recordModel.id]!.lastUpdate);
               records.add(MapEntry(recordDate, recordModel));
             }
           }
@@ -637,18 +619,12 @@ class DBRepository implements DataBaseInterface {
       records.sort((a, b) => b.key.compareTo(a.key));
 
       // Aplicar paginación y retornar
-      return records
-          .skip(offset)
-          .take(limit)
-          .map((e) => e.value)
-          .toList();
-
+      return records.skip(offset).take(limit).map((e) => e.value).toList();
     } catch (e, stack) {
       log("Error in get operation", error: e, stackTrace: stack);
       rethrow;
     }
   }
-
 
   // Método auxiliar para obtener el total de registros (útil para paginación)
   Future<int> getTotalRecords() async {
@@ -660,13 +636,13 @@ class DBRepository implements DataBaseInterface {
       int total = 0;
 
       for (var prefix in mainIndex.containers.keys) {
-        final prefixIndexPath = "${await mainDir}/${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}";
+        final prefixIndexPath =
+            "${await mainDir}/${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}";
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) continue;
 
         final prefixIndex = ActiveIndexModel.fromJson(
-            jsonDecode(await prefixIndexFile.readAsString())
-        );
+            jsonDecode(await prefixIndexFile.readAsString()));
 
         total += prefixIndex.records.length;
       }
@@ -677,7 +653,6 @@ class DBRepository implements DataBaseInterface {
       return 0;
     }
   }
-
 
   @override
   Future<DataModel> getById(String id) async {
@@ -706,9 +681,8 @@ class DBRepository implements DataBaseInterface {
         throw Exception('Empty index file');
       }
 
-      final ActiveIndexModel prefixIndex = ActiveIndexModel.fromJson(
-          jsonDecode(indexContent)
-      );
+      final ActiveIndexModel prefixIndex =
+          ActiveIndexModel.fromJson(jsonDecode(indexContent));
 
       // Check if record exists in index
       if (!prefixIndex.records.containsKey(id.toString())) {
@@ -728,7 +702,7 @@ class DBRepository implements DataBaseInterface {
       if (_blockCache.containsKey(blockPath)) {
         final cachedRecords = _blockCache[blockPath]!;
         return cachedRecords.firstWhere(
-              (r) => r.id == id.toString(),
+          (r) => r.id == id.toString(),
           orElse: () => throw Exception('Record not found in cached block'),
         );
       }
@@ -741,23 +715,20 @@ class DBRepository implements DataBaseInterface {
 
       // Decode block content and cache it
       final List<dynamic> blockRecords = jsonDecode(blockContent);
-      final records = blockRecords
-          .map((record) => DataModel.fromJson(record))
-          .toList();
+      final records =
+          blockRecords.map((record) => DataModel.fromJson(record)).toList();
       _blockCache[blockPath] = records;
 
       // Find and return the specific record
       return records.firstWhere(
-            (r) => r.id == id.toString(),
+        (r) => r.id == id.toString(),
         orElse: () => throw Exception('Record not found in block'),
       );
-
     } catch (e, stack) {
       log("Error in getById operation", error: e, stackTrace: stack);
       throw Exception('Failed to get record: ${e.toString()}');
     }
   }
-
 
   @override
   Future<DataModel> put(DataModel updatedData) async {
@@ -775,7 +746,8 @@ class DBRepository implements DataBaseInterface {
       // Verify index exists
       final prefixIndexFile = File(prefixIndexPath);
       if (!prefixIndexFile.existsSync()) {
-        throw Exception("Record not found: index does not exist. Use post() to create new records.");
+        throw Exception(
+            "Record not found: index does not exist. Use post() to create new records.");
       }
 
       // Read and decode prefix index
@@ -784,9 +756,8 @@ class DBRepository implements DataBaseInterface {
         throw Exception("Empty index file. Use post() to create new records.");
       }
 
-      final ActiveIndexModel prefixIndex = ActiveIndexModel.fromJson(
-          jsonDecode(indexContent)
-      );
+      final ActiveIndexModel prefixIndex =
+          ActiveIndexModel.fromJson(jsonDecode(indexContent));
 
       // Check if record exists
       if (!prefixIndex.records.containsKey(id)) {
@@ -803,7 +774,8 @@ class DBRepository implements DataBaseInterface {
       }
 
       // Create temporary backup
-      final tempPath = "$prefixPath/temp_${DateTime.now().millisecondsSinceEpoch}.bak";
+      final tempPath =
+          "$prefixPath/temp_${DateTime.now().millisecondsSinceEpoch}.bak";
       final tempFile = File(tempPath);
 
       List<DataModel> records;
@@ -834,8 +806,7 @@ class DBRepository implements DataBaseInterface {
         // Write updated block
         await blockFile.writeAsString(
             jsonEncode(records.map((r) => r.toJson()).toList()),
-            flush: true
-        );
+            flush: true);
 
         // Update cache
         _blockCache[blockPath] = records;
@@ -847,18 +818,16 @@ class DBRepository implements DataBaseInterface {
         );
 
         // Write updated index
-        await prefixIndexFile.writeAsString(
-            jsonEncode(prefixIndex.toJson()),
-            flush: true
-        );
+        await prefixIndexFile.writeAsString(jsonEncode(prefixIndex.toJson()),
+            flush: true);
 
         // Verify integrity
         final verificationContent = await blockFile.readAsString();
         final verificationRecords = List<DataModel>.from(
-            jsonDecode(verificationContent).map((r) => DataModel.fromJson(r))
-        );
+            jsonDecode(verificationContent).map((r) => DataModel.fromJson(r)));
 
-        final verifiedRecord = verificationRecords.firstWhere((r) => r.id == id);
+        final verifiedRecord =
+            verificationRecords.firstWhere((r) => r.id == id);
         if (verifiedRecord.hash != updatedData.hash) {
           throw Exception('Data integrity check failed');
         }
@@ -868,17 +837,14 @@ class DBRepository implements DataBaseInterface {
 
         // Return the updated record
         return verifiedRecord;
-
       } catch (e) {
         // If anything fails, keep temp file for recovery
         log("Update failed. Backup available at: $tempPath");
         rethrow;
       }
-
     } catch (e, stack) {
       log("Error in put operation", error: e, stackTrace: stack);
       rethrow;
     }
   }
-
 }

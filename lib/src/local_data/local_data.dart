@@ -5,7 +5,8 @@ import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
 class LocalDB {
-  static final ReactiveNotifier<DataBase> _instance = ReactiveNotifier<DataBase>(() => DataBase());
+  static final ReactiveNotifier<DataBase> _instance =
+      ReactiveNotifier<DataBase>(() => DataBase());
 
   static Future<void> init() async {
     await _instance.value.init();
@@ -31,11 +32,9 @@ class LocalDB {
 
 // ignore: non_constant_identifier_names
   static Future<DataModel> Put(String id, Map<dynamic, dynamic> data) async {
-
     final mapData = DataModel(id, data.length / 1000, data.hashCode, data);
 
     return await _instance.value.put(mapData);
-
   }
 
   // ignore: non_constant_identifier_names
