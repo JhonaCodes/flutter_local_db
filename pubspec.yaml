@@ -1,7 +1,8 @@
 name: flutter_local_db
 description: "A scalable and easy-to-use NoSQL database"
 version: 0.0.2
-homepage:
+homepage: https://github.com/JhonaCodes/flutter_local_db
+repository: https://github.com/JhonaCodes/flutter_local_db.git
 
 environment:
   sdk: ^3.5.4
