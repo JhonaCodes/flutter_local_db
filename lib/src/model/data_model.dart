@@ -2,7 +2,7 @@ class DataModel {
   final String id;
   final double size;
   final int hash;
-  final Map<String, dynamic> data;
+  final Map<dynamic, dynamic> data;
 
   DataModel(this.id, this.size, this.hash, this.data);
 
