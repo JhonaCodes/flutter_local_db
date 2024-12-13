@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
-import 'package:flutter_local_db/src/repository/db_device_repository.dart';
 
 @protected
 @immutable

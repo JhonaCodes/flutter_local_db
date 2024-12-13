@@ -11,34 +11,32 @@ class ActiveIndexModel {
   factory ActiveIndexModel.fromJson(Map<String, dynamic> json) {
     return ActiveIndexModel(
       blocks: Map<String, BlockData>.from(
-        (json['blocks'] ?? {}).map((key, value) =>
-            MapEntry(key, BlockData.fromJson(value))
-        ),
+        (json['blocks'] ?? {})
+            .map((key, value) => MapEntry(key, BlockData.fromJson(value))),
       ),
       records: Map<String, RecordLocation>.from(
-        (json['records'] ?? {}).map((key, value) =>
-            MapEntry(key, RecordLocation.fromJson(value))
-        ),
+        (json['records'] ?? {})
+            .map((key, value) => MapEntry(key, RecordLocation.fromJson(value))),
       ),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'blocks': blocks.map((key, value) => MapEntry(key, value.toJson())),
-    'records': records.map((key, value) => MapEntry(key, value.toJson())),
-  };
+        'blocks': blocks.map((key, value) => MapEntry(key, value.toJson())),
+        'records': records.map((key, value) => MapEntry(key, value.toJson())),
+      };
 
   static Map<String, dynamic> toInitial() => {
-    'blocks': {
-      'act_001.dex': BlockData(
-        totalLines: 20000,
-        usedLines: 0,
-        freeSpaces: [],
-        fragmentation: 0.0,
-      ).toJson(),
-    },
-    'records': {},
-  };
+        'blocks': {
+          'act_001.dex': BlockData(
+            totalLines: 20000,
+            usedLines: 0,
+            freeSpaces: [],
+            fragmentation: 0.0,
+          ).toJson(),
+        },
+        'records': {},
+      };
 }
 
 class BlockData {
@@ -64,11 +62,11 @@ class BlockData {
   }
 
   Map<String, dynamic> toJson() => {
-    'total_lines': totalLines,
-    'used_lines': usedLines,
-    'free_spaces': freeSpaces,
-    'fragmentation': fragmentation,
-  };
+        'total_lines': totalLines,
+        'used_lines': usedLines,
+        'free_spaces': freeSpaces,
+        'fragmentation': fragmentation,
+      };
 }
 
 class RecordLocation {
@@ -88,7 +86,7 @@ class RecordLocation {
   }
 
   Map<String, dynamic> toJson() => {
-    'block': block,
-    'last_update': lastUpdate,
-  };
+        'block': block,
+        'last_update': lastUpdate,
+      };
 }

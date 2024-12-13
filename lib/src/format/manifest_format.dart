@@ -1,7 +1,5 @@
-
 /// This information is related for current lib
 class ManifestFormat {
-
   static double version = 10.0;
   static String developer = "Jhonatan Ortiz - jhonacodes@gmail.com";
   static String lastUpdate = "15 - Dec - 2024";
@@ -10,8 +8,7 @@ class ManifestFormat {
 
   static int dateEpocNextBackup = 0;
 
-
-  static String toToml(){
+  static String toToml() {
     return """
 [info]
 name = 'local_database'
@@ -24,5 +21,4 @@ historical_range = $percentageForHistoricalProcess
 backup_on = $dateEpocNextBackup    
 """;
   }
-
 }

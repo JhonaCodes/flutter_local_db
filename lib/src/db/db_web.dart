@@ -5,13 +5,10 @@ import 'package:web/web.dart' as web;
 import 'db_interface.dart';
 
 class DataBase implements DataBaseInterface {
-
-  Future<bool> init() async{
-
+  Future<bool> init() async {
     _databaseName.updateState("de");
 
     web.window.indexedDB.open("${_databaseName.value}.db");
-
 
     return false;
   }
@@ -22,10 +19,8 @@ class DataBase implements DataBaseInterface {
     throw UnimplementedError();
   }
 
-
   @override
   Future<bool> post(DataModel data) {
-
     throw UnimplementedError();
   }
 
@@ -36,7 +31,7 @@ class DataBase implements DataBaseInterface {
   }
 
   @override
-  Future<bool> delete(String id) async{
+  Future<bool> delete(String id) async {
     web.window.indexedDB.deleteDatabase(_databaseName.value);
     return true;
   }
@@ -58,9 +53,6 @@ class DataBase implements DataBaseInterface {
     // TODO: implement deepClean
     throw UnimplementedError();
   }
-
-
-
 }
 
 final _databaseName = ReactiveNotifier<String>(() => "");

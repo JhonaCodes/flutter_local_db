@@ -38,6 +38,4 @@ class UserModel {
       age: age ?? this.age,
     );
   }
-
-
 }
