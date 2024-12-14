@@ -20,6 +20,10 @@ import 'package:reactive_notifier/reactive_notifier.dart';
 final repositoryNotifier = ReactiveNotifier<DBRepository>(DBRepository.new);
 bool _isOpen = false;
 
+
+/// This class needs cleaning, logic improvements, etc.
+/// For now this is an MVP of the general concept of what we want to do.
+/// Use this library with caution, as it may have drastic changes in the future.
 class DBRepository implements DataBaseServiceInterface {
 
   DBRepository() {
@@ -104,7 +108,7 @@ class DBRepository implements DataBaseServiceInterface {
 
 
   @override
-  Future<bool> post(DataLocalDBModel model, {bool secure = false}) async {
+  Future<DataLocalDBModel> post(DataLocalDBModel model, {bool secure = false}) async {
 
     if (!_isOpen) throw Exception('Repository must be open');
 
@@ -124,6 +128,12 @@ class DBRepository implements DataBaseServiceInterface {
       final String prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
       ActiveIndexModel prefixIndex;
+      try {
+        prefixIndex = await _getOrRebuildPrefixIndex(prefixPath);
+      } catch (e) {
+        log("Error obteniendo índice de prefijo: $e");
+        throw Exception("Error accessing prefix index");
+      }
 
 
       // Usar caché si está disponible
@@ -146,7 +156,7 @@ class DBRepository implements DataBaseServiceInterface {
 
       if (prefixIndex.records.containsKey(model.id)) {
         log("Duplicate Record ID: ${model.id} - Use PUT for updates. POST is reserved for creating new records.");
-        return false;
+        return model;
       }
 
       // Selección y manejo optimizado de bloques
@@ -203,13 +213,13 @@ class DBRepository implements DataBaseServiceInterface {
       // Actualizar índice principal
       await _updateMainIndex(idPrefix, prefixPath);
 
-      return true;
+      return model;
 
     } catch (e, stack) {
 
       log("Error in post operation", error: e, stackTrace: stack);
 
-      return false;
+      throw Exception("Unable to create record. Please verify the data and try again.");
 
     }
 
@@ -432,10 +442,34 @@ class DBRepository implements DataBaseServiceInterface {
     return utf8.decode(data?.readAsBytesSync() ?? []);
   }
 
-  Future<Map<String, dynamic>> get _decodeMainIndex async => mainIndexFile !=
-          null
-      ? Map<String, dynamic>.from(await jsonDecode(await mainIndexData ?? "{}"))
-      : {};
+  Future<Map<String, dynamic>> get _decodeMainIndex async {
+    try {
+
+      final File? file = await mainIndexFile;
+      if (file == null) return {};
+
+      final String data = await mainIndexData ?? "{}";
+
+      // Verificar si está vacío
+      if (data.trim().isEmpty) {
+        log("Main index vacío, reconstruyendo...");
+        await rebuildMainIndex();
+        return await _decodeMainIndex;
+      }
+
+      // Intentar deserializar para detectar errores
+      try {
+        return Map<String, dynamic>.from(jsonDecode(data));
+      } catch (e) {
+        log("Error al deserializar main index, reconstruyendo...");
+        await rebuildMainIndex();
+        return await _decodeMainIndex;
+      }
+    } catch (e) {
+      log("Error accediendo al main index: $e");
+      return {};
+    }
+  }
 
   Future<void> clearCache() async {
     prefixIndexCache.value.clear();
@@ -505,10 +539,12 @@ class DBRepository implements DataBaseServiceInterface {
         final String prefixIndexPath =
             "$prefixPath/${DBFile.activeSubIndex.ext}";
 
+
+
         // Verificar y leer índice del prefijo
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) {
-          continue;
+          await _getOrRebuildPrefixIndex(prefixPath);
         }
 
         // Leer y decodificar índice del prefijo
@@ -615,7 +651,7 @@ class DBRepository implements DataBaseServiceInterface {
       // Check if prefix index exists
       final prefixIndexFile = File(prefixIndexPath);
       if (!prefixIndexFile.existsSync()) {
-        throw Exception('Record not found: index does not exist');
+        await _getOrRebuildPrefixIndex(prefixPath);
       }
 
       // Read and decode prefix index
@@ -881,4 +917,139 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
 
+
+  Future<bool> rebuildMainIndex() async {
+    try {
+      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final activeDir = Directory(activePath);
+
+      if (!activeDir.existsSync()) return false;
+
+      final MainIndexModel newMainIndex = MainIndexModel.fromJson(MainIndexModel.toInitial());
+
+      await for (final entity in activeDir.list()) {
+        if (entity is Directory) {
+          final prefix = entity.path.split('/').last;
+          final prefixIndexPath = "${entity.path}/${DBFile.activeSubIndex.ext}";
+
+          if (await File(prefixIndexPath).exists()) {
+            newMainIndex.containers[prefix] = ContainerPaths(
+              active: "${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}",
+            );
+          }
+        }
+      }
+
+      final mainFile = await mainIndexFile;
+      if (mainFile != null) {
+        await mainFile.writeAsString(jsonEncode(newMainIndex.toJson()));
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      log("Error en rebuildMainIndex: $e");
+      return false;
+    }
+  }
+
+
+
+
+
+  Future<bool> _rebuildPrefixIndex(String prefix) async {
+    try {
+
+      log("RECONSTRUYENDO INDICE EN PREFIJO $prefix");
+      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final String prefixPath = "$activePath/$prefix";
+      final prefixDir = Directory(prefixPath);
+
+      if (!prefixDir.existsSync()) return false;
+
+      // Crear nuevo índice para este prefijo
+      final ActiveIndexModel newPrefixIndex = ActiveIndexModel.fromJson(ActiveIndexModel.toInitial());
+
+      // Buscar todos los archivos .dex (bloques de datos)
+      await for (final entity in prefixDir.list()) {
+        if (entity is File && entity.path.endsWith('.dex')) {
+          final String blockName = entity.path.split('/').last;
+
+          try {
+            // Leer y procesar cada bloque
+            final String content = await entity.readAsString();
+            if (content.isNotEmpty) {
+              final List<dynamic> records = jsonDecode(content);
+
+              // Reconstruir información del bloque
+              int usedLines = records.length;
+              newPrefixIndex.blocks[blockName] = BlockData(
+                totalLines: configNotifier.value.maxRecordsPerFile,
+                usedLines: usedLines,
+                freeSpaces: configNotifier.value.maxRecordsPerFile - usedLines,
+              );
+
+              // Reconstruir registros
+              for (var record in records) {
+                final DataLocalDBModel data = DataLocalDBModel.fromJson(record);
+                newPrefixIndex.records[data.id] = RecordLocation(
+                  block: blockName,
+                  lastUpdate: DateTime.now().toIso8601String(), // Usar fecha actual ya que perdimos la original
+                );
+              }
+            }
+          } catch (e) {
+            log("Error procesando bloque $blockName: $e");
+            continue; // Continuar con el siguiente bloque si hay error
+          }
+        }
+      }
+
+      // Guardar el nuevo índice
+      final indexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
+      await File(indexPath).writeAsString(jsonEncode(newPrefixIndex.toJson()));
+
+      // Actualizar caché
+      prefixIndexCache.value[indexPath] = newPrefixIndex.toJson();
+
+      return true;
+    } catch (e) {
+      log("Error reconstruyendo índice del prefijo $prefix: $e");
+      return false;
+    }
+  }
+
+
+
+
+  // Función para verificar y reconstruir un índice de prefijo si es necesario
+  Future<ActiveIndexModel> _getOrRebuildPrefixIndex(String prefixPath) async {
+    final String indexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
+    final indexFile = File(indexPath);
+
+    try {
+      if (await indexFile.exists()) {
+        final content = await indexFile.readAsString();
+        if (content.isNotEmpty) {
+          try {
+            return ActiveIndexModel.fromJson(jsonDecode(content));
+          } catch (e) {
+            log("Error deserializando índice de prefijo, reconstruyendo...");
+          }
+        }
+      }
+
+      // Si llegamos aquí, necesitamos reconstruir
+      final prefix = prefixPath.split('/').last;
+      await _rebuildPrefixIndex(prefix);
+
+      // Leer el índice reconstruido
+      final newContent = await indexFile.readAsString();
+      return ActiveIndexModel.fromJson(jsonDecode(newContent));
+
+    } catch (e) {
+      log("Error grave con índice de prefijo: $e");
+      return ActiveIndexModel.fromJson(ActiveIndexModel.toInitial());
+    }
+  }
 }

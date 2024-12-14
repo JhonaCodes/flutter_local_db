@@ -17,11 +17,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   }
 
   @override
-  Future<bool> post(DataLocalDBModel data, {bool secure = false}) async {
-    await repositoryNotifier.value.post(data);
-
-    return true;
-  }
+  Future<DataLocalDBModel> post(DataLocalDBModel data, {bool secure = false}) async => await repositoryNotifier.value.post(data);
 
   @override
   Future<bool> clean({bool secure = false}) async {

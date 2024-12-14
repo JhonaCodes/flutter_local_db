@@ -13,13 +13,13 @@ class AsyncQueueVM {
   final Queue<Future Function()> _queue = Queue();
   bool _isProcessing = false;
 
-  Future<void> process(Future Function() function)async{
+  Future process(Future Function() function)async{
     _queue.add(function);
-    await _processQueue();
+    return await _processQueue();
   }
 
 
-  Future<void> _processQueue() async {
+  Future _processQueue() async {
 
     if(_isProcessing || _queue.isEmpty) return;
 
@@ -32,7 +32,7 @@ class AsyncQueueVM {
         /// Because remove from list and return element
         final function = _queue.removeFirst();
 
-        await function();
+        return await function();
 
       }
 

@@ -9,7 +9,7 @@ abstract interface class DataBaseServiceInterface {
   Future<bool> delete(String id, {bool secure = false});
   Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false});
   Future<DataLocalDBModel> getById(String id, {bool secure = false});
-  Future<bool> post(DataLocalDBModel data, {bool secure = false});
+  Future<DataLocalDBModel> post(DataLocalDBModel data, {bool secure = false});
   Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false});
   Future<bool> clean({bool secure = false});
   Future<bool> deepClean({bool secure = false});

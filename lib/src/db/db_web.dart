@@ -23,7 +23,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   }
 
   @override
-  Future<bool> post(DataLocalDBModel data, {bool secure = false}) {
+  Future<DataLocalDBModel> post(DataLocalDBModel data, {bool secure = false}) {
     throw UnimplementedError();
   }
 
