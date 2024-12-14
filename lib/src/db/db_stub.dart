@@ -1,11 +1,13 @@
 import 'dart:developer';
 
+import 'package:flutter_local_db/src/model/config_db_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 
 import 'db_interface.dart';
 
 class DataBaseVM implements DataBaseServiceInterface {
-  Future<bool> init() {
+  @override
+  Future<bool> init(ConfigDBModel config) {
     // TODO: implement init
     throw UnimplementedError();
   }

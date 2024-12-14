@@ -7,6 +7,7 @@ import 'package:flutter_local_db/src/enum/db_directory.dart';
 import 'package:flutter_local_db/src/enum/db_files.dart';
 import 'package:flutter_local_db/src/format/manifest_format.dart';
 import 'package:flutter_local_db/src/model/active_index_model.dart';
+import 'package:flutter_local_db/src/model/config_db_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:flutter_local_db/src/model/main_index_model.dart';
 import 'package:flutter_local_db/src/notifiers/data_index_cache.dart';
@@ -15,10 +16,8 @@ import 'package:flutter_local_db/src/notifiers/prefix_index_cache.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
-/// For now just boilerplate code that works.
-// ignore: non_constant_identifier_names
-final RepositoryNotifier = ReactiveNotifier<DBRepository>(() => DBRepository());
-
+final repositoryNotifier = ReactiveNotifier<DBRepository>(DBRepository.new);
+final _configNotifier = ReactiveNotifier<ConfigDBModel>(ConfigDBModel.new);
 bool _isOpen = false;
 
 class DBRepository implements DataBaseServiceInterface {
@@ -36,39 +35,14 @@ class DBRepository implements DataBaseServiceInterface {
     DBDirectory.sync.path,
   ];
 
-  static final List<String> _initialFiles = [
-    DBFile.manifest.ext,
-    DBFile.globalIndex.ext,
-  ];
-
-  get mainDir async => await directory();
+  static final List<String> _initialFiles = [ DBFile.manifest.ext,  DBFile.globalIndex.ext ];
 
 
-  Future<void> _updateMainIndex(String idPrefix, String prefixPath) async {
-    final mainFile = await mainIndexFile;
-    if (mainFile != null) {
-      MainIndexModel mainIndex =
-      MainIndexModel.fromJson(await _decodeMainIndex);
-
-      mainIndex.containers[idPrefix] = ContainerPaths(
-        active:
-        "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
-        deleted: null,
-        sealed: null,
-        backup: null,
-        historical: null,
-        sync: null,
-      );
-
-      await mainFile.writeAsString(jsonEncode(mainIndex.toJson()));
-    }
-  }
-
-  Future<String> directory() async {
+  Future<String> get _mainDir async {
     final appDir = await getApplicationDocumentsDirectory();
 
     final newDir =
-        Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
+    Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
 
     try {
       if (!newDir.existsSync()) {
@@ -86,26 +60,12 @@ class DBRepository implements DataBaseServiceInterface {
     return newDir.path;
   }
 
-  /// Function for creating subdirectories
-  Future<bool> _createSubDirectory(String directoryName) async {
-    final String awaitedDirectory = await mainDir;
-
-    final subDirectory = Directory("$awaitedDirectory/$directoryName");
-
-    if (!subDirectory.existsSync()) {
-      await subDirectory.create(recursive: true).then((response) {
-        return response.path.contains(directoryName);
-      });
-    } else {
-      log("Folder already exist: $directoryName");
-    }
-
-    return true;
-  }
 
   /// Initialization
-  Future<bool> init() async {
+  @override
+  Future<bool> init(ConfigDBModel config) async {
     try {
+      _configNotifier.updateState(config);
       /// Creating sub-directories
       for (String dir in _suDirectories) {
         await _createSubDirectory(dir);
@@ -113,7 +73,7 @@ class DBRepository implements DataBaseServiceInterface {
 
       /// Creating files
       for (String file in _initialFiles) {
-        final fileComponent = File('${await mainDir}/$file');
+        final fileComponent = File('${await _mainDir}/$file');
 
         if (!fileComponent.existsSync()) {
           await fileComponent.create(recursive: true).then((response) {
@@ -141,19 +101,15 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
 
-
-
-
-
-  /// Crear elementos [Post]
   @override
   Future<bool> post(DataLocalDBModel model) async {
 
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
+
       final idPrefix = "${model.id[0]}${model.id[1]}";
-      final String activePath = "${await mainDir}/${DBDirectory.active.path}";
+      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final String prefixPath = "$activePath/$idPrefix";
 
       // Creamos el directorio si no existe
@@ -186,9 +142,8 @@ class DBRepository implements DataBaseServiceInterface {
       }
 
 
-      print(prefixIndexCache.value);
       if (prefixIndex.records.containsKey(model.id)) {
-        log("Record ID already exists: ${model.id}");
+        log("Duplicate Record ID: ${model.id} - Use PUT for updates. POST is reserved for creating new records.");
         return false;
       }
 
@@ -206,9 +161,7 @@ class DBRepository implements DataBaseServiceInterface {
           final content = await blockFile.readAsString();
           if (content.isNotEmpty) {
             final List<dynamic> decodedRecords = jsonDecode(content);
-            records = decodedRecords
-                .map((record) => DataLocalDBModel.fromJson(record))
-                .toList();
+            records = decodedRecords.map((record) => DataLocalDBModel.fromJson(record)).toList();
           } else {
             records = [];
           }
@@ -225,15 +178,14 @@ class DBRepository implements DataBaseServiceInterface {
       // Escribir a disco de manera eficiente
       await File(blockPath).writeAsString(
           jsonEncode(records.map((r) => r.toJson()).toList()),
-          flush: true // Asegura escritura inmediata
+          flush: true
       );
 
       // Actualizar índice
       prefixIndex.blocks[currentBlock] = BlockData(
-        totalLines: 20000,
+        totalLines: _configNotifier.value.maxRecordsPerFile,
         usedLines: records.length,
-        freeSpaces: [],
-        fragmentation: 0.0,
+        freeSpaces: _configNotifier.value.maxRecordsPerFile - records.length,
       );
 
       prefixIndex.records[model.id] = RecordLocation(
@@ -250,10 +202,15 @@ class DBRepository implements DataBaseServiceInterface {
       await _updateMainIndex(idPrefix, prefixPath);
 
       return true;
+
     } catch (e, stack) {
+
       log("Error in post operation", error: e, stackTrace: stack);
+
       return false;
+
     }
+
   }
 
 
@@ -270,44 +227,6 @@ class DBRepository implements DataBaseServiceInterface {
 
 
 
-
-
-
-
-  @override
-  Future<bool> clean() async {
-    if (!_isOpen) throw Exception('Repository must be open');
-
-    try {
-      // Limpiar caché
-      prefixIndexCache.value.clear();
-      dataIndexCache.value.clear();
-
-      // Obtener directorio activo
-      final String activePath = "${await mainDir}/${DBDirectory.active.path}";
-      final activeDir = Directory(activePath);
-
-      if (!activeDir.existsSync()) {
-        return true; // Si no existe, consideramos que ya está limpio
-      }
-
-      // Eliminar todo el contenido del directorio active
-      await for (final entity in activeDir.list()) {
-        await entity.delete(recursive: true);
-      }
-
-      // Resetear el índice principal pero mantener la estructura
-      final mainFile = await mainIndexFile;
-      if (mainFile != null && mainFile.existsSync()) {
-        await mainFile.writeAsString(jsonEncode(MainIndexModel.toInitial()));
-      }
-
-      return true;
-    } catch (e, stack) {
-      log("Error in clean operation", error: e, stackTrace: stack);
-      return false;
-    }
-  }
 
   @override
   Future<bool> deepClean() async {
@@ -319,7 +238,7 @@ class DBRepository implements DataBaseServiceInterface {
       dataIndexCache.value.clear();
 
       // Obtener el directorio principal
-      final baseDir = await mainDir;
+      final baseDir = await _mainDir;
 
       // Lista de todos los subdirectorios a limpiar
       final directories = _suDirectories;
@@ -376,7 +295,7 @@ class DBRepository implements DataBaseServiceInterface {
       final idPrefix = "${id[0]}${id[1]}";
 
       // Get paths
-      final activePath = "${await mainDir}/${DBDirectory.active.path}";
+      final activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final prefixPath = "$activePath/$idPrefix";
       final prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
@@ -410,8 +329,7 @@ class DBRepository implements DataBaseServiceInterface {
       }
 
       // Create temporary backup before deletion
-      final tempPath =
-          "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
+      final tempPath = "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
       final tempFile = File(tempPath);
 
       List<DataLocalDBModel> records;
@@ -459,16 +377,14 @@ class DBRepository implements DataBaseServiceInterface {
         } else {
           // Update block statistics
           prefixIndex.blocks[recordLocation.block] = BlockData(
-            totalLines: 20000,
+            totalLines: _configNotifier.value.maxRecordsPerFile,
             usedLines: records.length,
-            freeSpaces: [],
-            fragmentation: 0.0,
+            freeSpaces: _configNotifier.value.maxRecordsPerFile - records.length,
           );
         }
 
         // Write updated index
-        await prefixIndexFile.writeAsString(jsonEncode(prefixIndex.toJson()),
-            flush: true);
+        await prefixIndexFile.writeAsString(jsonEncode(prefixIndex.toJson()), flush: true);
 
         // If everything is OK, delete temp file
         await tempFile.delete();
@@ -487,6 +403,7 @@ class DBRepository implements DataBaseServiceInterface {
 
 // Helper method for block selection
   String _selectActiveBlock(ActiveIndexModel prefixIndex) {
+
     // If no blocks exist, create first one
     if (prefixIndex.blocks.isEmpty) {
       return 'act_001.dex';
@@ -506,7 +423,7 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   Future<File>? get mainIndexFile async =>
-      File("${await mainDir}/${DBFile.globalIndex.ext}");
+      File("${await _mainDir}/${DBFile.globalIndex.ext}");
 
   Future<String>? get mainIndexData async {
     final File? data = await mainIndexFile;
@@ -569,7 +486,7 @@ class DBRepository implements DataBaseServiceInterface {
       final records = <MapEntry<DateTime, DataLocalDBModel>>[];
 
       // Obtener directorio activo
-      final String activePath = "${await mainDir}/${DBDirectory.active.path}";
+      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
 
       // Obtener índice principal
       final mainFile = await mainIndexFile;
@@ -661,7 +578,7 @@ class DBRepository implements DataBaseServiceInterface {
 
       for (var prefix in mainIndex.containers.keys) {
         final prefixIndexPath =
-            "${await mainDir}/${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}";
+            "${await _mainDir}/${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}";
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) continue;
 
@@ -689,7 +606,7 @@ class DBRepository implements DataBaseServiceInterface {
       final idPrefix = "${id.toString()[0]}${id.toString()[1]}";
 
       // Get active directory path
-      final activePath = "${await mainDir}/${DBDirectory.active.path}";
+      final activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final prefixPath = "$activePath/$idPrefix";
       final prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
@@ -763,7 +680,7 @@ class DBRepository implements DataBaseServiceInterface {
       final idPrefix = "${id[0]}${id[1]}";
 
       // Get paths
-      final activePath = "${await mainDir}/${DBDirectory.active.path}";
+      final activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final prefixPath = "$activePath/$idPrefix";
       final prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
@@ -871,4 +788,95 @@ class DBRepository implements DataBaseServiceInterface {
       rethrow;
     }
   }
+
+
+
+
+  @override
+  Future<bool> clean() async {
+    if (!_isOpen) throw Exception('Repository must be open');
+
+    try {
+
+      // Limpiar caché
+      prefixIndexCache.value.clear();
+      dataIndexCache.value.clear();
+
+      // Obtener directorio activo
+      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final activeDir = Directory(activePath);
+
+      if (!activeDir.existsSync()) {
+        return true; // Si no existe, consideramos que ya está limpio
+      }
+
+      // Eliminar todo el contenido del directorio active
+      await for (final entity in activeDir.list()) {
+        await entity.delete(recursive: true);
+      }
+
+      // Resetear el índice principal pero mantener la estructura
+      final mainFile = await mainIndexFile;
+      if (mainFile != null && mainFile.existsSync()) {
+        await mainFile.writeAsString(jsonEncode(MainIndexModel.toInitial()));
+      }
+
+      return true;
+    } catch (e, stack) {
+      log("Error in clean operation", error: e, stackTrace: stack);
+      return false;
+    }
+  }
+
+
+
+
+  Future<void> _updateMainIndex(String idPrefix, String prefixPath, [
+    String? deleted,
+    String? sealed,
+    String? backup,
+    String? historical,
+    String? sync,
+  ]) async {
+
+    final mainFile = await mainIndexFile;
+
+    if (mainFile != null) {
+
+      MainIndexModel mainIndex = MainIndexModel.fromJson(await _decodeMainIndex);
+
+      mainIndex.containers[idPrefix] = ContainerPaths(
+        active: "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
+        deleted: deleted,
+        sealed: sealed,
+        backup: backup,
+        historical: historical,
+        sync: sync,
+      );
+
+      await mainFile.writeAsString( jsonEncode(mainIndex.toJson()) );
+
+    }
+
+  }
+
+
+  /// Function for creating subdirectories
+  Future<bool> _createSubDirectory(String directoryName) async {
+    final String awaitedDirectory = await _mainDir;
+
+    final subDirectory = Directory("$awaitedDirectory/$directoryName");
+
+    if (!subDirectory.existsSync()) {
+      await subDirectory.create(recursive: true).then((response) {
+        return response.path.contains(directoryName);
+      });
+    } else {
+      log("Folder already exist: $directoryName");
+    }
+
+    return true;
+  }
+
+
 }

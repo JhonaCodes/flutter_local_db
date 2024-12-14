@@ -1,3 +1,4 @@
+import 'package:flutter_local_db/src/model/config_db_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 
 import 'package:reactive_notifier/reactive_notifier.dart';
@@ -5,10 +6,12 @@ import 'package:web/web.dart' as web;
 import 'db_interface.dart';
 
 class DataBaseVM implements DataBaseServiceInterface {
-  Future<bool> init() async {
+
+  @override
+  Future<bool> init(ConfigDBModel config) async {
     _databaseName.updateState("de");
 
-    web.window.indexedDB.open("${_databaseName.value}.db");
+    web.window.indexedDB.open("${_databaseName.value}.dex");
 
     return false;
   }

@@ -5,10 +5,13 @@ import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:flutter_local_db/src/notifiers/local_database_notifier.dart';
 import 'package:flutter_local_db/src/notifiers/queue_cache.dart';
 
+import 'model/config_db_model.dart';
+
 
 class LocalDB {
 
-  static Future<void> init() async => await localDatabaseNotifier.value.init();
+
+  static Future<void> init({ConfigDBModel config = const ConfigDBModel()}) async => await localDatabaseNotifier.value.init(config);
 
   // ignore: non_constant_identifier_names
   static Future<void> Post(String key, Map<dynamic, dynamic> data) async {
