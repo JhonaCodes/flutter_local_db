@@ -6,4 +6,4 @@ import 'package:reactive_notifier/reactive_notifier.dart';
 /// Structure: { prefix: { key: value } }
 @protected
 final ReactiveNotifier<Map<String, Map<String, dynamic>>> prefixIndexCache =
-ReactiveNotifier<Map<String, Map<String, dynamic>>>(() => {});
+    ReactiveNotifier<Map<String, Map<String, dynamic>>>(() => {});

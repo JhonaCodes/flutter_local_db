@@ -27,6 +27,6 @@ class ConfigDBModel {
   /// @param hashEncrypt Encryption key (default: 'flutter_local_db')
   const ConfigDBModel(
       {this.maxRecordsPerFile = 2000,
-        this.backupEveryDays = 0,
-        this.hashEncrypt = 'flutter_local_db'});
+      this.backupEveryDays = 0,
+      this.hashEncrypt = 'flutter_local_db'});
 }

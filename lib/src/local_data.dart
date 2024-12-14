@@ -13,7 +13,7 @@ class LocalDB {
   /// Initializes the database with optional configuration
   /// @param config Optional database configuration (defaults to ConfigDBModel())
   static Future<void> init(
-      {ConfigDBModel config = const ConfigDBModel()}) async =>
+          {ConfigDBModel config = const ConfigDBModel()}) async =>
       await localDatabaseNotifier.value.init(config);
 
   /// Creates a new record in the database
@@ -36,7 +36,7 @@ class LocalDB {
       );
 
       await queueCache.value.process(
-              () async => await localDatabaseNotifier.value.post(currentData));
+          () async => await localDatabaseNotifier.value.post(currentData));
     }
   }
 

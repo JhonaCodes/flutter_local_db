@@ -1,4 +1,3 @@
-
 class ActiveIndexModel {
   final Map<String, BlockData> blocks;
   final Map<String, RecordLocation> records;

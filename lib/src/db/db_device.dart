@@ -32,7 +32,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<DataLocalDBModel> The created record
   @override
   Future<DataLocalDBModel> post(DataLocalDBModel data,
-      {bool secure = false}) async =>
+          {bool secure = false}) async =>
       await repositoryNotifier.value.post(data);
 
   /// Cleans the database by removing all records
