@@ -17,42 +17,42 @@ class DataBaseVM implements DataBaseServiceInterface {
   }
 
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0}) {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) {
     // TODO: implement get
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> post(DataLocalDBModel data) {
+  Future<bool> post(DataLocalDBModel data, {bool secure = false}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> clean() {
+  Future<bool> clean({bool secure = false}) {
     // TODO: implement clean
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> delete(String id) async {
+  Future<bool> delete(String id, {bool secure = false}) async {
     web.window.indexedDB.deleteDatabase(_databaseName.value);
     return true;
   }
 
   @override
-  Future<DataLocalDBModel> getById(String id) {
+  Future<DataLocalDBModel> getById(String id, {bool secure = false}) {
     // TODO: implement getById
     throw UnimplementedError();
   }
 
   @override
-  Future<DataLocalDBModel> put(DataLocalDBModel data) {
+  Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false}) {
     // TODO: implement put
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> deepClean() {
+  Future<bool> deepClean({bool secure = false}) {
     // TODO: implement deepClean
     throw UnimplementedError();
   }

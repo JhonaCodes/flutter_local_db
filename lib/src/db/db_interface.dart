@@ -6,11 +6,11 @@ import 'package:flutter_local_db/src/model/data_model.dart';
 @immutable
 abstract interface class DataBaseServiceInterface {
   Future<bool> init(ConfigDBModel config);
-  Future<bool> delete(String id);
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0});
-  Future<DataLocalDBModel> getById(String id);
-  Future<bool> post(DataLocalDBModel data);
-  Future<DataLocalDBModel> put(DataLocalDBModel data);
-  Future<bool> clean();
-  Future<bool> deepClean();
+  Future<bool> delete(String id, {bool secure = false});
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false});
+  Future<DataLocalDBModel> getById(String id, {bool secure = false});
+  Future<bool> post(DataLocalDBModel data, {bool secure = false});
+  Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false});
+  Future<bool> clean({bool secure = false});
+  Future<bool> deepClean({bool secure = false});
 }

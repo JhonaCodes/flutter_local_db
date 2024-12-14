@@ -9,5 +9,8 @@ class ConfigDBModel {
   /// Zero for no backups
   final int backupEveryDays;
 
-  const ConfigDBModel({ this.maxRecordsPerFile = 2000, this.backupEveryDays = 0});
+  /// In progress
+  final String hashEncrypt;
+
+  const ConfigDBModel({ this.maxRecordsPerFile = 2000, this.backupEveryDays = 0, this.hashEncrypt = 'flutter_local_db'});
 }

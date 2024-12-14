@@ -12,41 +12,41 @@ class DataBaseVM implements DataBaseServiceInterface {
   }
 
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0}) async {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) async {
     return await repositoryNotifier.value.get(limit: limit, offset: offset);
   }
 
   @override
-  Future<bool> post(DataLocalDBModel data) async {
+  Future<bool> post(DataLocalDBModel data, {bool secure = false}) async {
     await repositoryNotifier.value.post(data);
 
     return true;
   }
 
   @override
-  Future<bool> clean() async {
+  Future<bool> clean({bool secure = false}) async {
     await repositoryNotifier.value.clean();
     return true;
   }
 
   @override
-  Future<bool> delete(String id) async {
+  Future<bool> delete(String id, {bool secure = false}) async {
     await repositoryNotifier.value.delete(id);
     return true;
   }
 
   @override
-  Future<DataLocalDBModel> getById(String id) {
+  Future<DataLocalDBModel> getById(String id, {bool secure = false}) {
     return repositoryNotifier.value.getById(id);
   }
 
   @override
-  Future<DataLocalDBModel> put(DataLocalDBModel data) {
+  Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false}) {
     return repositoryNotifier.value.put(data);
   }
 
   @override
-  Future<bool> deepClean() async {
+  Future<bool> deepClean({bool secure = false}) async {
     await repositoryNotifier.value.deepClean();
     return true;
   }

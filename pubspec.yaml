@@ -22,7 +22,7 @@ dependencies:
   web: ^1.1.0
 
   # Official lib for secure data saving
-  crypto: ^3.0.6
+  encrypt: ^5.0.3
 
   # Robust package for singleton and streams management, good reactive state an debug.
   reactive_notifier: ^2.3.1

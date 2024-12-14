@@ -11,13 +11,13 @@ import 'package:flutter_local_db/src/model/config_db_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:flutter_local_db/src/model/main_index_model.dart';
 import 'package:flutter_local_db/src/notifiers/data_index_cache.dart';
+import 'package:flutter_local_db/src/notifiers/local_database_notifier.dart';
 import 'package:flutter_local_db/src/notifiers/prefix_index_cache.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
 final repositoryNotifier = ReactiveNotifier<DBRepository>(DBRepository.new);
-final _configNotifier = ReactiveNotifier<ConfigDBModel>(ConfigDBModel.new);
 bool _isOpen = false;
 
 class DBRepository implements DataBaseServiceInterface {
@@ -28,11 +28,13 @@ class DBRepository implements DataBaseServiceInterface {
 
   final List<String> _suDirectories = [
     DBDirectory.active.path,
-    DBDirectory.sealed.path,
-    DBDirectory.secure.path,
     DBDirectory.backup.path,
-    DBDirectory.historical.path,
-    DBDirectory.sync.path,
+
+    /// For next releases in this order.
+    //DBDirectory.secure.path,
+    //DBDirectory.sync.path,
+    //DBDirectory.historical.path,
+    //DBDirectory.sealed.path,
   ];
 
   static final List<String> _initialFiles = [ DBFile.manifest.ext,  DBFile.globalIndex.ext ];
@@ -65,7 +67,7 @@ class DBRepository implements DataBaseServiceInterface {
   @override
   Future<bool> init(ConfigDBModel config) async {
     try {
-      _configNotifier.updateState(config);
+      configNotifier.updateState(config);
       /// Creating sub-directories
       for (String dir in _suDirectories) {
         await _createSubDirectory(dir);
@@ -102,7 +104,7 @@ class DBRepository implements DataBaseServiceInterface {
 
 
   @override
-  Future<bool> post(DataLocalDBModel model) async {
+  Future<bool> post(DataLocalDBModel model, {bool secure = false}) async {
 
     if (!_isOpen) throw Exception('Repository must be open');
 
@@ -183,9 +185,9 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Actualizar índice
       prefixIndex.blocks[currentBlock] = BlockData(
-        totalLines: _configNotifier.value.maxRecordsPerFile,
+        totalLines: configNotifier.value.maxRecordsPerFile,
         usedLines: records.length,
-        freeSpaces: _configNotifier.value.maxRecordsPerFile - records.length,
+        freeSpaces: configNotifier.value.maxRecordsPerFile - records.length,
       );
 
       prefixIndex.records[model.id] = RecordLocation(
@@ -229,7 +231,7 @@ class DBRepository implements DataBaseServiceInterface {
 
 
   @override
-  Future<bool> deepClean() async {
+  Future<bool> deepClean({bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -287,7 +289,7 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   @override
-  Future<bool> delete(String id) async {
+  Future<bool> delete(String id, {bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -377,9 +379,9 @@ class DBRepository implements DataBaseServiceInterface {
         } else {
           // Update block statistics
           prefixIndex.blocks[recordLocation.block] = BlockData(
-            totalLines: _configNotifier.value.maxRecordsPerFile,
+            totalLines: configNotifier.value.maxRecordsPerFile,
             usedLines: records.length,
-            freeSpaces: _configNotifier.value.maxRecordsPerFile - records.length,
+            freeSpaces: configNotifier.value.maxRecordsPerFile - records.length,
           );
         }
 
@@ -478,7 +480,7 @@ class DBRepository implements DataBaseServiceInterface {
   /// - Si no hay registros, retorna una lista vacía
   /// - Utiliza el lastUpdate del índice para el ordenamiento
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0}) async {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -596,7 +598,7 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   @override
-  Future<DataLocalDBModel> getById(String id) async {
+  Future<DataLocalDBModel> getById(String id, {bool secure = false}) async {
     log(id);
 
     if (!_isOpen) throw Exception('Repository must be open');
@@ -672,7 +674,7 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   @override
-  Future<DataLocalDBModel> put(DataLocalDBModel updatedData) async {
+  Future<DataLocalDBModel> put(DataLocalDBModel updatedData, {bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -793,7 +795,7 @@ class DBRepository implements DataBaseServiceInterface {
 
 
   @override
-  Future<bool> clean() async {
+  Future<bool> clean({bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
