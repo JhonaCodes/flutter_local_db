@@ -3,18 +3,19 @@ import 'package:flutter_local_db/src/repository/db_device_repository.dart';
 
 import 'db_interface.dart';
 
-class DataBase implements DataBaseInterface {
+class DataBaseVM implements DataBaseServiceInterface {
+
   Future<bool> init() async {
     return await RepositoryNotifier.value.init();
   }
 
   @override
-  Future<List<DataModel>> get({int limit = 20, int offset = 0}) async {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0}) async {
     return await RepositoryNotifier.value.get(limit: limit, offset: offset);
   }
 
   @override
-  Future<bool> post(DataModel data) async {
+  Future<bool> post(DataLocalDBModel data) async {
     await RepositoryNotifier.value.post(data);
 
     return true;
@@ -33,12 +34,12 @@ class DataBase implements DataBaseInterface {
   }
 
   @override
-  Future<DataModel> getById(String id) {
+  Future<DataLocalDBModel> getById(String id) {
     return RepositoryNotifier.value.getById(id);
   }
 
   @override
-  Future<DataModel> put(DataModel data) {
+  Future<DataLocalDBModel> put(DataLocalDBModel data) {
     return RepositoryNotifier.value.put(data);
   }
 

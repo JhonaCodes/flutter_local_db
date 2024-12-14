@@ -4,7 +4,7 @@ import 'package:flutter_local_db/src/model/data_model.dart';
 
 import 'db_interface.dart';
 
-class DataBase implements DataBaseInterface {
+class DataBaseVM implements DataBaseServiceInterface {
   Future<bool> init() {
     // TODO: implement init
     throw UnimplementedError();
@@ -23,27 +23,27 @@ class DataBase implements DataBaseInterface {
   }
 
   @override
-  Future<List<DataModel>> get({int limit = 20, int offset = 0}) {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0}) {
     // TODO: implement get
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> post(DataModel data) {
+  Future<bool> post(DataLocalDBModel data) {
     log("From db_stup");
     // TODO: implement post
     throw UnimplementedError();
   }
 
   @override
-  Future<DataModel> getById(String id) {
+  Future<DataLocalDBModel> getById(String id) {
     log("Error");
     // TODO: implement getById
     throw UnimplementedError();
   }
 
   @override
-  Future<DataModel> put(DataModel data) {
+  Future<DataLocalDBModel> put(DataLocalDBModel data) {
     // TODO: implement put
     throw UnimplementedError();
   }

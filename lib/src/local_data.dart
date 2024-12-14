@@ -19,7 +19,8 @@ class LocalDB {
     }
 
     if( _isValidMap(data) ) {
-      final currentData = DataModel(
+
+      final currentData = DataLocalDBModel(
         id: key,
         sizeKb: _mapToKb(data),
         hash: _toHash(data.values),
@@ -33,18 +34,18 @@ class LocalDB {
   }
 
   // ignore: non_constant_identifier_names
-  static Future<List<DataModel>> Get({int limit = 10}) async {
+  static Future<List<DataLocalDBModel>> Get({int limit = 10}) async {
     return await localDatabaseNotifier.value.get(limit: limit);
   }
 
 // ignore: non_constant_identifier_names
-  static Future<DataModel> GetById(String id) async {
+  static Future<DataLocalDBModel> GetById(String id) async {
     return await localDatabaseNotifier.value.getById(id);
   }
 
 // ignore: non_constant_identifier_names
-  static Future<DataModel> Put(String id, Map<dynamic, dynamic> data) async {
-    final mapData = DataModel(
+  static Future<DataLocalDBModel> Put(String id, Map<dynamic, dynamic> data) async {
+    final mapData = DataLocalDBModel(
       id: id,
       sizeKb: _mapToKb(data),
       hash: data.hashCode,
@@ -71,7 +72,6 @@ class LocalDB {
 
   static double _mapToKb(Map map) => double.parse((utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
   static int _toHash (Iterable<dynamic> values) => Object.hashAll(values);
-
   static bool _isValidMap(dynamic map) {
     try{
 
@@ -86,9 +86,9 @@ class LocalDB {
       return false;
     }
   }
-
   static bool _isValidId(String text) {
     RegExp regex = RegExp(r'^[a-zA-Z0-9-]{9,}$');
     return regex.hasMatch(text);
   }
+
 }

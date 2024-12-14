@@ -18,9 +18,10 @@ import 'package:reactive_notifier/reactive_notifier.dart';
 /// For now just boilerplate code that works.
 // ignore: non_constant_identifier_names
 final RepositoryNotifier = ReactiveNotifier<DBRepository>(() => DBRepository());
+
 bool _isOpen = false;
 
-class DBRepository implements DataBaseInterface {
+class DBRepository implements DataBaseServiceInterface {
 
   DBRepository() {
     _isOpen = true;
@@ -146,7 +147,7 @@ class DBRepository implements DataBaseInterface {
 
   /// Crear elementos [Post]
   @override
-  Future<bool> post(DataModel model) async {
+  Future<bool> post(DataLocalDBModel model) async {
 
     if (!_isOpen) throw Exception('Repository must be open');
 
@@ -196,7 +197,7 @@ class DBRepository implements DataBaseInterface {
       final String blockPath = "$prefixPath/$currentBlock";
 
       // Usar caché de bloques
-      List<DataModel> records;
+      List<DataLocalDBModel> records;
       if (dataIndexCache.value.containsKey(blockPath)) {
         records = List.from(dataIndexCache.value[blockPath]!);
       } else {
@@ -206,7 +207,7 @@ class DBRepository implements DataBaseInterface {
           if (content.isNotEmpty) {
             final List<dynamic> decodedRecords = jsonDecode(content);
             records = decodedRecords
-                .map((record) => DataModel.fromJson(record))
+                .map((record) => DataLocalDBModel.fromJson(record))
                 .toList();
           } else {
             records = [];
@@ -413,7 +414,7 @@ class DBRepository implements DataBaseInterface {
           "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
       final tempFile = File(tempPath);
 
-      List<DataModel> records;
+      List<DataLocalDBModel> records;
 
       // Read current block content
       if (dataIndexCache.value.containsKey(blockPath)) {
@@ -421,7 +422,7 @@ class DBRepository implements DataBaseInterface {
       } else {
         final blockContent = await blockFile.readAsString();
         final List<dynamic> blockRecords = jsonDecode(blockContent);
-        records = blockRecords.map((r) => DataModel.fromJson(r)).toList();
+        records = blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
         dataIndexCache.value[blockPath] = records;
       }
 
@@ -560,12 +561,12 @@ class DBRepository implements DataBaseInterface {
   /// - Si no hay registros, retorna una lista vacía
   /// - Utiliza el lastUpdate del índice para el ordenamiento
   @override
-  Future<List<DataModel>> get({int limit = 20, int offset = 0}) async {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
       // Lista para almacenar los resultados
-      final records = <MapEntry<DateTime, DataModel>>[];
+      final records = <MapEntry<DateTime, DataLocalDBModel>>[];
 
       // Obtener directorio activo
       final String activePath = "${await mainDir}/${DBDirectory.active.path}";
@@ -626,7 +627,7 @@ class DBRepository implements DataBaseInterface {
 
           // Procesar cada registro en el bloque
           for (final record in blockRecords) {
-            final DataModel recordModel = DataModel.fromJson(record);
+            final DataLocalDBModel recordModel = DataLocalDBModel.fromJson(record);
 
             // Verificar si el ID está en la lista de IDs del bloque
             if (blockToIds[blockEntry.key]!.contains(recordModel.id)) {
@@ -678,7 +679,7 @@ class DBRepository implements DataBaseInterface {
   }
 
   @override
-  Future<DataModel> getById(String id) async {
+  Future<DataLocalDBModel> getById(String id) async {
     log(id);
 
     if (!_isOpen) throw Exception('Repository must be open');
@@ -739,7 +740,7 @@ class DBRepository implements DataBaseInterface {
       // Decode block content and cache it
       final List<dynamic> blockRecords = jsonDecode(blockContent);
       final records =
-          blockRecords.map((record) => DataModel.fromJson(record)).toList();
+          blockRecords.map((record) => DataLocalDBModel.fromJson(record)).toList();
       dataIndexCache.value[blockPath] = records;
 
       // Find and return the specific record
@@ -754,7 +755,7 @@ class DBRepository implements DataBaseInterface {
   }
 
   @override
-  Future<DataModel> put(DataModel updatedData) async {
+  Future<DataLocalDBModel> put(DataLocalDBModel updatedData) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -801,7 +802,7 @@ class DBRepository implements DataBaseInterface {
           "$prefixPath/temp_${DateTime.now().millisecondsSinceEpoch}.bak";
       final tempFile = File(tempPath);
 
-      List<DataModel> records;
+      List<DataLocalDBModel> records;
 
       // Read current block content
       if (dataIndexCache.value.containsKey(blockPath)) {
@@ -809,7 +810,7 @@ class DBRepository implements DataBaseInterface {
       } else {
         final blockContent = await blockFile.readAsString();
         final List<dynamic> blockRecords = jsonDecode(blockContent);
-        records = blockRecords.map((r) => DataModel.fromJson(r)).toList();
+        records = blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
         dataIndexCache.value[blockPath] = records;
       }
 
@@ -846,8 +847,8 @@ class DBRepository implements DataBaseInterface {
 
         // Verify integrity
         final verificationContent = await blockFile.readAsString();
-        final verificationRecords = List<DataModel>.from(
-            jsonDecode(verificationContent).map((r) => DataModel.fromJson(r)));
+        final verificationRecords = List<DataLocalDBModel>.from(
+            jsonDecode(verificationContent).map((r) => DataLocalDBModel.fromJson(r)));
 
         final verifiedRecord =
             verificationRecords.firstWhere((r) => r.id == id);

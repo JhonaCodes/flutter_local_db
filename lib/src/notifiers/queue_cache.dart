@@ -18,7 +18,7 @@ class AsyncQueueVM {
     await _processQueue();
   }
 
-  int _counter = 0;
+
   Future<void> _processQueue() async {
 
     if(_isProcessing || _queue.isEmpty) return;
@@ -28,8 +28,6 @@ class AsyncQueueVM {
     try{
 
       while(_queue.isNotEmpty){
-
-        log("Queue counter ${_counter++}");
 
         /// Because remove from list and return element
         final function = _queue.removeFirst();

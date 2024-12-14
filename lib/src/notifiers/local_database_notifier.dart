@@ -4,4 +4,4 @@ import 'package:flutter_local_db/src/db/database.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
 @protected
-final ReactiveNotifier<DataBase> localDatabaseNotifier = ReactiveNotifier<DataBase>(() => DataBase());
+final ReactiveNotifier<DataBaseVM> localDatabaseNotifier = ReactiveNotifier<DataBaseVM>(() => DataBaseVM());
