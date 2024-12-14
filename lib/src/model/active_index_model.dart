@@ -1,4 +1,4 @@
-// Modelo para el índice interno de active
+
 class ActiveIndexModel {
   final Map<String, BlockData> blocks;
   final Map<String, RecordLocation> records;

@@ -852,11 +852,11 @@ class DBRepository implements DataBaseServiceInterface {
   Future<void> _updateMainIndex(
     String idPrefix,
     String prefixPath, [
-    String? deleted,
-    String? sealed,
+    //String? deleted,
+    //String? sealed,
     String? backup,
-    String? historical,
-    String? sync,
+    //String? historical,
+    //String? sync,
   ]) async {
     final mainFile = await mainIndexFile;
 
@@ -867,11 +867,11 @@ class DBRepository implements DataBaseServiceInterface {
       mainIndex.containers[idPrefix] = ContainerPaths(
         active:
             "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
-        deleted: deleted,
-        sealed: sealed,
+        //deleted: deleted,
+        //sealed: sealed,
         backup: backup,
-        historical: historical,
-        sync: sync,
+        //historical: historical,
+        //sync: sync,
       );
 
       await mainFile.writeAsString(jsonEncode(mainIndex.toJson()));

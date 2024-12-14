@@ -48,38 +48,38 @@ class MainIndexModel {
 // Container paths model
 class ContainerPaths {
   final String? active;
-  final String? deleted;
-  final String? sealed;
+  //final String? deleted;
+  //final String? sealed;
   final String? backup;
-  final String? historical;
-  final String? sync;
+  //final String? historical;
+  //final String? sync;
 
   ContainerPaths({
     this.active,
-    this.deleted,
-    this.sealed,
+    //this.deleted,
+    //this.sealed,
     this.backup,
-    this.historical,
-    this.sync,
+    //this.historical,
+    //this.sync,
   });
 
   factory ContainerPaths.fromJson(Map json) {
     return ContainerPaths(
       active: json['active'] as String?,
-      deleted: json['deleted'] as String?,
-      sealed: json['sealed'] as String?,
+      //deleted: json['deleted'] as String?,
+      //sealed: json['sealed'] as String?,
       backup: json['backup'] as String?,
-      historical: json['historical'] as String?,
-      sync: json['sync'] as String?,
+      //historical: json['historical'] as String?,
+      //sync: json['sync'] as String?,
     );
   }
 
   Map toJson() => {
         'active': active,
-        'deleted': deleted,
-        'sealed': sealed,
+        //'deleted': deleted,
+        //'sealed': sealed,
         'backup': backup,
-        'historical': historical,
-        'sync': sync,
+        //'historical': historical,
+        //'sync': sync,
       };
 }
