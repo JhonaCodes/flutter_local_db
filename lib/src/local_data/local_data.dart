@@ -1,4 +1,4 @@
-import 'dart:nativewrappers/_internal/vm/lib/developer.dart';
+import 'dart:developer';
 
 import 'package:flutter_local_db/src/db/database.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
