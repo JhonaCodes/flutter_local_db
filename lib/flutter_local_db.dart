@@ -1,3 +1,5 @@
 library flutter_local_db;
 
-export 'package:flutter_local_db/flutter_local_db.dart';
+export 'src/local_data.dart';
+export 'src/model/data_model.dart';
+export 'src/model/config_db_model.dart';

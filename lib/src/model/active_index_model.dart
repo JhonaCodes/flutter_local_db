@@ -1,4 +1,3 @@
-// Modelo para el índice interno de active
 class ActiveIndexModel {
   final Map<String, BlockData> blocks;
   final Map<String, RecordLocation> records;
@@ -29,10 +28,9 @@ class ActiveIndexModel {
   static Map<String, dynamic> toInitial() => {
         'blocks': {
           'act_001.dex': BlockData(
-            totalLines: 20000,
+            totalLines: 2000,
             usedLines: 0,
-            freeSpaces: [],
-            fragmentation: 0.0,
+            freeSpaces: 0,
           ).toJson(),
         },
         'records': {},
@@ -42,22 +40,19 @@ class ActiveIndexModel {
 class BlockData {
   final int totalLines;
   final int usedLines;
-  final List<int> freeSpaces;
-  final double fragmentation;
+  final int freeSpaces;
 
   BlockData({
     required this.totalLines,
     required this.usedLines,
     required this.freeSpaces,
-    required this.fragmentation,
   });
 
   factory BlockData.fromJson(Map<String, dynamic> json) {
     return BlockData(
       totalLines: json['total_lines'] as int,
       usedLines: json['used_lines'] as int,
-      freeSpaces: List<int>.from(json['free_spaces'] ?? []),
-      fragmentation: (json['fragmentation'] as num).toDouble(),
+      freeSpaces: json['free_spaces'],
     );
   }
 
@@ -65,7 +60,6 @@ class BlockData {
         'total_lines': totalLines,
         'used_lines': usedLines,
         'free_spaces': freeSpaces,
-        'fragmentation': fragmentation,
       };
 }
 

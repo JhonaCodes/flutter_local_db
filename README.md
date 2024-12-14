@@ -1,168 +1,187 @@
-# Flutter Local DB
+# Flutter Local DB v0.1.0
 
-A high-performance local database for Flutter that provides incredible simplicity with powerful underlying architecture. Store any JSON data with just an ID string and let the system handle all the complexity for you.
+A high-performance local database for Flutter that provides simple JSON storage with a powerful underlying architecture. Designed for efficient data persistence with automatic block management and smart indexing.
 
-## Why Flutter Local DB?
+## Features
 
-- 🎯 **Ultimate Simplicity**: Store any JSON with just an ID
-- ⚡ **Lightning Fast**: O(1) access times through smart indexing
-- 🛡️ **Fault Tolerant**: Corrupted file? No problem, only affects that block
-- 📦 **Infinitely Scalable**: No practical size limits thanks to block architecture
-- 🔍 **Smart Storage**: Automatic block management and space optimization
-- 🚀 **Zero Config**: Just initialize and start using
+- 🚀 **High Performance**: O(1) access times through smart indexing and caching
+- 🎯 **Simple API**: Store and retrieve JSON data with minimal code
+- 🛡️ **Fault Tolerant**: Block-based architecture prevents total data corruption
+- 📦 **Smart Storage**: Automatic block management and space optimization
+- 🔐 **Secure Storage**: Optional encryption for sensitive data
+- 🔄 **Async Queue**: Built-in request queue management
+- 📱 **Cross-Platform**: Works on mobile, desktop and web(soon)
 
 ## Installation
 
+Add to your `pubspec.yaml`:
+
 ```yaml
 dependencies:
-  flutter_local_db: ^0.0.2
+  flutter_local_db: ^0.1.0
 ```
 
-## Quick Start
+## Basic Usage
 
-### 1. Initialize
+### Initialize Database
+
 ```dart
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize with default configuration
   await LocalDB.init();
+  
+  // Or initialize with custom configuration
+  await LocalDB.init(
+    config: ConfigDBModel(
+      maxRecordsPerFile: 2000,
+      backupEveryDays: 7,
+      hashEncrypt: 'your-16-char-key'
+    )
+  );
+  
   runApp(MyApp());
 }
 ```
 
-### 2. Store Data
+### CRUD Operations
+
 ```dart
-// Store any JSON data with just an ID
-await LocalDB.Post('user_123', {
+// Create
+await LocalDB.Post('user-123456789', {
   'name': 'John Doe',
-  'age': 30,
-  'preferences': {
-    'theme': 'dark',
-    'notifications': true
-  },
-  'scores': [100, 95, 98]
-});
-```
-
-### 3. Retrieve Data
-```dart
-// Get by ID - Lightning fast O(1) operation
-final userData = await LocalDB.GetById('user_123');
-
-// Get multiple records with pagination
-final records = await LocalDB.Get(limit: 20, offset: 0);
-```
-
-### 4. Update Data
-```dart
-// Simply provide the ID and updated data
-await LocalDB.Put('user_123', {
-  'name': 'John Doe',
-  'age': 31,  // Updated age
-  'preferences': {
-    'theme': 'light'  // Changed theme
+  'email': 'john@example.com',
+  'metadata': {
+    'lastLogin': DateTime.now().toIso8601String(),
+    'preferences': {'theme': 'dark'}
   }
 });
-```
 
-### 5. Delete Data
-```dart
-// Delete single record
-await LocalDB.Delete('user_123');
+// Read single record
+final user = await LocalDB.GetById('user-123456789');
 
-// Clear database
+// Read multiple records with pagination
+final users = await LocalDB.Get(limit: 20);
+
+// Update
+await LocalDB.Put('user-123456789', {
+  'name': 'John Doe',
+  'email': 'john.doe@example.com',
+  'metadata': {
+    'lastLogin': DateTime.now().toIso8601String(),
+    'preferences': {'theme': 'light'}
+  }
+});
+
+// Delete
+await LocalDB.Delete('user-123456789');
+
+// Clear all records
 await LocalDB.Clean();
+
+// Deep clean (resets database)
+await LocalDB.DeepClean();
 ```
 
-## Why It's Amazing
+## Advanced Configuration
 
-### 🎯 Built for Simplicity
-Store any JSON structure you want - the system handles all the complexity:
+### ConfigDBModel
+
 ```dart
-// Store simple data
-await LocalDB.Post('settings', {'theme': 'dark'});
-
-// Store complex nested structures
-await LocalDB.Post('gameState', {
-  'player': {
-    'position': {'x': 100, 'y': 200},
-    'inventory': ['sword', 'shield'],
-    'stats': {
-      'health': 100,
-      'mana': 50,
-      'skills': ['jump', 'run']
-    }
-  }
-});
+final config = ConfigDBModel(
+  // Maximum records per storage block
+  maxRecordsPerFile: 2000,
+  
+  // Days between automatic backups (0 = disabled)
+  backupEveryDays: 7,
+  
+  // Encryption key (must be 16 characters)
+  hashEncrypt: 'your-16-char-key'
+);
 ```
 
-### ⚡ Smart Architecture
+## Directory Structure
+
 ```
 local_database/
-├── active/          # Active data
-    ├── ab/         # Smart hash prefixing
-        ├── index   # Fast lookup index
-        └── block   # Isolated data block
-    └── cd/         # Another prefix
-└── backup/         # Automatic backups
+├── active/          # Current data blocks
+│   ├── index.json  # Global index
+│   └── blocks/     # Data blocks by prefix
+├── sealed/         # Immutable data
+├── secure/         # Encrypted data
+├── backup/         # Automatic backups
+├── historical/     # Archived data
+└── sync/          # Sync metadata
 ```
 
-### 🛡️ Fault Tolerance
-- Each record is stored in isolated blocks
-- If one file corrupts, other data remains safe
-- Automatic block management and optimization
+## Implementation Examples
 
-### 🚀 High Performance
-- O(1) access time for any record
-- Smart caching system
-- Efficient space management
-- Distributed block structure
-
-## Real World Example
-
+### Basic Data Storage
 ```dart
-class GameSaveSystem {
-  // Save game state
-  Future<void> saveGame(String saveId, Map<String, dynamic> gameState) async {
-    await LocalDB.Post(saveId, gameState);
+class UserPreferences {
+  static Future<void> savePreferences(Map<String, dynamic> prefs) async {
+    await LocalDB.Post('prefs-${DateTime.now().millisecondsSinceEpoch}', prefs);
   }
 
-  // Load game state
-  Future<Map<String, dynamic>> loadGame(String saveId) async {
-    return await LocalDB.GetById(saveId);
-  }
-
-  // Update specific game data
-  Future<void> updateGameState(String saveId, Map<String, dynamic> newState) async {
-    await LocalDB.Put(saveId, newState);
+  static Future<List<DataLocalDBModel>> getPreferences() async {
+    return await LocalDB.Get(limit: 1);
   }
 }
 ```
 
-## Benefits at Scale
-
-- **Infinite Scalability**: No practical size limits thanks to block-based architecture
-- **Fast Regardless of Size**: O(1) access time whether you have 10 or 10 million records
-- **Space Efficient**: Smart block management and automatic optimization
-- **Data Safety**: Corruption in one file never affects other data
-- **Memory Efficient**: Loads only what you need, when you need it
-
-Perfect for:
-- Game save systems
-- User preferences
-- Cached API responses
-- Offline data storage
-- And much more!
-
-## Contributing
-
-Contributions are welcome! If you find a bug or want a feature, please file an issue. Feel free to make a pull request if you want to contribute code.
-
-## Testing
+### Caching API Responses
 ```dart
-flutter test
+class ApiCache {
+  static Future<void> cacheResponse(String endpoint, Map<String, dynamic> data) async {
+    final cacheId = 'cache-${endpoint.hashCode}';
+    await LocalDB.Post(cacheId, {
+      'endpoint': endpoint,
+      'timestamp': DateTime.now().toIso8601String(),
+      'data': data
+    });
+  }
+
+  static Future<DataLocalDBModel?> getCachedResponse(String endpoint) async {
+    try {
+      return await LocalDB.GetById('cache-${endpoint.hashCode}');
+    } catch (e) {
+      return null;
+    }
+  }
+}
 ```
 
-## Example
-A complete example can be found in the `/example` directory.
+## Performance Considerations
+
+- **ID Format**: IDs must be alphanumeric and at least 9 characters long
+- **Block Size**: Default 2000 records per block for optimal performance
+- **Pagination**: Use appropriate limit values to avoid loading unnecessary data
+- **Encryption**: Adds slight overhead when enabled
+- **Queuing**: Operations are automatically queued to prevent conflicts
+
+## Error Handling
+
+```dart
+try {
+  await LocalDB.Post('invalid-id', data);
+} catch (e) {
+  print('Error: Invalid ID format');
+}
+
+try {
+  final data = await LocalDB.GetById('non-existent');
+} catch (e) {
+  print('Error: Record not found');
+}
+```
+
+## Limitations
+
+- IDs must be at least 9 characters long
+- JSON serialization required for stored data
+- Encryption key must be exactly 16 characters
+- Web storage limited by browser constraints
 
 
 ## Contribution
@@ -177,7 +196,8 @@ Contributions are welcome! If you have ideas for new features or improvements, p
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](https://github.com/JhonaCodes/flutter_local_db/LICENSE)
 
 ## Author
+
 Made with ❤️ by [JhonaCode](https://github.com/JhonaCodes)

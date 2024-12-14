@@ -1,50 +1,83 @@
+import 'package:flutter_local_db/src/model/config_db_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:flutter_local_db/src/repository/db_device_repository.dart';
 
 import 'db_interface.dart';
 
-class DataBase implements DataBaseInterface {
-  Future<bool> init() async {
-    return await RepositoryNotifier.value.init();
+/// ViewModel implementation for device-specific database operations implementing DataBaseServiceInterface.
+/// Handles all database operations by delegating to the repository layer.
+class DataBaseVM implements DataBaseServiceInterface {
+  /// Initializes the database with the given configuration
+  /// @param config Database configuration parameters
+  /// @return Future<bool> Success status of initialization
+  @override
+  Future<bool> init(ConfigDBModel config) async {
+    return await repositoryNotifier.value.init(config);
   }
 
+  /// Retrieves a list of database records with pagination
+  /// @param limit Maximum number of records to retrieve (default: 20)
+  /// @param offset Number of records to skip (default: 0)
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<List<DataLocalDBModel>> List of retrieved records
   @override
-  Future<List<DataModel>> get({int limit = 20, int offset = 0}) async {
-    return await RepositoryNotifier.value.get(limit: limit, offset: offset);
+  Future<List<DataLocalDBModel>> get(
+      {int limit = 20, int offset = 0, bool secure = false}) async {
+    return await repositoryNotifier.value.get(limit: limit, offset: offset);
   }
 
+  /// Creates a new record in the database
+  /// @param data The record data to store
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<DataLocalDBModel> The created record
   @override
-  Future<bool> post(DataModel data) async {
-    await RepositoryNotifier.value.post(data);
+  Future<DataLocalDBModel> post(DataLocalDBModel data,
+          {bool secure = false}) async =>
+      await repositoryNotifier.value.post(data);
 
+  /// Cleans the database by removing all records
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<bool> Success status of the operation
+  @override
+  Future<bool> clean({bool secure = false}) async {
+    await repositoryNotifier.value.clean();
     return true;
   }
 
+  /// Deletes a specific record by ID
+  /// @param id Identifier of the record to delete
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<bool> Success status of the deletion
   @override
-  Future<bool> clean() async {
-    await RepositoryNotifier.value.clean();
+  Future<bool> delete(String id, {bool secure = false}) async {
+    await repositoryNotifier.value.delete(id);
     return true;
   }
 
+  /// Retrieves a specific record by ID
+  /// @param id Identifier of the record to retrieve
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<DataLocalDBModel> The retrieved record
   @override
-  Future<bool> delete(String id) async {
-    await RepositoryNotifier.value.delete(id);
-    return true;
+  Future<DataLocalDBModel> getById(String id, {bool secure = false}) {
+    return repositoryNotifier.value.getById(id);
   }
 
+  /// Updates an existing record in the database
+  /// @param data The updated record data
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<DataLocalDBModel> The updated record
   @override
-  Future<DataModel> getById(String id) {
-    return RepositoryNotifier.value.getById(id);
+  Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false}) {
+    return repositoryNotifier.value.put(data);
   }
 
+  /// Performs a deep clean of the database, removing all data and resetting state
+  /// @param secure Flag for secure storage access (default: false)
+  /// @return Future<bool> Success status of the operation
   @override
-  Future<DataModel> put(DataModel data) {
-    return RepositoryNotifier.value.put(data);
-  }
-
-  @override
-  Future<bool> deepClean() async {
-    await RepositoryNotifier.value.deepClean();
+  Future<bool> deepClean({bool secure = false}) async {
+    await repositoryNotifier.value.deepClean();
     return true;
   }
 }
