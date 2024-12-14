@@ -61,7 +61,6 @@ class BlockData {
         'total_lines': totalLines,
         'used_lines': usedLines,
         'free_spaces': freeSpaces,
-
       };
 }
 

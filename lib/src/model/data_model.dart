@@ -4,8 +4,11 @@ class DataLocalDBModel {
   final int hash;
   final Map<dynamic, dynamic> data;
 
-  DataLocalDBModel({required this.id, required this.sizeKb, required this.hash, required this.data});
-
+  DataLocalDBModel(
+      {required this.id,
+      required this.sizeKb,
+      required this.hash,
+      required this.data});
 
   Map<String, dynamic> toJson() {
     return {
@@ -16,7 +19,6 @@ class DataLocalDBModel {
     };
   }
 
-
   factory DataLocalDBModel.fromJson(Map<String, dynamic> json) {
     return DataLocalDBModel(
       id: json['id'] as String,
@@ -26,7 +28,6 @@ class DataLocalDBModel {
     );
   }
 
-
   DataLocalDBModel copyWith({
     String? id,
     double? size,
@@ -35,10 +36,9 @@ class DataLocalDBModel {
   }) {
     return DataLocalDBModel(
       id: id ?? this.id,
-      sizeKb: size ?? this.sizeKb,
+      sizeKb: size ?? sizeKb,
       hash: hash ?? this.hash,
       data: data ?? this.data,
     );
   }
-
 }

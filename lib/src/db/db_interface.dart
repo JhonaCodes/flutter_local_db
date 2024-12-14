@@ -7,7 +7,8 @@ import 'package:flutter_local_db/src/model/data_model.dart';
 abstract interface class DataBaseServiceInterface {
   Future<bool> init(ConfigDBModel config);
   Future<bool> delete(String id, {bool secure = false});
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false});
+  Future<List<DataLocalDBModel>> get(
+      {int limit = 20, int offset = 0, bool secure = false});
   Future<DataLocalDBModel> getById(String id, {bool secure = false});
   Future<DataLocalDBModel> post(DataLocalDBModel data, {bool secure = false});
   Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false});

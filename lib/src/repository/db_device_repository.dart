@@ -20,12 +20,10 @@ import 'package:reactive_notifier/reactive_notifier.dart';
 final repositoryNotifier = ReactiveNotifier<DBRepository>(DBRepository.new);
 bool _isOpen = false;
 
-
 /// This class needs cleaning, logic improvements, etc.
 /// For now this is an MVP of the general concept of what we want to do.
 /// Use this library with caution, as it may have drastic changes in the future.
 class DBRepository implements DataBaseServiceInterface {
-
   DBRepository() {
     _isOpen = true;
   }
@@ -41,14 +39,16 @@ class DBRepository implements DataBaseServiceInterface {
     //DBDirectory.sealed.path,
   ];
 
-  static final List<String> _initialFiles = [ DBFile.manifest.ext,  DBFile.globalIndex.ext ];
-
+  static final List<String> _initialFiles = [
+    DBFile.manifest.ext,
+    DBFile.globalIndex.ext
+  ];
 
   Future<String> get _mainDir async {
     final appDir = await getApplicationDocumentsDirectory();
 
     final newDir =
-    Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
+        Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
 
     try {
       if (!newDir.existsSync()) {
@@ -66,12 +66,12 @@ class DBRepository implements DataBaseServiceInterface {
     return newDir.path;
   }
 
-
   /// Initialization
   @override
   Future<bool> init(ConfigDBModel config) async {
     try {
       configNotifier.updateState(config);
+
       /// Creating sub-directories
       for (String dir in _suDirectories) {
         await _createSubDirectory(dir);
@@ -106,14 +106,12 @@ class DBRepository implements DataBaseServiceInterface {
     }
   }
 
-
   @override
-  Future<DataLocalDBModel> post(DataLocalDBModel model, {bool secure = false}) async {
-
+  Future<DataLocalDBModel> post(DataLocalDBModel model,
+      {bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
-
       final idPrefix = "${model.id[0]}${model.id[1]}";
       final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final String prefixPath = "$activePath/$idPrefix";
@@ -135,10 +133,10 @@ class DBRepository implements DataBaseServiceInterface {
         throw Exception("Error accessing prefix index");
       }
 
-
       // Usar caché si está disponible
       if (prefixIndexCache.value.containsKey(prefixIndexPath)) {
-        prefixIndex = ActiveIndexModel.fromJson(prefixIndexCache.value[prefixIndexPath]!);
+        prefixIndex =
+            ActiveIndexModel.fromJson(prefixIndexCache.value[prefixIndexPath]!);
       } else {
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) {
@@ -152,7 +150,6 @@ class DBRepository implements DataBaseServiceInterface {
         // Guardar en caché
         prefixIndexCache.value[prefixIndexPath] = prefixIndex.toJson();
       }
-
 
       if (prefixIndex.records.containsKey(model.id)) {
         log("Duplicate Record ID: ${model.id} - Use PUT for updates. POST is reserved for creating new records.");
@@ -173,7 +170,9 @@ class DBRepository implements DataBaseServiceInterface {
           final content = await blockFile.readAsString();
           if (content.isNotEmpty) {
             final List<dynamic> decodedRecords = jsonDecode(content);
-            records = decodedRecords.map((record) => DataLocalDBModel.fromJson(record)).toList();
+            records = decodedRecords
+                .map((record) => DataLocalDBModel.fromJson(record))
+                .toList();
           } else {
             records = [];
           }
@@ -190,8 +189,7 @@ class DBRepository implements DataBaseServiceInterface {
       // Escribir a disco de manera eficiente
       await File(blockPath).writeAsString(
           jsonEncode(records.map((r) => r.toJson()).toList()),
-          flush: true
-      );
+          flush: true);
 
       // Actualizar índice
       prefixIndex.blocks[currentBlock] = BlockData(
@@ -207,38 +205,21 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Actualizar caché y escribir índice
       prefixIndexCache.value[prefixIndexPath] = prefixIndex.toJson();
-      await File(prefixIndexPath)
-          .writeAsString( jsonEncode(prefixIndexCache.value[prefixIndexPath]!), flush: true);
+      await File(prefixIndexPath).writeAsString(
+          jsonEncode(prefixIndexCache.value[prefixIndexPath]!),
+          flush: true);
 
       // Actualizar índice principal
       await _updateMainIndex(idPrefix, prefixPath);
 
       return model;
-
     } catch (e, stack) {
-
       log("Error in post operation", error: e, stackTrace: stack);
 
-      throw Exception("Unable to create record. Please verify the data and try again.");
-
+      throw Exception(
+          "Unable to create record. Please verify the data and try again.");
     }
-
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   @override
   Future<bool> deepClean({bool secure = false}) async {
@@ -341,7 +322,8 @@ class DBRepository implements DataBaseServiceInterface {
       }
 
       // Create temporary backup before deletion
-      final tempPath = "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
+      final tempPath =
+          "$prefixPath/delete_temp_${DateTime.now().millisecondsSinceEpoch}.bak";
       final tempFile = File(tempPath);
 
       List<DataLocalDBModel> records;
@@ -352,7 +334,8 @@ class DBRepository implements DataBaseServiceInterface {
       } else {
         final blockContent = await blockFile.readAsString();
         final List<dynamic> blockRecords = jsonDecode(blockContent);
-        records = blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
+        records =
+            blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
         dataIndexCache.value[blockPath] = records;
       }
 
@@ -396,7 +379,8 @@ class DBRepository implements DataBaseServiceInterface {
         }
 
         // Write updated index
-        await prefixIndexFile.writeAsString(jsonEncode(prefixIndex.toJson()), flush: true);
+        await prefixIndexFile.writeAsString(jsonEncode(prefixIndex.toJson()),
+            flush: true);
 
         // If everything is OK, delete temp file
         await tempFile.delete();
@@ -415,7 +399,6 @@ class DBRepository implements DataBaseServiceInterface {
 
 // Helper method for block selection
   String _selectActiveBlock(ActiveIndexModel prefixIndex) {
-
     // If no blocks exist, create first one
     if (prefixIndex.blocks.isEmpty) {
       return 'act_001.dex';
@@ -444,7 +427,6 @@ class DBRepository implements DataBaseServiceInterface {
 
   Future<Map<String, dynamic>> get _decodeMainIndex async {
     try {
-
       final File? file = await mainIndexFile;
       if (file == null) return {};
 
@@ -454,6 +436,8 @@ class DBRepository implements DataBaseServiceInterface {
       if (data.trim().isEmpty) {
         log("Main index vacío, reconstruyendo...");
         await rebuildMainIndex();
+
+        // ignore: recursive_getters
         return await _decodeMainIndex;
       }
 
@@ -463,6 +447,7 @@ class DBRepository implements DataBaseServiceInterface {
       } catch (e) {
         log("Error al deserializar main index, reconstruyendo...");
         await rebuildMainIndex();
+        // ignore: recursive_getters
         return await _decodeMainIndex;
       }
     } catch (e) {
@@ -475,8 +460,6 @@ class DBRepository implements DataBaseServiceInterface {
     prefixIndexCache.value.clear();
     dataIndexCache.value.clear();
   }
-
-
 
   /// Obtiene una lista paginada de registros ordenados por fecha (más reciente a más antiguo)
   ///
@@ -514,7 +497,8 @@ class DBRepository implements DataBaseServiceInterface {
   /// - Si no hay registros, retorna una lista vacía
   /// - Utiliza el lastUpdate del índice para el ordenamiento
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) async {
+  Future<List<DataLocalDBModel>> get(
+      {int limit = 20, int offset = 0, bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -538,8 +522,6 @@ class DBRepository implements DataBaseServiceInterface {
         final String prefixPath = "$activePath/$prefix";
         final String prefixIndexPath =
             "$prefixPath/${DBFile.activeSubIndex.ext}";
-
-
 
         // Verificar y leer índice del prefijo
         final prefixIndexFile = File(prefixIndexPath);
@@ -582,7 +564,8 @@ class DBRepository implements DataBaseServiceInterface {
 
           // Procesar cada registro en el bloque
           for (final record in blockRecords) {
-            final DataLocalDBModel recordModel = DataLocalDBModel.fromJson(record);
+            final DataLocalDBModel recordModel =
+                DataLocalDBModel.fromJson(record);
 
             // Verificar si el ID está en la lista de IDs del bloque
             if (blockToIds[blockEntry.key]!.contains(recordModel.id)) {
@@ -694,8 +677,9 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Decode block content and cache it
       final List<dynamic> blockRecords = jsonDecode(blockContent);
-      final records =
-          blockRecords.map((record) => DataLocalDBModel.fromJson(record)).toList();
+      final records = blockRecords
+          .map((record) => DataLocalDBModel.fromJson(record))
+          .toList();
       dataIndexCache.value[blockPath] = records;
 
       // Find and return the specific record
@@ -710,7 +694,8 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   @override
-  Future<DataLocalDBModel> put(DataLocalDBModel updatedData, {bool secure = false}) async {
+  Future<DataLocalDBModel> put(DataLocalDBModel updatedData,
+      {bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
@@ -765,7 +750,8 @@ class DBRepository implements DataBaseServiceInterface {
       } else {
         final blockContent = await blockFile.readAsString();
         final List<dynamic> blockRecords = jsonDecode(blockContent);
-        records = blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
+        records =
+            blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
         dataIndexCache.value[blockPath] = records;
       }
 
@@ -803,7 +789,8 @@ class DBRepository implements DataBaseServiceInterface {
         // Verify integrity
         final verificationContent = await blockFile.readAsString();
         final verificationRecords = List<DataLocalDBModel>.from(
-            jsonDecode(verificationContent).map((r) => DataLocalDBModel.fromJson(r)));
+            jsonDecode(verificationContent)
+                .map((r) => DataLocalDBModel.fromJson(r)));
 
         final verifiedRecord =
             verificationRecords.firstWhere((r) => r.id == id);
@@ -827,15 +814,11 @@ class DBRepository implements DataBaseServiceInterface {
     }
   }
 
-
-
-
   @override
   Future<bool> clean({bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
-
       // Limpiar caché
       prefixIndexCache.value.clear();
       dataIndexCache.value.clear();
@@ -866,25 +849,24 @@ class DBRepository implements DataBaseServiceInterface {
     }
   }
 
-
-
-
-  Future<void> _updateMainIndex(String idPrefix, String prefixPath, [
+  Future<void> _updateMainIndex(
+    String idPrefix,
+    String prefixPath, [
     String? deleted,
     String? sealed,
     String? backup,
     String? historical,
     String? sync,
   ]) async {
-
     final mainFile = await mainIndexFile;
 
     if (mainFile != null) {
-
-      MainIndexModel mainIndex = MainIndexModel.fromJson(await _decodeMainIndex);
+      MainIndexModel mainIndex =
+          MainIndexModel.fromJson(await _decodeMainIndex);
 
       mainIndex.containers[idPrefix] = ContainerPaths(
-        active: "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
+        active:
+            "${DBDirectory.active.path}/$idPrefix/${DBFile.activeSubIndex.ext}",
         deleted: deleted,
         sealed: sealed,
         backup: backup,
@@ -892,12 +874,9 @@ class DBRepository implements DataBaseServiceInterface {
         sync: sync,
       );
 
-      await mainFile.writeAsString( jsonEncode(mainIndex.toJson()) );
-
+      await mainFile.writeAsString(jsonEncode(mainIndex.toJson()));
     }
-
   }
-
 
   /// Function for creating subdirectories
   Future<bool> _createSubDirectory(String directoryName) async {
@@ -916,8 +895,6 @@ class DBRepository implements DataBaseServiceInterface {
     return true;
   }
 
-
-
   Future<bool> rebuildMainIndex() async {
     try {
       final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
@@ -925,7 +902,8 @@ class DBRepository implements DataBaseServiceInterface {
 
       if (!activeDir.existsSync()) return false;
 
-      final MainIndexModel newMainIndex = MainIndexModel.fromJson(MainIndexModel.toInitial());
+      final MainIndexModel newMainIndex =
+          MainIndexModel.fromJson(MainIndexModel.toInitial());
 
       await for (final entity in activeDir.list()) {
         if (entity is Directory) {
@@ -934,7 +912,8 @@ class DBRepository implements DataBaseServiceInterface {
 
           if (await File(prefixIndexPath).exists()) {
             newMainIndex.containers[prefix] = ContainerPaths(
-              active: "${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}",
+              active:
+                  "${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}",
             );
           }
         }
@@ -953,13 +932,8 @@ class DBRepository implements DataBaseServiceInterface {
     }
   }
 
-
-
-
-
   Future<bool> _rebuildPrefixIndex(String prefix) async {
     try {
-
       log("RECONSTRUYENDO INDICE EN PREFIJO $prefix");
       final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final String prefixPath = "$activePath/$prefix";
@@ -968,7 +942,8 @@ class DBRepository implements DataBaseServiceInterface {
       if (!prefixDir.existsSync()) return false;
 
       // Crear nuevo índice para este prefijo
-      final ActiveIndexModel newPrefixIndex = ActiveIndexModel.fromJson(ActiveIndexModel.toInitial());
+      final ActiveIndexModel newPrefixIndex =
+          ActiveIndexModel.fromJson(ActiveIndexModel.toInitial());
 
       // Buscar todos los archivos .dex (bloques de datos)
       await for (final entity in prefixDir.list()) {
@@ -994,7 +969,8 @@ class DBRepository implements DataBaseServiceInterface {
                 final DataLocalDBModel data = DataLocalDBModel.fromJson(record);
                 newPrefixIndex.records[data.id] = RecordLocation(
                   block: blockName,
-                  lastUpdate: DateTime.now().toIso8601String(), // Usar fecha actual ya que perdimos la original
+                  lastUpdate: DateTime.now()
+                      .toIso8601String(), // Usar fecha actual ya que perdimos la original
                 );
               }
             }
@@ -1018,9 +994,6 @@ class DBRepository implements DataBaseServiceInterface {
       return false;
     }
   }
-
-
-
 
   // Función para verificar y reconstruir un índice de prefijo si es necesario
   Future<ActiveIndexModel> _getOrRebuildPrefixIndex(String prefixPath) async {
@@ -1046,7 +1019,6 @@ class DBRepository implements DataBaseServiceInterface {
       // Leer el índice reconstruido
       final newContent = await indexFile.readAsString();
       return ActiveIndexModel.fromJson(jsonDecode(newContent));
-
     } catch (e) {
       log("Error grave con índice de prefijo: $e");
       return ActiveIndexModel.fromJson(ActiveIndexModel.toInitial());

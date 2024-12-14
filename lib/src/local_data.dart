@@ -7,22 +7,19 @@ import 'package:flutter_local_db/src/notifiers/queue_cache.dart';
 
 import 'model/config_db_model.dart';
 
-
 class LocalDB {
-
-
-  static Future<void> init({ConfigDBModel config = const ConfigDBModel()}) async => await localDatabaseNotifier.value.init(config);
+  static Future<void> init(
+          {ConfigDBModel config = const ConfigDBModel()}) async =>
+      await localDatabaseNotifier.value.init(config);
 
   // ignore: non_constant_identifier_names
   static Future<void> Post(String key, Map<dynamic, dynamic> data) async {
-
-    if( !_isValidId(key) ){
-
-      throw Exception("The provided key is invalid. Please ensure it contains only letters and numbers, with a minimum length of 9 characters.");
+    if (!_isValidId(key)) {
+      throw Exception(
+          "The provided key is invalid. Please ensure it contains only letters and numbers, with a minimum length of 9 characters.");
     }
 
-    if( _isValidMap(data) ) {
-
+    if (_isValidMap(data)) {
       final currentData = DataLocalDBModel(
         id: key,
         sizeKb: _mapToKb(data),
@@ -30,10 +27,9 @@ class LocalDB {
         data: data,
       );
 
-      await queueCache.value.process(() async => await localDatabaseNotifier.value.post(currentData));
-
+      await queueCache.value.process(
+          () async => await localDatabaseNotifier.value.post(currentData));
     }
-
   }
 
   // ignore: non_constant_identifier_names
@@ -47,7 +43,8 @@ class LocalDB {
   }
 
 // ignore: non_constant_identifier_names
-  static Future<DataLocalDBModel> Put(String id, Map<dynamic, dynamic> data) async {
+  static Future<DataLocalDBModel> Put(
+      String id, Map<dynamic, dynamic> data) async {
     final mapData = DataLocalDBModel(
       id: id,
       sizeKb: _mapToKb(data),
@@ -73,25 +70,25 @@ class LocalDB {
     return await localDatabaseNotifier.value.deepClean();
   }
 
-  static double _mapToKb(Map map) => double.parse((utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
-  static int _toHash (Iterable<dynamic> values) => Object.hashAll(values);
+  static double _mapToKb(Map map) => double.parse(
+      (utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
+  static int _toHash(Iterable<dynamic> values) => Object.hashAll(values);
   static bool _isValidMap(dynamic map) {
-    try{
-
+    try {
       String jsonString = jsonEncode(map);
 
       jsonDecode(jsonString);
 
       return true;
-    }catch(error, stackTrace){
+    } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
       return false;
     }
   }
+
   static bool _isValidId(String text) {
     RegExp regex = RegExp(r'^[a-zA-Z0-9-]{9,}$');
     return regex.hasMatch(text);
   }
-
 }

@@ -5,19 +5,21 @@ import 'package:flutter_local_db/src/repository/db_device_repository.dart';
 import 'db_interface.dart';
 
 class DataBaseVM implements DataBaseServiceInterface {
-
   @override
   Future<bool> init(ConfigDBModel config) async {
     return await repositoryNotifier.value.init(config);
   }
 
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) async {
+  Future<List<DataLocalDBModel>> get(
+      {int limit = 20, int offset = 0, bool secure = false}) async {
     return await repositoryNotifier.value.get(limit: limit, offset: offset);
   }
 
   @override
-  Future<DataLocalDBModel> post(DataLocalDBModel data, {bool secure = false}) async => await repositoryNotifier.value.post(data);
+  Future<DataLocalDBModel> post(DataLocalDBModel data,
+          {bool secure = false}) async =>
+      await repositoryNotifier.value.post(data);
 
   @override
   Future<bool> clean({bool secure = false}) async {

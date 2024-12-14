@@ -1,1 +1,1 @@
-enum RequestMethod {get,post,put,delete,geById}
+enum RequestMethod { get, post, put, delete, geById }

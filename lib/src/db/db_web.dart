@@ -6,7 +6,6 @@ import 'package:web/web.dart' as web;
 import 'db_interface.dart';
 
 class DataBaseVM implements DataBaseServiceInterface {
-
   @override
   Future<bool> init(ConfigDBModel config) async {
     _databaseName.updateState("de");
@@ -17,7 +16,8 @@ class DataBaseVM implements DataBaseServiceInterface {
   }
 
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) {
+  Future<List<DataLocalDBModel>> get(
+      {int limit = 20, int offset = 0, bool secure = false}) {
     // TODO: implement get
     throw UnimplementedError();
   }

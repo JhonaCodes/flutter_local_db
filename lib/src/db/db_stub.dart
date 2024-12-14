@@ -25,7 +25,8 @@ class DataBaseVM implements DataBaseServiceInterface {
   }
 
   @override
-  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) {
+  Future<List<DataLocalDBModel>> get(
+      {int limit = 20, int offset = 0, bool secure = false}) {
     // TODO: implement get
     throw UnimplementedError();
   }
