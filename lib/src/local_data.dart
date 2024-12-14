@@ -4,9 +4,9 @@ import 'package:flutter_local_db/src/db/database.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
+final ReactiveNotifier<DataBase> _instance = ReactiveNotifier<DataBase>(() => DataBase());
+
 class LocalDB {
-  static final ReactiveNotifier<DataBase> _instance =
-      ReactiveNotifier<DataBase>(() => DataBase());
 
   static Future<void> init() async {
     await _instance.value.init();
