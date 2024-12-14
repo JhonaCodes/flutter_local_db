@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:flutter_local_db/src/cache/data_index_cache.dart';
-import 'package:flutter_local_db/src/cache/prefix_index_cache.dart';
 import 'package:flutter_local_db/src/db/db_interface.dart';
 import 'package:flutter_local_db/src/enum/db_directory.dart';
 import 'package:flutter_local_db/src/enum/db_files.dart';
@@ -11,6 +9,8 @@ import 'package:flutter_local_db/src/format/manifest_format.dart';
 import 'package:flutter_local_db/src/model/active_index_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:flutter_local_db/src/model/main_index_model.dart';
+import 'package:flutter_local_db/src/notifiers/data_index_cache.dart';
+import 'package:flutter_local_db/src/notifiers/prefix_index_cache.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
