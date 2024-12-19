@@ -26,10 +26,10 @@ class MainIndexModel {
     final containersMap = Map<String, ContainerPaths>.fromEntries(
       json.entries.where((e) => e.key != 'total_index').map(
             (e) => MapEntry(
-          e.key,
-          ContainerPaths.fromJson(e.value as Map<String, dynamic>),
-        ),
-      ),
+              e.key,
+              ContainerPaths.fromJson(e.value as Map<String, dynamic>),
+            ),
+          ),
     );
 
     return MainIndexModel(
@@ -97,7 +97,7 @@ class ContainerPaths {
   /// Converts the path configuration to a JSON map
   /// Includes all defined paths, even if null
   Map toJson() => {
-    'active': active,
-    'backup': backup,
-  };
+        'active': active,
+        'backup': backup,
+      };
 }

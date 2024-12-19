@@ -11,4 +11,4 @@ import 'package:reactive_notifier/reactive_notifier.dart';
 /// - Value: List of data models within that container
 @protected
 final ReactiveNotifier<Map<String, List<DataLocalDBModel>>> dataIndexCache =
-ReactiveNotifier<Map<String, List<DataLocalDBModel>>>(() => {});
+    ReactiveNotifier<Map<String, List<DataLocalDBModel>>>(() => {});

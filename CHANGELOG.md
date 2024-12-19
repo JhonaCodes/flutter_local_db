@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0] - December 15, 2024
+
+### Added
+- New `local_database_notifier` for reactive state management
+- Initial implementation of `MobileDirectoryManager` to handle directory operations
+- Enhanced singleton pattern enforcement after initialization
+
+### Improved
+- Comprehensive code documentation across the library
+- Significantly simplified initialization process
+- Better separation of concerns in core components
+- Directory management abstraction with dedicated handlers
+
+
 ## [0.1.0] - 2024-12-15
 ### Added
 - Advanced block-based storage system

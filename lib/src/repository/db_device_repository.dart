@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter_local_db/src/db/db_interface.dart';
+import 'package:flutter_local_db/src/directory/mobile_directory_manager.dart';
 import 'package:flutter_local_db/src/enum/db_directory.dart';
 import 'package:flutter_local_db/src/enum/db_files.dart';
 import 'package:flutter_local_db/src/format/manifest_format.dart';
@@ -14,7 +15,6 @@ import 'package:flutter_local_db/src/notifiers/data_index_cache.dart';
 import 'package:flutter_local_db/src/notifiers/local_database_notifier.dart';
 import 'package:flutter_local_db/src/notifiers/prefix_index_cache.dart';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
 final repositoryNotifier = ReactiveNotifier<DBRepository>(DBRepository.new);
@@ -28,74 +28,17 @@ class DBRepository implements DataBaseServiceInterface {
     _isOpen = true;
   }
 
-  final List<String> _suDirectories = [
-    DBDirectory.active.path,
-    DBDirectory.backup.path,
-
-    /// For next releases in this order.
-    //DBDirectory.secure.path,
-    //DBDirectory.sync.path,
-    //DBDirectory.historical.path,
-    //DBDirectory.sealed.path,
-  ];
-
-  static final List<String> _initialFiles = [
-    DBFile.manifest.ext,
-    DBFile.globalIndex.ext
-  ];
-
-  Future<String> get _mainDir async {
-    final appDir = await getApplicationDocumentsDirectory();
-
-    final newDir =
-        Directory('${appDir.path}/${DBDirectory.localDatabase.path}');
-
-    try {
-      if (!newDir.existsSync()) {
-        await newDir.create(recursive: true).then((response) {
-          if (response.path.contains(DBDirectory.localDatabase.path)) {
-            return response.path;
-          }
-        });
-      }
-    } catch (e, stack) {
-      log(e.toString());
-      log(stack.toString());
-    }
-
-    return newDir.path;
-  }
+  String get _mainDir => MobileDirectoryService.instance.notifier.data;
 
   /// Initialization
   @override
   Future<bool> init(ConfigDBModel config) async {
     try {
-      configNotifier.updateState(config);
+      /// Init Route data for current device route path
+      await MobileDirectoryService.instance.notifier.init();
 
-      /// Creating sub-directories
-      for (String dir in _suDirectories) {
-        await _createSubDirectory(dir);
-      }
-
-      /// Creating files
-      for (String file in _initialFiles) {
-        final fileComponent = File('${await _mainDir}/$file');
-
-        if (!fileComponent.existsSync()) {
-          await fileComponent.create(recursive: true).then((response) {
-            if (file.contains(DBFile.manifest.ext)) {
-              fileComponent.writeAsStringSync(ManifestFormat.toToml());
-            }
-
-            if (file.contains(DBFile.globalIndex.ext)) {
-              fileComponent
-                  .writeAsStringSync(jsonEncode(MainIndexModel.toInitial()));
-            }
-          });
-        } else {
-          log('File already exists: $file');
-        }
-      }
+      /// Configure database instance
+      LocalDataBaseNotifier.instanceConfig.updateState(config);
 
       return true;
     } catch (error, stackTrace) {
@@ -112,15 +55,14 @@ class DBRepository implements DataBaseServiceInterface {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {
-      final idPrefix = "${model.id[0]}${model.id[1]}";
-      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
-      final String prefixPath = "$activePath/$idPrefix";
+      final String idPrefix =
+          MobileDirectoryService.instance.notifier.prefixFromId(model.id);
+      final String prefixPath =
+          MobileDirectoryService.instance.notifier.activePrefixPath(idPrefix);
 
-      // Creamos el directorio si no existe
-      final prefixDir = Directory(prefixPath);
-      if (!prefixDir.existsSync()) {
-        await prefixDir.create(recursive: true);
-      }
+      /// Create dir if not exist.
+      await MobileDirectoryService.instance.notifier
+          .createDirectoryIfNotExist(prefixPath);
 
       // Manejo optimizado del índice de prefijo
       final String prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
@@ -134,9 +76,9 @@ class DBRepository implements DataBaseServiceInterface {
       }
 
       // Usar caché si está disponible
-      if (prefixIndexCache.value.containsKey(prefixIndexPath)) {
-        prefixIndex =
-            ActiveIndexModel.fromJson(prefixIndexCache.value[prefixIndexPath]!);
+      if (prefixIndexCache.notifier.containsKey(prefixIndexPath)) {
+        prefixIndex = ActiveIndexModel.fromJson(
+            prefixIndexCache.notifier[prefixIndexPath]!);
       } else {
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) {
@@ -148,7 +90,7 @@ class DBRepository implements DataBaseServiceInterface {
               : jsonDecode(content));
         }
         // Guardar en caché
-        prefixIndexCache.value[prefixIndexPath] = prefixIndex.toJson();
+        prefixIndexCache.notifier[prefixIndexPath] = prefixIndex.toJson();
       }
 
       if (prefixIndex.records.containsKey(model.id)) {
@@ -162,8 +104,8 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Usar caché de bloques
       List<DataLocalDBModel> records;
-      if (dataIndexCache.value.containsKey(blockPath)) {
-        records = List.from(dataIndexCache.value[blockPath]!);
+      if (dataIndexCache.notifier.containsKey(blockPath)) {
+        records = List.from(dataIndexCache.notifier[blockPath]!);
       } else {
         final blockFile = File(blockPath);
         if (blockFile.existsSync()) {
@@ -179,12 +121,12 @@ class DBRepository implements DataBaseServiceInterface {
         } else {
           records = [];
         }
-        dataIndexCache.value[blockPath] = records;
+        dataIndexCache.notifier[blockPath] = records;
       }
 
       // Añadir nuevo registro
       records.add(model);
-      dataIndexCache.value[blockPath] = records;
+      dataIndexCache.notifier[blockPath] = records;
 
       // Escribir a disco de manera eficiente
       await File(blockPath).writeAsString(
@@ -193,9 +135,12 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Actualizar índice
       prefixIndex.blocks[currentBlock] = BlockData(
-        totalLines: configNotifier.value.maxRecordsPerFile,
+        totalLines:
+            LocalDataBaseNotifier.instanceConfig.notifier.maxRecordsPerFile,
         usedLines: records.length,
-        freeSpaces: configNotifier.value.maxRecordsPerFile - records.length,
+        freeSpaces:
+            LocalDataBaseNotifier.instanceConfig.notifier.maxRecordsPerFile -
+                records.length,
       );
 
       prefixIndex.records[model.id] = RecordLocation(
@@ -204,9 +149,9 @@ class DBRepository implements DataBaseServiceInterface {
       );
 
       // Actualizar caché y escribir índice
-      prefixIndexCache.value[prefixIndexPath] = prefixIndex.toJson();
+      prefixIndexCache.notifier[prefixIndexPath] = prefixIndex.toJson();
       await File(prefixIndexPath).writeAsString(
-          jsonEncode(prefixIndexCache.value[prefixIndexPath]!),
+          jsonEncode(prefixIndexCache.notifier[prefixIndexPath]!),
           flush: true);
 
       // Actualizar índice principal
@@ -227,18 +172,16 @@ class DBRepository implements DataBaseServiceInterface {
 
     try {
       // Limpiar caché
-      prefixIndexCache.value.clear();
-      dataIndexCache.value.clear();
-
-      // Obtener el directorio principal
-      final baseDir = await _mainDir;
+      prefixIndexCache.notifier.clear();
+      dataIndexCache.notifier.clear();
 
       // Lista de todos los subdirectorios a limpiar
-      final directories = _suDirectories;
+      final directories =
+          MobileDirectoryService.instance.notifier.suDirectories;
 
       // Eliminar contenido de cada subdirectorio
       for (String dir in directories) {
-        final dirPath = "$baseDir/$dir";
+        final dirPath = "$_mainDir/$dir";
         final directory = Directory(dirPath);
 
         if (directory.existsSync()) {
@@ -255,7 +198,7 @@ class DBRepository implements DataBaseServiceInterface {
       }
 
       // Mantener el archivo manifest (.toml) sin cambios
-      final manifestPath = "$baseDir/${DBFile.manifest.ext}";
+      final manifestPath = "$_mainDir/${DBFile.manifest.ext}";
       final manifestFile = File(manifestPath);
       if (!manifestFile.existsSync()) {
         // Si no existe el manifest, lo creamos con la configuración inicial
@@ -264,7 +207,7 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Recrear la estructura de directorios base
       for (String dir in directories) {
-        final dirPath = "$baseDir/$dir";
+        final dirPath = "$_mainDir/$dir";
         final directory = Directory(dirPath);
 
         if (!directory.existsSync()) {
@@ -288,7 +231,7 @@ class DBRepository implements DataBaseServiceInterface {
       final idPrefix = "${id[0]}${id[1]}";
 
       // Get paths
-      final activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final activePath = "$_mainDir/${DBDirectory.active.path}";
       final prefixPath = "$activePath/$idPrefix";
       final prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
@@ -329,14 +272,14 @@ class DBRepository implements DataBaseServiceInterface {
       List<DataLocalDBModel> records;
 
       // Read current block content
-      if (dataIndexCache.value.containsKey(blockPath)) {
-        records = List.from(dataIndexCache.value[blockPath]!);
+      if (dataIndexCache.notifier.containsKey(blockPath)) {
+        records = List.from(dataIndexCache.notifier[blockPath]!);
       } else {
         final blockContent = await blockFile.readAsString();
         final List<dynamic> blockRecords = jsonDecode(blockContent);
         records =
             blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
-        dataIndexCache.value[blockPath] = records;
+        dataIndexCache.notifier[blockPath] = records;
       }
 
       // Find record index
@@ -358,7 +301,7 @@ class DBRepository implements DataBaseServiceInterface {
             flush: true);
 
         // Update cache
-        dataIndexCache.value[blockPath] = records;
+        dataIndexCache.notifier[blockPath] = records;
 
         // Remove from index
         prefixIndex.records.remove(id);
@@ -372,9 +315,12 @@ class DBRepository implements DataBaseServiceInterface {
         } else {
           // Update block statistics
           prefixIndex.blocks[recordLocation.block] = BlockData(
-            totalLines: configNotifier.value.maxRecordsPerFile,
+            totalLines:
+                LocalDataBaseNotifier.instanceConfig.notifier.maxRecordsPerFile,
             usedLines: records.length,
-            freeSpaces: configNotifier.value.maxRecordsPerFile - records.length,
+            freeSpaces: LocalDataBaseNotifier
+                    .instanceConfig.notifier.maxRecordsPerFile -
+                records.length,
           );
         }
 
@@ -418,7 +364,7 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   Future<File>? get mainIndexFile async =>
-      File("${await _mainDir}/${DBFile.globalIndex.ext}");
+      File("$_mainDir/${DBFile.globalIndex.ext}");
 
   Future<String>? get mainIndexData async {
     final File? data = await mainIndexFile;
@@ -457,8 +403,8 @@ class DBRepository implements DataBaseServiceInterface {
   }
 
   Future<void> clearCache() async {
-    prefixIndexCache.value.clear();
-    dataIndexCache.value.clear();
+    prefixIndexCache.notifier.clear();
+    dataIndexCache.notifier.clear();
   }
 
   /// Obtiene una lista paginada de registros ordenados por fecha (más reciente a más antiguo)
@@ -506,7 +452,7 @@ class DBRepository implements DataBaseServiceInterface {
       final records = <MapEntry<DateTime, DataLocalDBModel>>[];
 
       // Obtener directorio activo
-      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final String activePath = "$_mainDir/${DBDirectory.active.path}";
 
       // Obtener índice principal
       final mainFile = await mainIndexFile;
@@ -599,7 +545,7 @@ class DBRepository implements DataBaseServiceInterface {
 
       for (var prefix in mainIndex.containers.keys) {
         final prefixIndexPath =
-            "${await _mainDir}/${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}";
+            "$_mainDir/${DBDirectory.active.path}/$prefix/${DBFile.activeSubIndex.ext}";
         final prefixIndexFile = File(prefixIndexPath);
         if (!prefixIndexFile.existsSync()) continue;
 
@@ -627,7 +573,7 @@ class DBRepository implements DataBaseServiceInterface {
       final idPrefix = "${id.toString()[0]}${id.toString()[1]}";
 
       // Get active directory path
-      final activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final activePath = "$_mainDir/${DBDirectory.active.path}";
       final prefixPath = "$activePath/$idPrefix";
       final prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
@@ -661,8 +607,8 @@ class DBRepository implements DataBaseServiceInterface {
       }
 
       // Check block cache first
-      if (dataIndexCache.value.containsKey(blockPath)) {
-        final cachedRecords = dataIndexCache.value[blockPath]!;
+      if (dataIndexCache.notifier.containsKey(blockPath)) {
+        final cachedRecords = dataIndexCache.notifier[blockPath]!;
         return cachedRecords.firstWhere(
           (r) => r.id == id.toString(),
           orElse: () => throw Exception('Record not found in cached block'),
@@ -680,7 +626,7 @@ class DBRepository implements DataBaseServiceInterface {
       final records = blockRecords
           .map((record) => DataLocalDBModel.fromJson(record))
           .toList();
-      dataIndexCache.value[blockPath] = records;
+      dataIndexCache.notifier[blockPath] = records;
 
       // Find and return the specific record
       return records.firstWhere(
@@ -703,7 +649,7 @@ class DBRepository implements DataBaseServiceInterface {
       final idPrefix = "${id[0]}${id[1]}";
 
       // Get paths
-      final activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final activePath = "$_mainDir/${DBDirectory.active.path}";
       final prefixPath = "$activePath/$idPrefix";
       final prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
 
@@ -745,14 +691,14 @@ class DBRepository implements DataBaseServiceInterface {
       List<DataLocalDBModel> records;
 
       // Read current block content
-      if (dataIndexCache.value.containsKey(blockPath)) {
-        records = List.from(dataIndexCache.value[blockPath]!);
+      if (dataIndexCache.notifier.containsKey(blockPath)) {
+        records = List.from(dataIndexCache.notifier[blockPath]!);
       } else {
         final blockContent = await blockFile.readAsString();
         final List<dynamic> blockRecords = jsonDecode(blockContent);
         records =
             blockRecords.map((r) => DataLocalDBModel.fromJson(r)).toList();
-        dataIndexCache.value[blockPath] = records;
+        dataIndexCache.notifier[blockPath] = records;
       }
 
       // Find record index
@@ -774,7 +720,7 @@ class DBRepository implements DataBaseServiceInterface {
             flush: true);
 
         // Update cache
-        dataIndexCache.value[blockPath] = records;
+        dataIndexCache.notifier[blockPath] = records;
 
         // Update index with new timestamp
         prefixIndex.records[id] = RecordLocation(
@@ -820,11 +766,11 @@ class DBRepository implements DataBaseServiceInterface {
 
     try {
       // Limpiar caché
-      prefixIndexCache.value.clear();
-      dataIndexCache.value.clear();
+      prefixIndexCache.notifier.clear();
+      dataIndexCache.notifier.clear();
 
       // Obtener directorio activo
-      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final String activePath = "$_mainDir/${DBDirectory.active.path}";
       final activeDir = Directory(activePath);
 
       if (!activeDir.existsSync()) {
@@ -878,26 +824,9 @@ class DBRepository implements DataBaseServiceInterface {
     }
   }
 
-  /// Function for creating subdirectories
-  Future<bool> _createSubDirectory(String directoryName) async {
-    final String awaitedDirectory = await _mainDir;
-
-    final subDirectory = Directory("$awaitedDirectory/$directoryName");
-
-    if (!subDirectory.existsSync()) {
-      await subDirectory.create(recursive: true).then((response) {
-        return response.path.contains(directoryName);
-      });
-    } else {
-      log("Folder already exist: $directoryName");
-    }
-
-    return true;
-  }
-
   Future<bool> rebuildMainIndex() async {
     try {
-      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final String activePath = "$_mainDir/${DBDirectory.active.path}";
       final activeDir = Directory(activePath);
 
       if (!activeDir.existsSync()) return false;
@@ -934,8 +863,7 @@ class DBRepository implements DataBaseServiceInterface {
 
   Future<bool> _rebuildPrefixIndex(String prefix) async {
     try {
-
-      final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
+      final String activePath = "$_mainDir/${DBDirectory.active.path}";
       final String prefixPath = "$activePath/$prefix";
       final prefixDir = Directory(prefixPath);
 
@@ -959,9 +887,12 @@ class DBRepository implements DataBaseServiceInterface {
               // Reconstruir información del bloque
               int usedLines = records.length;
               newPrefixIndex.blocks[blockName] = BlockData(
-                totalLines: configNotifier.value.maxRecordsPerFile,
+                totalLines: LocalDataBaseNotifier
+                    .instanceConfig.notifier.maxRecordsPerFile,
                 usedLines: usedLines,
-                freeSpaces: configNotifier.value.maxRecordsPerFile - usedLines,
+                freeSpaces: LocalDataBaseNotifier
+                        .instanceConfig.notifier.maxRecordsPerFile -
+                    usedLines,
               );
 
               // Reconstruir registros
@@ -986,7 +917,7 @@ class DBRepository implements DataBaseServiceInterface {
       await File(indexPath).writeAsString(jsonEncode(newPrefixIndex.toJson()));
 
       // Actualizar caché
-      prefixIndexCache.value[indexPath] = newPrefixIndex.toJson();
+      prefixIndexCache.notifier[indexPath] = newPrefixIndex.toJson();
 
       return true;
     } catch (e) {

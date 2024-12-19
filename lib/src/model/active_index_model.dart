@@ -36,9 +36,9 @@ class ActiveIndexModel {
   /// Converts the current state to a JSON map for persistence
   /// This includes all block information and record locations
   Map<String, dynamic> toJson() => {
-    'blocks': blocks.map((key, value) => MapEntry(key, value.toJson())),
-    'records': records.map((key, value) => MapEntry(key, value.toJson())),
-  };
+        'blocks': blocks.map((key, value) => MapEntry(key, value.toJson())),
+        'records': records.map((key, value) => MapEntry(key, value.toJson())),
+      };
 
   /// Creates an initial empty index structure with a single block
   /// Used when initializing a new database instance
@@ -47,15 +47,15 @@ class ActiveIndexModel {
   /// - One initial block ('act_001.dex') with 2000 lines capacity
   /// - Empty records map
   static Map<String, dynamic> toInitial() => {
-    'blocks': {
-      'act_001.dex': BlockData(
-        totalLines: 2000,
-        usedLines: 0,
-        freeSpaces: 0,
-      ).toJson(),
-    },
-    'records': {},
-  };
+        'blocks': {
+          'act_001.dex': BlockData(
+            totalLines: 2000,
+            usedLines: 0,
+            freeSpaces: 0,
+          ).toJson(),
+        },
+        'records': {},
+      };
 }
 
 /// Contains metadata and statistics for each data block file within the 'active' folder.
@@ -94,10 +94,10 @@ class BlockData {
   /// Converts the block statistics to a JSON map for storage
   /// Keys follow snake_case convention for consistency
   Map<String, dynamic> toJson() => {
-    'total_lines': totalLines,
-    'used_lines': usedLines,
-    'free_spaces': freeSpaces,
-  };
+        'total_lines': totalLines,
+        'used_lines': usedLines,
+        'free_spaces': freeSpaces,
+      };
 }
 
 /// Stores the location information for each record within the database system.
@@ -130,7 +130,7 @@ class RecordLocation {
   /// Converts the location information to a JSON map
   /// Keys follow snake_case convention for consistency with other models
   Map<String, dynamic> toJson() => {
-    'block': block,
-    'last_update': lastUpdate,
-  };
+        'block': block,
+        'last_update': lastUpdate,
+      };
 }

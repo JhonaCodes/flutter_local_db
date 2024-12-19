@@ -18,12 +18,11 @@ class DataLocalDBModel {
   final Map<dynamic, dynamic> data;
 
   /// Creates a new instance with all required fields
-  DataLocalDBModel({
-    required this.id,
-    required this.sizeKb,
-    required this.hash,
-    required this.data
-  });
+  DataLocalDBModel(
+      {required this.id,
+      required this.sizeKb,
+      required this.hash,
+      required this.data});
 
   /// Converts the model instance to a JSON map
   /// Used when sending responses to API requests

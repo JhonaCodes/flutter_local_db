@@ -17,7 +17,7 @@ class DataBaseVM implements DataBaseServiceInterface {
     _databaseName.updateState("de");
 
     // Opens IndexedDB database with configured name
-    web.window.indexedDB.open("${_databaseName.value}.dex");
+    web.window.indexedDB.open("${_databaseName.notifier}.dex");
 
     return false;
   }
@@ -50,7 +50,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<bool> Always returns true after deletion
   @override
   Future<bool> delete(String id, {bool secure = false}) async {
-    web.window.indexedDB.deleteDatabase(_databaseName.value);
+    web.window.indexedDB.deleteDatabase(_databaseName.notifier);
     return true;
   }
 

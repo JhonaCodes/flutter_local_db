@@ -14,7 +14,7 @@ class LocalDB {
   /// @param config Optional database configuration (defaults to ConfigDBModel())
   static Future<void> init(
           {ConfigDBModel config = const ConfigDBModel()}) async =>
-      await localDatabaseNotifier.value.init(config);
+      await LocalDataBaseNotifier.instanceDatabase.notifier.init(config);
 
   /// Creates a new record in the database
   /// @param key Unique identifier for the record (must be alphanumeric, min 9 chars)
@@ -35,8 +35,9 @@ class LocalDB {
         data: data,
       );
 
-      await queueCache.value.process(
-          () async => await localDatabaseNotifier.value.post(currentData));
+      await queueCache.notifier.process(() async => await LocalDataBaseNotifier
+          .instanceDatabase.notifier
+          .post(currentData));
     }
   }
 
@@ -44,14 +45,15 @@ class LocalDB {
   /// @param limit Maximum number of records to retrieve (default: 10)
   // ignore: non_constant_identifier_names
   static Future<List<DataLocalDBModel>> Get({int limit = 10}) async {
-    return await localDatabaseNotifier.value.get(limit: limit);
+    return await LocalDataBaseNotifier.instanceDatabase.notifier
+        .get(limit: limit);
   }
 
   /// Retrieves a single record by its ID
   /// @param id Unique identifier of the record
   // ignore: non_constant_identifier_names
   static Future<DataLocalDBModel> GetById(String id) async {
-    return await localDatabaseNotifier.value.getById(id);
+    return await LocalDataBaseNotifier.instanceDatabase.notifier.getById(id);
   }
 
   /// Updates an existing record
@@ -67,26 +69,26 @@ class LocalDB {
       data: data,
     );
 
-    return await localDatabaseNotifier.value.put(mapData);
+    return await LocalDataBaseNotifier.instanceDatabase.notifier.put(mapData);
   }
 
   /// Deletes a record by its ID
   /// @param id Unique identifier of the record to delete
   // ignore: non_constant_identifier_names
   static Future<bool> Delete(String id) async {
-    return await localDatabaseNotifier.value.delete(id);
+    return await LocalDataBaseNotifier.instanceDatabase.notifier.delete(id);
   }
 
   /// Removes all records from the database
   // ignore: non_constant_identifier_names
   static Future<bool> Clean() async {
-    return await localDatabaseNotifier.value.clean();
+    return await LocalDataBaseNotifier.instanceDatabase.notifier.clean();
   }
 
   /// Performs a complete reset of the database
   // ignore: non_constant_identifier_names
   static Future<bool> DeepClean() async {
-    return await localDatabaseNotifier.value.deepClean();
+    return await LocalDataBaseNotifier.instanceDatabase.notifier.deepClean();
   }
 
   /// Calculates the size of a map in kilobytes
