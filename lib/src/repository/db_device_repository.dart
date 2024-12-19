@@ -934,7 +934,7 @@ class DBRepository implements DataBaseServiceInterface {
 
   Future<bool> _rebuildPrefixIndex(String prefix) async {
     try {
-      log("RECONSTRUYENDO INDICE EN PREFIJO $prefix");
+
       final String activePath = "${await _mainDir}/${DBDirectory.active.path}";
       final String prefixPath = "$activePath/$prefix";
       final prefixDir = Directory(prefixPath);
