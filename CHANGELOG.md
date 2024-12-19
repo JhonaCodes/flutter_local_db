@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1] - December 15, 2024
+- Update example.
+
+
 ## [0.2.0] - December 15, 2024
 
 ### Added

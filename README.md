@@ -22,7 +22,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.2.0
+  flutter_local_db: ^0.2.1
 ```
 
 ## Basic Usage
