@@ -12,7 +12,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<bool> Success status of initialization
   @override
   Future<bool> init(ConfigDBModel config) async {
-    return await repositoryNotifier.value.init(config);
+    return await repositoryNotifier.notifier.init(config);
   }
 
   /// Retrieves a list of database records with pagination
@@ -23,7 +23,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   @override
   Future<List<DataLocalDBModel>> get(
       {int limit = 20, int offset = 0, bool secure = false}) async {
-    return await repositoryNotifier.value.get(limit: limit, offset: offset);
+    return await repositoryNotifier.notifier.get(limit: limit, offset: offset);
   }
 
   /// Creates a new record in the database
@@ -33,14 +33,14 @@ class DataBaseVM implements DataBaseServiceInterface {
   @override
   Future<DataLocalDBModel> post(DataLocalDBModel data,
           {bool secure = false}) async =>
-      await repositoryNotifier.value.post(data);
+      await repositoryNotifier.notifier.post(data);
 
   /// Cleans the database by removing all records
   /// @param secure Flag for secure storage access (default: false)
   /// @return Future<bool> Success status of the operation
   @override
   Future<bool> clean({bool secure = false}) async {
-    await repositoryNotifier.value.clean();
+    await repositoryNotifier.notifier.clean();
     return true;
   }
 
@@ -50,7 +50,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<bool> Success status of the deletion
   @override
   Future<bool> delete(String id, {bool secure = false}) async {
-    await repositoryNotifier.value.delete(id);
+    await repositoryNotifier.notifier.delete(id);
     return true;
   }
 
@@ -60,7 +60,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<DataLocalDBModel> The retrieved record
   @override
   Future<DataLocalDBModel> getById(String id, {bool secure = false}) {
-    return repositoryNotifier.value.getById(id);
+    return repositoryNotifier.notifier.getById(id);
   }
 
   /// Updates an existing record in the database
@@ -69,7 +69,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<DataLocalDBModel> The updated record
   @override
   Future<DataLocalDBModel> put(DataLocalDBModel data, {bool secure = false}) {
-    return repositoryNotifier.value.put(data);
+    return repositoryNotifier.notifier.put(data);
   }
 
   /// Performs a deep clean of the database, removing all data and resetting state
@@ -77,7 +77,7 @@ class DataBaseVM implements DataBaseServiceInterface {
   /// @return Future<bool> Success status of the operation
   @override
   Future<bool> deepClean({bool secure = false}) async {
-    await repositoryNotifier.value.deepClean();
+    await repositoryNotifier.notifier.deepClean();
     return true;
   }
 }
