@@ -1,4 +1,4 @@
-# Flutter Local DB v0.1.0
+# Flutter Local DB
 
 A high-performance local database for Flutter that provides simple JSON storage with a powerful underlying architecture. Designed for efficient data persistence with automatic block management and smart indexing.
 
