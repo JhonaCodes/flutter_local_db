@@ -58,7 +58,8 @@ class DBRepository implements DataBaseServiceInterface {
 
     try {
 
-      final String idPrefix   = MobileDirectoryService.instance.notifier.prefixFromId(model.id);
+      final String idPrefix   = '${model.id[0]}${model.id[1]}';
+
       final String prefixPath = MobileDirectoryService.instance.notifier.activePrefixPath(idPrefix);
 
       /// Create dir if not exist.
@@ -66,8 +67,6 @@ class DBRepository implements DataBaseServiceInterface {
 
       // Manejo optimizado del índice de prefijo
       final String prefixIndexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
-
-
       ActiveIndexModel prefixIndex;
 
 
@@ -110,6 +109,7 @@ class DBRepository implements DataBaseServiceInterface {
       } else {
 
         final blockFile = File(blockPath);
+
         if (blockFile.existsSync()) {
           final content = await blockFile.readAsString();
           if (content.isNotEmpty) {
@@ -457,8 +457,7 @@ class DBRepository implements DataBaseServiceInterface {
   /// - Si no hay registros, retorna una lista vacía
   /// - Utiliza el lastUpdate del índice para el ordenamiento
   @override
-  Future<List<DataLocalDBModel>> get(
-      {int limit = 20, int offset = 0, bool secure = false}) async {
+  Future<List<DataLocalDBModel>> get({int limit = 20, int offset = 0, bool secure = false}) async {
     if (!_isOpen) throw Exception('Repository must be open');
 
     try {

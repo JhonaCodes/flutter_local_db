@@ -34,9 +34,6 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
     DBFile.globalIndex.ext
   ];
 
-  /// prefix
-  String prefixFromId(String id) => '${id[0]}${id[1]}';
-
   /// Paths
   String activePrefixPath(String prefix) => '$data${DBDirectory.active.path}/$prefix';
 
@@ -157,11 +154,8 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
 
     final String indexPath = "$prefixPath/$subIndex";
 
-    //log(indexPath);
 
     final File indexFile = File(indexPath);
-
-    //log(indexFile.path);
 
     final bool isIndexFileOnPath = await indexFile.exists();
 
@@ -266,7 +260,7 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
       final indexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
       await File(indexPath).writeAsString(jsonEncode(newPrefixIndex.toJson()));
 
-      // Update cahe data.
+      // Update cache data.
       prefixIndexCache.notifier[indexPath] = newPrefixIndex.toJson();
 
       return true;
