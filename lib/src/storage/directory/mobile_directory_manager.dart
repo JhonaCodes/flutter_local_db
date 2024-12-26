@@ -10,7 +10,6 @@ import 'package:flutter_local_db/src/model/active_index_model.dart';
 import 'package:flutter_local_db/src/model/data_model.dart';
 import 'package:flutter_local_db/src/model/main_index_model.dart';
 import 'package:flutter_local_db/src/notifiers/local_database_notifier.dart';
-import 'package:flutter_local_db/src/notifiers/prefix_index_cache.dart';
 import 'package:flutter_local_db/src/utils/system_utils.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
@@ -21,12 +20,6 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
   final List<String> suDirectories = [
     DBDirectory.active.path,
     DBDirectory.backup.path,
-
-    /// For next releases in this order.
-    //DBDirectory.secure.path,
-    //DBDirectory.sync.path,
-    //DBDirectory.historical.path,
-    //DBDirectory.sealed.path,
   ];
 
   final List<String> initialFiles = [
@@ -34,8 +27,6 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
     DBFile.globalIndex.ext
   ];
 
-  /// Paths
-  String activePrefixPath(String prefix) => '$data${DBDirectory.active.path}/$prefix';
 
   @override
   Future<void> init() async {
@@ -62,16 +53,17 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
       }
     }
 
-    await _initialFilesAndDirectories();
-  }
-
-
-
-  Future<void> _initialFilesAndDirectories() async {
     await _createInitialFiles();
     await _createSubDirectories();
     _readAllDataDirectories();
+
   }
+
+
+
+  String activePrefixPath(String prefix) => '$data${DBDirectory.active.path}/$prefix';
+
+
 
   Future<void> _createInitialFiles() async {
     try {
@@ -85,8 +77,7 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
             }
 
             if (file.contains(DBFile.globalIndex.ext)) {
-              fileComponent
-                  .writeAsStringSync(jsonEncode(MainIndexModel.toInitial()));
+              fileComponent.writeAsStringSync(jsonEncode(LocalDBNotifier.mainIndexCache.notifier.toInitial()));
             }
           });
         } else {
@@ -136,13 +127,10 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
       await Directory(prefixPatch).create(recursive: true).then((response)async{
 
         /// Create prefix on cache list.
-        LocalDataBaseNotifier.currentListPrefix.transformState((list) {
+        LocalDBNotifier.currentListPrefix.transformState((list) {
           list.add(prefixIndex);
-          //log("Prefix $prefixIndex was added on currentListPrefix cache");
           return list;
         });
-
-        //log("${LocalDataBaseNotifier.currentListPrefix.notifier}");
 
       });
 
@@ -232,9 +220,9 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
               int usedLines = records.length;
 
               newPrefixIndex.blocks[blockName] = BlockData(
-                totalLines: LocalDataBaseNotifier.instanceConfig.notifier.maxRecordsPerFile,
+                totalLines: LocalDBNotifier.instanceConfigDB.notifier.maxRecordsPerFile,
                 usedLines: usedLines,
-                freeSpaces: LocalDataBaseNotifier.instanceConfig.notifier.maxRecordsPerFile - usedLines,
+                freeSpaces: LocalDBNotifier.instanceConfigDB.notifier.maxRecordsPerFile - usedLines,
               );
 
               // Rebuild registers data for index
@@ -260,8 +248,6 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
       final indexPath = "$prefixPath/${DBFile.activeSubIndex.ext}";
       await File(indexPath).writeAsString(jsonEncode(newPrefixIndex.toJson()));
 
-      // Update cache data.
-      prefixIndexCache.notifier[indexPath] = newPrefixIndex.toJson();
 
       return true;
     } catch (e, stackTrace) {
@@ -282,17 +268,13 @@ class MobileDirectoryManager extends ViewModelStateImpl<String> {
 
 
     if(dirs.isNotEmpty) {
-      LocalDataBaseNotifier.currentListPrefix.updateState(dirs);
+      LocalDBNotifier.currentListPrefix.updateState(dirs);
     }
 
   }
 
   /// Verify is contain prefix for create or not folder [12,f4,be,...]
-  bool containPrefixDir(String prefix) => LocalDataBaseNotifier.currentListPrefix.notifier.contains(prefix);
+  bool containPrefixDir(String prefix) => LocalDBNotifier.currentListPrefix.notifier.contains(prefix);
 
 }
 
-mixin MobileDirectoryService {
-  static final ReactiveNotifier<MobileDirectoryManager> instance =
-      ReactiveNotifier<MobileDirectoryManager>(MobileDirectoryManager.new);
-}

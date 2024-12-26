@@ -13,14 +13,14 @@ class AESEncryptor {
     if (plainText.trim().isEmpty) return "";
     // Verify encryption key length is exactly 16 characters
     assert(
-        LocalDataBaseNotifier.instanceConfig.notifier.hashEncrypt.length == 16);
+        LocalDBNotifier.instanceConfigDB.notifier.hashEncrypt.length == 16);
 
     // Create encryption key and service from configuration
     final cipherKey =
-        Key.fromUtf8(LocalDataBaseNotifier.instanceConfig.notifier.hashEncrypt);
+        Key.fromUtf8(LocalDBNotifier.instanceConfigDB.notifier.hashEncrypt);
     final encryptService = Encrypter(AES(cipherKey));
     final initVector =
-        IV.fromUtf8(LocalDataBaseNotifier.instanceConfig.notifier.hashEncrypt);
+        IV.fromUtf8(LocalDBNotifier.instanceConfigDB.notifier.hashEncrypt);
 
     // Perform encryption and return Base64 result
     Encrypted encryptedData = encryptService.encrypt(plainText, iv: initVector);
@@ -36,14 +36,14 @@ class AESEncryptor {
     if (encryptedData.trim().isEmpty) return "";
     // Verify encryption key length is exactly 16 characters
     assert(
-        LocalDataBaseNotifier.instanceConfig.notifier.hashEncrypt.length == 16);
+        LocalDBNotifier.instanceConfigDB.notifier.hashEncrypt.length == 16);
 
     // Create encryption key and service from configuration
     final cipherKey =
-        Key.fromUtf8(LocalDataBaseNotifier.instanceConfig.notifier.hashEncrypt);
+        Key.fromUtf8(LocalDBNotifier.instanceConfigDB.notifier.hashEncrypt);
     final encryptService = Encrypter(AES(cipherKey));
     final initVector =
-        IV.fromUtf8(LocalDataBaseNotifier.instanceConfig.notifier.hashEncrypt);
+        IV.fromUtf8(LocalDBNotifier.instanceConfigDB.notifier.hashEncrypt);
 
     // Decrypt the Base64 encoded data
     return encryptService.decrypt(Encrypted.fromBase64(encryptedData),
