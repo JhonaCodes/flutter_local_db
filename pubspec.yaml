@@ -25,7 +25,9 @@ dependencies:
   encrypt: ^5.0.3
 
   # Robust package for singleton and streams management, good reactive state an debug.
-  reactive_notifier: ^2.4.1
+  reactive_notifier: ^2.4.2
+
+  intl: ^0.20.1
 
 dev_dependencies:
   flutter_test:
@@ -34,3 +36,4 @@ dev_dependencies:
 
 
 flutter:
+  uses-material-design: true

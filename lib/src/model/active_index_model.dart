@@ -22,9 +22,7 @@ class ActiveIndexModel {
   /// The JSON structure should contain 'blocks' and 'records' objects
   factory ActiveIndexModel.fromJson(Map<String, dynamic> json) {
     return ActiveIndexModel(
-      blocks: Map<String, BlockData>.from(
-        (json['blocks'] ?? {})
-            .map((key, value) => MapEntry(key, BlockData.fromJson(value))),
+      blocks: Map<String, BlockData>.from((json['blocks'] ?? {}).map((key, value) => MapEntry(key, BlockData.fromJson(value))),
       ),
       records: Map<String, RecordLocation>.from(
         (json['records'] ?? {})
@@ -46,7 +44,7 @@ class ActiveIndexModel {
   /// Returns a JSON map with:
   /// - One initial block ('act_001.dex') with 2000 lines capacity
   /// - Empty records map
-  static Map<String, dynamic> toInitial() => {
+  static Map<String, dynamic> toInitialActiveFolder() => {
         'blocks': {
           'act_001.dex': BlockData(
             totalLines: 2000,
