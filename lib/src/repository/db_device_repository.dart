@@ -95,6 +95,7 @@ class DBRepository implements DataBaseServiceInterface {
         throw Exception("Duplicate Record ID: ${model.id} - Use PUT for updates. POST is reserved for creating new records.");
       }
 
+
       // Selección y manejo optimizado de bloques
       final String currentBlock = _selectActiveBlock(prefixIndex);
       final String blockPath = "$prefixPath/$currentBlock";
