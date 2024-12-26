@@ -55,10 +55,17 @@ class MainIndexModel {
 
   /// Creates an initial empty index structure
   /// Used when initializing a new database instance
-  static Map<String, dynamic> toInitial() {
+  Map<String, dynamic> toInitial() {
     return {
       'total_index': 0,
     };
+  }
+
+
+  factory MainIndexModel.initial(){
+    return MainIndexModel.fromJson({
+      'total_index': 0,
+    });
   }
 }
 

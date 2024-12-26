@@ -1,18 +1,20 @@
 import 'package:flutter_local_db/src/db/database.dart';
 import 'package:flutter_local_db/src/model/config_db_model.dart';
-import 'package:flutter_local_db/src/model/data_model.dart';
+
+import 'package:flutter_local_db/src/model/main_index_model.dart';
+import 'package:flutter_local_db/src/storage/directory/mobile_directory_manager.dart';
 import 'package:reactive_notifier/reactive_notifier.dart';
 
-mixin LocalDataBaseNotifier {
+mixin LocalDBNotifier {
+
   /// Main database instance notifier
   /// Provides reactive access to the database ViewModel implementation
   /// Protected to ensure proper initialization and access control
-  static final instanceDatabase = ReactiveNotifier<DataBaseVM>(DataBaseVM.new);
+  static final instanceDB = ReactiveNotifier<DataBaseVM>(DataBaseVM.new);
 
   /// Configuration state notifier
   /// Maintains reactive access to database configuration settings
-  static final instanceConfig =
-      ReactiveNotifier<ConfigDBModel>(ConfigDBModel.new);
+  static final instanceConfigDB = ReactiveNotifier<ConfigDBModel>(ConfigDBModel.new);
 
 
   /// Maintains a reactive list of all directory prefixes currently in use.
@@ -31,6 +33,12 @@ mixin LocalDataBaseNotifier {
   /// The cache structure is:
   /// - Key: Container/Directory identifier (String)
   /// - Value: List of data models within that container
-  static final ReactiveNotifier<Map<String, List<DataLocalDBModel>>> dataIndexCache = ReactiveNotifier<Map<String, List<DataLocalDBModel>>>(() => {});
+  static final ReactiveNotifier<MainIndexModel> mainIndexCache = ReactiveNotifier<MainIndexModel>(MainIndexModel.initial);
+
+
+
+
+  static final ReactiveNotifier<MobileDirectoryManager> directoryManager =
+  ReactiveNotifier<MobileDirectoryManager>(MobileDirectoryManager.new);
 
 }
