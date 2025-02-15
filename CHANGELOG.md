@@ -1,20 +1,25 @@
 # Changelog
 
-## 0.3.0-alpha.2 (2025-02-16)
+### 0.3.0-alpha.3
 
-### Changed
+#### Changed
+- Update example file.
+
+### 0.3.0-alpha.2
+
+#### Changed
 - Completely redesigned changelog format for improved readability and professionalism
 - Updated changelog formatting to meet pub.dev best practices
 - Enhanced version numbering and date representation
 - Improved section organization and language clarity
 
 
-## 0.3.0-alpha.1 (2025-02-16)
+### 0.3.0-alpha.1
 
 ⚠️ **BREAKING CHANGES WARNING**
 This version introduces significant architectural changes by replacing the JSON-based storage with RedB (Rust Embedded Database). There is no automatic migration system available. Please ensure you have backed up your data before upgrading, as you will need to manually migrate your existing data to the new format.
 
-### Breaking Changes
+#### Breaking Changes
 - Removed JSON-based storage in favor of RedB (Rust Embedded Database)
 - Removed `ConfigDBModel` and related configurations
 - Reduced minimum ID length requirement from 9 to 3 characters
@@ -25,7 +30,7 @@ This version introduces significant architectural changes by replacing the JSON-
 - Removed `Clean` and `DeepClean` methods
 - Transitioned to Result-based error handling
 
-### Added
+#### Added
 - Rust-based core using RedB embedded database
 - FFI bridge for native platform integration
 - Result type system for robust error handling
@@ -37,7 +42,7 @@ This version introduces significant architectural changes by replacing the JSON-
 - Simplified initialization system
 - Rust-inspired `Result` types for all operations
 
-### Changed
+#### Changed
 - Simplified API focusing on core CRUD operations
 - Updated ID validation requirements
 - Migrated to async/await for all database operations
@@ -45,7 +50,7 @@ This version introduces significant architectural changes by replacing the JSON-
 - Improved cross-platform support
 - Streamlined initialization process
 
-### Removed
+#### Removed
 - Complex configuration options
 - Directory management system
 - Automatic backup functionality
@@ -55,7 +60,7 @@ This version introduces significant architectural changes by replacing the JSON-
 - Automatic encryption
 - Block-based storage system
 
-### Migration Guide
+#### Migration Guide
 1. Backup existing data
 2. Update initialization code:
    ```dart
@@ -85,23 +90,23 @@ This version introduces significant architectural changes by replacing the JSON-
    ```
 4. Remove usage of deprecated features
 
-## 0.2.1 (2024-12-15)
+### 0.2.1
 - Updated example documentation
 
-## 0.2.0 (2024-12-15)
-### Added
+### 0.2.0
+#### Added
 - Reactive state management with `local_database_notifier`
 - `MobileDirectoryManager` for directory operations
 - Enhanced singleton pattern initialization
 
-### Improved
+#### Improved
 - Comprehensive library documentation
 - Simplified initialization process
 - Better component separation
 - Directory management abstraction
 
-## 0.1.0 (2024-12-15)
-### Added
+### 0.1.0
+#### Added
 - Block-based storage system
 - Concurrent operation queue
 - Platform-specific implementations
@@ -111,30 +116,30 @@ This version introduces significant architectural changes by replacing the JSON-
 - ID validation
 - JSON validation and size calculation
 
-### Changed
+#### Changed
 - Performance improvements with reactive notifiers
 - Enhanced error handling and logging
 - Upgraded configuration management
 
-### Fixed
+#### Fixed
 - Concurrent operation race conditions
 - Memory leaks in large datasets
 
-## 0.0.2 (2024-12-01)
-### Added
+### 0.0.2
+#### Added
 - Initial documentation
 - Performance metrics
 
-### Changed
+#### Changed
 - Code organization
 - Documentation updates
 
-### Fixed
+#### Fixed
 - Implementation issues
 - Documentation typos
 
-## 0.0.1 (2024-11-15)
-### Added
+### 0.0.1
+#### Added
 - Initial project structure
 - Basic CRUD operations
 - File-based storage
