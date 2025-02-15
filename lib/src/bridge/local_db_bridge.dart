@@ -175,12 +175,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
       calloc.free(idPtr);
 
-      /// Help to use malloc for free memory.
-      final response = deleteResult.address == 1;
-
-      malloc.free(deleteResult);
-
-      return Ok(response);
+      return Ok(deleteResult.address == 1);
 
     }catch(e,stack){
       log(e.toString());
