@@ -156,9 +156,28 @@ class LocalDbBridge extends LocalSbRequestImpl{
   }
 
   @override
-  Future<LocalDbResult<LocalDbRequestModel, String>> put(LocalDbRequestModel model) {
-    // TODO: implement put
-    throw UnimplementedError();
+  Future<LocalDbResult<LocalDbRequestModel, String>> put(LocalDbRequestModel model) async{
+    try{
+
+      final jsonString = jsonEncode(model.toJson());
+      final jsonPointer = jsonString.toNativeUtf8();
+      final resultFfi = _put(_dbInstance, jsonPointer);
+      final result = resultFfi.cast<Utf8>().toDartString();
+
+      calloc.free(jsonPointer);
+
+      if (resultFfi == nullptr) {
+        return const Err("Not found");
+      }
+
+      malloc.free(resultFfi);
+
+      return Ok(LocalDbRequestModel.fromJson(jsonDecode(result)));
+    }catch(error, stackTrace){
+      log(error.toString());
+      log(stackTrace.toString());
+      return Err(error.toString());
+    }
   }
   
   // @override
@@ -216,9 +235,6 @@ class LocalDbBridge extends LocalSbRequestImpl{
       return Err(e.toString());
     }
   }
-  
-
-
 
 }
 
