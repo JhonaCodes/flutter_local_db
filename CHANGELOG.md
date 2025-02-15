@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0-alpha.2 (2025-02-16)
+
+### Changed
+- Completely redesigned changelog format for improved readability and professionalism
+- Updated changelog formatting to meet pub.dev best practices
+- Enhanced version numbering and date representation
+- Improved section organization and language clarity
+
+
 ## 0.3.0-alpha.1 (2025-02-16)
 
 ⚠️ **BREAKING CHANGES WARNING**
