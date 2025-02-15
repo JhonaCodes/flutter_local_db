@@ -1,8 +1,15 @@
 name: flutter_local_db
 description: "A scalable and easy-to-use NoSQL database designed for modern applications that require high performance and flexibility in data handling"
-version: 0.2.1
+version: 0.3.0
 homepage: https://github.com/JhonaCodes/flutter_local_db
 repository: https://github.com/JhonaCodes/flutter_local_db.git
+
+topics:
+  - database
+  - nosql
+  - ffi
+  - rust
+  - storage
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -11,13 +18,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   path_provider: 2.1.5
   intl: ^0.20.1
   ffi: ^2.1.3
-
-platforms:
-  android: null
 
 dev_dependencies:
   flutter_test:
@@ -30,4 +33,8 @@ flutter:
       android:
         package: com.rust.flutter_local_db
         pluginClass: FlutterLocalDbPlugin
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      macos:
         ffiPlugin: true
