@@ -96,7 +96,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
   @override
   Future<LocalDbResult<LocalDbRequestModel,String>> post(LocalDbRequestModel model) async{
 
-    final jsonString = jsonEncode(model.toJson());
+    final jsonString = jsonEncode(model.toJsonSave());
     final jsonPointer = jsonString.toNativeUtf8();
 
     try{
