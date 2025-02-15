@@ -39,6 +39,16 @@ class LocalDB {
     return await LocalDbBridge.instance.post(model);
   }
 
+  /// Retrieves all records from the local database
+  ///
+  /// Returns:
+  ///   - Ok(List<LocalDbRequestModel>): List of records if successful. Empty list if no records found
+  ///   - Err(String): Error message if the operation fails, particularly if a null pointer is returned from FFI
+// ignore: non_constant_identifier_names
+  static Future<LocalDbResult<List<LocalDbRequestModel>, String>> GetAll() async {
+    return await LocalDbBridge.instance.getAll();
+  }
+
 
   /// Retrieves a single record by its ID
   /// @param id Unique identifier of the record
@@ -79,6 +89,9 @@ class LocalDB {
     }
     return await LocalDbBridge.instance.delete(id);
   }
+
+
+
   //
   // /// Removes all records from the database
   // // ignore: non_constant_identifier_names
