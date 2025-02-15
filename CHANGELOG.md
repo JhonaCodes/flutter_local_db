@@ -1,5 +1,10 @@
 # Changelog
 
+### 0.3.0-alpha.4
+
+#### Changed
+- Update changelog.
+
 ### 0.3.0-alpha.3
 
 #### Changed
