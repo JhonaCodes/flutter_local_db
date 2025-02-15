@@ -29,17 +29,19 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
   static final LocalDbBridge instance = LocalDbBridge._();
 
-  late final LocalDbResult<DynamicLibrary, String> _lib;
-  late final Pointer<AppDbState> _dbInstance;
+  late LocalDbResult<DynamicLibrary, String> _lib;
+  late Pointer<AppDbState> _dbInstance;
 
 
   Future<void> initialize(String databaseName) async {
-    _lib = CurrentPlatform.loadRustNativeLib();
-    _bindFunctions();
+    _lib = await CurrentPlatform.loadRustNativeLib();
+
+    _bindFunctions(_lib);
 
     final appDir = await getApplicationDocumentsDirectory();
 
     _init('${appDir.path}/$databaseName');
+
   }
 
 
@@ -56,8 +58,8 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
 
   /// Bind functiopns for initialization
-  void _bindFunctions(){
-    switch(_lib){
+  void _bindFunctions(LocalDbResult<DynamicLibrary, String> rLib){
+    switch(rLib){
       case Ok(data: DynamicLibrary lib):
         _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck, PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
         _post = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.pushData.cName);
@@ -66,6 +68,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
         _put = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.updateData.cName);
         break;
         case Err(error: String error):
+          log(error);
           throw Exception(error);
     }
   }
@@ -173,7 +176,8 @@ class LocalDbBridge extends LocalSbRequestImpl{
 }
 
 sealed class CurrentPlatform {
-  static LocalDbResult<DynamicLibrary, String> loadRustNativeLib() {
+  static Future<LocalDbResult<DynamicLibrary, String>> loadRustNativeLib() async{
+
     if (Platform.isAndroid) {
       Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
     }
