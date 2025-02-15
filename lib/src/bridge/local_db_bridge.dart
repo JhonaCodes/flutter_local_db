@@ -21,6 +21,7 @@ final class AppDbState extends Opaque {}
 /// Typedef for the rust functions
 typedef PointerStringFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
+typedef PinterBoolFFICallBack = Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
 
 
 class LocalDbBridge extends LocalSbRequestImpl{
@@ -60,6 +61,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
   late final PointerStringFFICallBack _get;
   late final PointerStringFFICallBack _getById;
   late final PointerStringFFICallBack _put;
+  late final PinterBoolFFICallBack _delete;
 
 
   /// Bind functiopns for initialization
@@ -71,6 +73,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
         _get = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.getAll.cName);
         _getById = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.getById.cName);
         _put = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.updateData.cName);
+        _delete = lib.lookupFunction<PinterBoolFFICallBack, PinterBoolFFICallBack>(FFiFunctions.delete.cName);
         break;
         case Err(error: String error):
           log(error);
@@ -164,9 +167,28 @@ class LocalDbBridge extends LocalSbRequestImpl{
   // }
 
   @override
-  Future<bool> delete(String id) {
-    // TODO: implement delete
-    throw UnimplementedError();
+  Future<LocalDbResult<bool, String>> delete(String id) async{
+
+    try{
+      final idPtr = id.toNativeUtf8();
+      final deleteResult = _delete(_dbInstance, idPtr);
+
+      calloc.free(idPtr);
+
+      /// Help to use malloc for free memory.
+      final response = deleteResult.address == 1;
+
+      malloc.free(deleteResult);
+
+      return Ok(response);
+
+    }catch(e,stack){
+      log(e.toString());
+      log(stack.toString());
+      return Err(e.toString());
+    }
+
+
   }
 
   @override
