@@ -21,7 +21,8 @@ final class AppDbState extends Opaque {}
 /// Typedef for the rust functions
 typedef PointerStringFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
-typedef PinterBoolFFICallBack = Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerBoolFFICallBack = Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 
 class LocalDbBridge extends LocalSbRequestImpl{
@@ -58,10 +59,10 @@ class LocalDbBridge extends LocalSbRequestImpl{
   /// Functions registration
   late final Pointer<AppDbState> Function(Pointer<Utf8>) _createDatabase;
   late final PointerStringFFICallBack _post;
-  late final PointerStringFFICallBack _get;
+  late final PointerListFFICallBack _get;
   late final PointerStringFFICallBack _getById;
   late final PointerStringFFICallBack _put;
-  late final PinterBoolFFICallBack _delete;
+  late final PointerBoolFFICallBack _delete;
 
 
   /// Bind functiopns for initialization
@@ -70,10 +71,10 @@ class LocalDbBridge extends LocalSbRequestImpl{
       case Ok(data: DynamicLibrary lib):
         _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck, PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
         _post = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.getAll.cName);
+        _get = lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(FFiFunctions.getAll.cName);
         _getById = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.getById.cName);
         _put = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        _delete = lib.lookupFunction<PinterBoolFFICallBack, PinterBoolFFICallBack>(FFiFunctions.delete.cName);
+        _delete = lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(FFiFunctions.delete.cName);
         break;
         case Err(error: String error):
           log(error);
@@ -187,9 +188,33 @@ class LocalDbBridge extends LocalSbRequestImpl{
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll() {
-    // TODO: implement getAll
-    throw UnimplementedError();
+  Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll() async{
+    try{
+
+      final resultFfi = _get(_dbInstance);
+
+      if(resultFfi == nullptr){
+        log('Error: NULL pointer returned from GetAll FFI call');
+        return Err('Failed to retrieve data: null pointer returned');
+      }
+
+      final resultTransformed = resultFfi.cast<Utf8>().toDartString();
+
+      /// Because no need anymore and the reference is on [resultTransformed]
+      malloc.free(resultFfi);
+
+      final List<dynamic> jsonList = jsonDecode(resultTransformed);
+
+      final List<LocalDbRequestModel> dataList = jsonList.map((json) => LocalDbRequestModel.fromJson(json)).toList();
+
+      return Ok(dataList);
+
+
+    }catch(e, stack){
+      log(e.toString());
+      log(stack.toString());
+      return Err(e.toString());
+    }
   }
   
 
