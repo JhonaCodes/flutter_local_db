@@ -28,6 +28,6 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.rust.offline_first_core
-        pluginClass: FlutterOfflineFirstPlugin
+        package: com.rust.flutter_local_db
+        pluginClass: FlutterLocalDbPlugin
         ffiPlugin: true

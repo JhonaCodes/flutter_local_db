@@ -1,9 +1,9 @@
-package com.rust.offline_first_core;
+package com.rust.flutter_local_db;
 
 import androidx.annotation.NonNull;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 
-public class FlutterOfflineFirstPlugin implements FlutterPlugin {
+public class FlutterLocalDbPlugin implements FlutterPlugin {
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
         // No need implementations

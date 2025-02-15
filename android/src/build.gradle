@@ -1,4 +1,4 @@
-group 'com.rust.offline_first_core'
+group 'com.rust.flutter_local_db'
 version '1.0.0'
 
 buildscript {
@@ -23,7 +23,7 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdk 33
-    namespace 'com.rust.offline_first_core'
+    namespace 'com.rust.flutter_local_db'
 
     defaultConfig {
         minSdk 19
