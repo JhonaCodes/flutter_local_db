@@ -1,19 +1,7 @@
 # Changelog
 
 ### 0.3.0-alpha.3
-
-#### Changed
-- Update example file.
-
 ### 0.3.0-alpha.2
-
-#### Changed
-- Completely redesigned changelog format for improved readability and professionalism
-- Updated changelog formatting to meet pub.dev best practices
-- Enhanced version numbering and date representation
-- Improved section organization and language clarity
-
-
 ### 0.3.0-alpha.1
 
 ⚠️ **BREAKING CHANGES WARNING**
