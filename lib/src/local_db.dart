@@ -6,7 +6,6 @@ import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'bridge/local_db_bridge.dart';
 import 'model/local_db_request_model.dart';
 
-
 /// Main interface for the LocalDB library
 /// Provides static methods for database operations with built-in validation
 class LocalDB {
@@ -21,14 +20,20 @@ class LocalDB {
   /// @param data Map containing the data to store
   /// @throws Exception if key is invalid
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbRequestModel,String>> Post(String key, Map<String, dynamic> data, {String? lastUpdate}) async {
-
+  static Future<LocalDbResult<LocalDbRequestModel, String>> Post(String key, Map<String, dynamic> data, {String? lastUpdate}) async {
     if (!_isValidId(key)) {
-      return  const Err(
+      return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    if(!_isValidMap(data)) return Err('The provided format data is invalid.\n$data');
+    if (!_isValidMap(data)) return Err('The provided format data is invalid.\n$data');
+
+    final verifyId = await GetById(key);
+
+    if (verifyId.isOk) {
+      return Err("Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.");
+      ;
+    }
 
     final model = LocalDbRequestModel(
       id: key,
@@ -49,12 +54,10 @@ class LocalDB {
     return await LocalDbBridge.instance.getAll();
   }
 
-
   /// Retrieves a single record by its ID
   /// @param id Unique identifier of the record
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(String id) async {
-
     if (!_isValidId(id)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
@@ -63,34 +66,32 @@ class LocalDB {
     return await LocalDbBridge.instance.getById(id);
   }
 
-  // /// Updates an existing record
-  // /// @param id Unique identifier of the record to update
-  // /// @param data New data to store
-  // // ignore: non_constant_identifier_names
-  // static Future<DataLocalDBModel> Put(
-  //     String id, Map<dynamic, dynamic> data) async {
-  //   final mapData = DataLocalDBModel(
-  //     id: id,
-  //     sizeKb: _mapToKb(data),
-  //     hash: data.hashCode,
-  //     data: data,
-  //   );
-  //
-  //   return await LocalDataBaseNotifier.instanceDatabase.notifier.put(mapData);
-  // }
+  /// Updates an existing record
+  /// @param id Unique identifier of the record to update
+  /// @param data New data to store
+  // ignore: non_constant_identifier_names
+  static Future<LocalDbResult<LocalDbRequestModel, String>> Put(String key, Map<String, dynamic> data) async {
+    final verifyId = await GetById(key);
+
+    if (verifyId.isOk) {
+      final currentData = LocalDbRequestModel(id: key, data: data, hash: DateTime.now().millisecondsSinceEpoch.toString());
+
+      return await LocalDbBridge.instance.put(currentData);
+    }
+
+    return Err("Record '$key' not found. Use POST method to create new records.");
+  }
 
   /// Deletes a record by its ID
   /// @param id Unique identifier of the record to delete
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<bool, String>> Delete(String id) async {
     if (!_isValidId(id)) {
-      return  const Err(
+      return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
     return await LocalDbBridge.instance.delete(id);
   }
-
-
 
   //
   // /// Removes all records from the database
@@ -108,8 +109,7 @@ class LocalDB {
   /// Calculates the size of a map in kilobytes
   /// @param map Map to calculate size for
   /// @return Size in KB with 3 decimal places
-  static double _mapToKb(Map map) => double.parse(
-      (utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
+  static double _mapToKb(Map map) => double.parse((utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
 
   /// Generates a hash from map values
   /// @param values Iterable of values to hash
@@ -139,6 +139,4 @@ class LocalDB {
     RegExp regex = RegExp(r'^[a-zA-Z0-9_-]{3,}$');
     return regex.hasMatch(text);
   }
-
-
 }
