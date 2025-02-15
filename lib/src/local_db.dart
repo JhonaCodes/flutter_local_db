@@ -32,7 +32,7 @@ class LocalDB {
 
     final model = LocalDbRequestModel(
       id: key,
-      lastUpdate: lastUpdate,
+      hash: DateTime.now().millisecondsSinceEpoch.toString(),
       data: data,
     );
 

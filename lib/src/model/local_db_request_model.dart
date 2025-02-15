@@ -16,11 +16,6 @@ class LocalDbRequestModel{
     'data': data,
   };
 
-  Map<String, dynamic> toJsonSave() => {
-    'id': id,
-    'hash': hash ?? "${DateTime.now().millisecondsSinceEpoch}",
-    'data': data,
-  };
   factory LocalDbRequestModel.fromJson(Map<String, dynamic> json) => LocalDbRequestModel(
     id: json['id'],
     hash: json['hash'],
