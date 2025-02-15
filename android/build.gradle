@@ -1,5 +1,3 @@
-package android
-
 group 'com.rust.flutter_local_db'
 version '1.0.0'
 
