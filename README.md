@@ -1,28 +1,26 @@
 # Flutter Local DB
 
-A high-performance local database for Flutter that provides simple JSON storage with a powerful underlying architecture. Designed for efficient data persistence with automatic block management and smart indexing.
+A high-performance local database for Flutter that leverages Rust's RedB embedded database through FFI (Foreign Function Interface). This library provides a robust, efficient, and safe way to store local data in your Flutter applications across multiple platforms.
 
 ![flutter_local_db](https://github.com/user-attachments/assets/09c97008-cfc6-4588-b54c-5737ad00e9e4)
 
-
-
 ## Features
 
-- 🚀 **High Performance**: O(1) access times through smart indexing and caching
-- 🎯 **Simple API**: Store and retrieve JSON data with minimal code
-- 🛡️ **Fault Tolerant**: Block-based architecture prevents total data corruption
-- 📦 **Smart Storage**: Automatic block management and space optimization
-- 🔐 **Secure Storage**: Optional encryption for sensitive data
-- 🔄 **Async Queue**: Built-in request queue management
-- 📱 **Cross-Platform**: Works on mobile, desktop and web(soon)
+🦀 **Rust Powered**: Uses RedB embedded database for maximum performance and reliability  
+🔄 **FFI Integration**: Seamless integration between Flutter and Rust  
+🎯 **Simple API**: Store and retrieve JSON data with minimal code  
+🛡️ **Result Types**: Rust-inspired Result types for better error handling  
+📱 **Cross-Platform**: Supports Android, iOS, and macOS  
+⚡ **Async Operations**: All database operations are asynchronous  
+🔍 **Smart Querying**: Efficient data retrieval through RedB's B-tree implementation
 
 ## Installation
 
-Add to your `pubspec.yaml`:
+Add to your pubspec.yaml:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.2.1
+  flutter_local_db: ^0.3.0
 ```
 
 ## Basic Usage
@@ -33,17 +31,8 @@ dependencies:
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize with default configuration
-  await LocalDB.init();
-  
-  // Or initialize with custom configuration
-  await LocalDB.init(
-    config: ConfigDBModel(
-      maxRecordsPerFile: 2000,
-      backupEveryDays: 7,
-      hashEncrypt: 'your-16-char-key'
-    )
-  );
+  // Initialize with database name
+  await LocalDB.init(localDbName: "my_app_db");
   
   runApp(MyApp());
 }
@@ -53,150 +42,105 @@ void main() async {
 
 ```dart
 // Create
-await LocalDB.Post('user-123456789', {
+final result = await LocalDB.Post('user-123', {
   'name': 'John Doe',
   'email': 'john@example.com',
   'metadata': {
-    'lastLogin': DateTime.now().toIso8601String(),
-    'preferences': {'theme': 'dark'}
+    'lastLogin': DateTime.now().toIso8601String()
   }
 });
 
-// Read single record
-final user = await LocalDB.GetById('user-123456789');
+// Handle result
+result.when(
+  ok: (data) => print('User created: ${data.id}'),
+  err: (error) => print('Error: $error')
+);
 
-// Read multiple records with pagination
-final users = await LocalDB.Get(limit: 20);
+// Read single record
+final userResult = await LocalDB.GetById('user-123');
+userResult.when(
+  ok: (user) => print('Found user: ${user?.data}'),
+  err: (error) => print('Error: $error')
+);
+
+// Read all records
+final allUsersResult = await LocalDB.GetAll();
+allUsersResult.when(
+  ok: (users) => users.forEach((user) => print(user.data)),
+  err: (error) => print('Error: $error')
+);
 
 // Update
-await LocalDB.Put('user-123456789', {
+final updateResult = await LocalDB.Put('user-123', {
   'name': 'John Doe',
-  'email': 'john.doe@example.com',
-  'metadata': {
-    'lastLogin': DateTime.now().toIso8601String(),
-    'preferences': {'theme': 'light'}
-  }
+  'email': 'john.updated@example.com'
 });
 
 // Delete
-await LocalDB.Delete('user-123456789');
-
-// Clear all records
-await LocalDB.Clean();
-
-// Deep clean (resets database)
-await LocalDB.DeepClean();
+final deleteResult = await LocalDB.Delete('user-123');
 ```
-
-## Advanced Configuration
-
-### ConfigDBModel
-
-```dart
-final config = ConfigDBModel(
-  // Maximum records per storage block
-  maxRecordsPerFile: 2000,
-  
-  // Days between automatic backups (0 = disabled)
-  backupEveryDays: 7,
-  
-  // Encryption key (must be 16 characters)
-  hashEncrypt: 'your-16-char-key'
-);
-```
-
-## Directory Structure
-
-```
-local_database/
-├── active/          # Current data blocks
-│   ├── index.json  # Global index
-│   └── blocks/     # Data blocks by prefix
-├── sealed/         # Immutable data
-├── secure/         # Encrypted data
-├── backup/         # Automatic backups
-├── historical/     # Archived data
-└── sync/          # Sync metadata
-```
-
-## Implementation Examples
-
-### Basic Data Storage
-```dart
-class UserPreferences {
-  static Future<void> savePreferences(Map<String, dynamic> prefs) async {
-    await LocalDB.Post('prefs-${DateTime.now().millisecondsSinceEpoch}', prefs);
-  }
-
-  static Future<List<DataLocalDBModel>> getPreferences() async {
-    return await LocalDB.Get(limit: 1);
-  }
-}
-```
-
-### Caching API Responses
-```dart
-class ApiCache {
-  static Future<void> cacheResponse(String endpoint, Map<String, dynamic> data) async {
-    final cacheId = 'cache-${endpoint.hashCode}';
-    await LocalDB.Post(cacheId, {
-      'endpoint': endpoint,
-      'timestamp': DateTime.now().toIso8601String(),
-      'data': data
-    });
-  }
-
-  static Future<DataLocalDBModel?> getCachedResponse(String endpoint) async {
-    try {
-      return await LocalDB.GetById('cache-${endpoint.hashCode}');
-    } catch (e) {
-      return null;
-    }
-  }
-}
-```
-
-## Performance Considerations
-
-- **ID Format**: IDs must be alphanumeric and at least 9 characters long
-- **Block Size**: Default 2000 records per block for optimal performance
-- **Pagination**: Use appropriate limit values to avoid loading unnecessary data
-- **Encryption**: Adds slight overhead when enabled
-- **Queuing**: Operations are automatically queued to prevent conflicts
 
 ## Error Handling
 
+The library uses a Result type system inspired by Rust for better error handling:
+
 ```dart
-try {
-  await LocalDB.Post('invalid-id', data);
-} catch (e) {
-  print('Error: Invalid ID format');
+final result = await LocalDB.Post('user-123', userData);
+if (result.isOk) {
+  final data = result.data;
+  // Handle success
+} else {
+  final error = result.errorOrNull;
+  // Handle error
 }
 
-try {
-  final data = await LocalDB.GetById('non-existent');
-} catch (e) {
-  print('Error: Record not found');
-}
+// Or using pattern matching
+result.when(
+  ok: (data) => // Handle success,
+  err: (error) => // Handle error
+);
 ```
+
+## ID Format Requirements
+
+- Must be at least 3 characters long
+- Can only contain letters, numbers, hyphens (-) and underscores (_)
+- Must be unique within the database
+
+## Implementation Details
+
+### Architecture
+
+- **Flutter Layer**: Provides high-level API and type safety
+- **FFI Bridge**: Handles communication between Flutter and Rust
+- **Rust Core**: Manages the RedB database operations
+- **Result Types**: Provides type-safe error handling
+
+### Platform Support
+
+- ✅ Android: `.so` shared library
+- ✅ iOS: `.a` static library
+- ✅ macOS: `.dylib` dynamic library
+- 🚧 Windows: Coming soon
+- 🚧 Linux: Coming soon
+- 🚧 Web: Coming soon
 
 ## Limitations
 
-- IDs must be at least 9 characters long
-- JSON serialization required for stored data
-- Encryption key must be exactly 16 characters
-- Web storage limited by browser constraints
+- Data must be JSON-serializable
+- IDs must follow the format requirements
+- Platform-specific limitations may apply
+- Currently no support for complex queries or indexing
+- No automatic migration system
 
+## Contributing
 
-## Contribution
+Contributions are welcome! The project uses a dual-language architecture:
 
-Contributions are welcome! If you have ideas for new features or improvements, please open an [issue](https://github.com/JhonaCodes/flutter_local_db/issues) or submit a pull request.
+- Flutter/Dart for the high-level API and FFI bridge
+- Rust for the core database operations
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/new-feature`).
-3. Commit your changes (`git commit -am 'Add new feature'`).
-4. Push to the branch (`git push origin feature/new-feature`).
-5. Open a pull request.
+Please ensure you have both Rust and Flutter development environments set up before contributing.
 
 ## License
 
