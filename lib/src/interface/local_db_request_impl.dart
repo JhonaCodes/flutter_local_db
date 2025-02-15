@@ -11,6 +11,6 @@ abstract class LocalSbRequestImpl{
   Future<LocalDbResult<LocalDbRequestModel,String>>  put(LocalDbRequestModel model);
   Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll();
   Future<LocalDbResult<LocalDbRequestModel?,String>> getById(String id);
-  Future<bool> delete(String id);
+  Future<LocalDbResult<bool, String>> delete(String id);
   // Future<bool> cleanDatabase(LocalDbRequestModel model);
 } 

@@ -1,3 +1,5 @@
+
+/// Because help to use [when] and [map] methods.
 sealed class LocalDbResult<T, E>{
   const LocalDbResult();
 

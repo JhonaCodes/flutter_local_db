@@ -69,12 +69,16 @@ class LocalDB {
   //   return await LocalDataBaseNotifier.instanceDatabase.notifier.put(mapData);
   // }
 
-  // /// Deletes a record by its ID
-  // /// @param id Unique identifier of the record to delete
-  // // ignore: non_constant_identifier_names
-  // static Future<bool> Delete(String id) async {
-  //   return await LocalDataBaseNotifier.instanceDatabase.notifier.delete(id);
-  // }
+  /// Deletes a record by its ID
+  /// @param id Unique identifier of the record to delete
+  // ignore: non_constant_identifier_names
+  static Future<LocalDbResult<bool, String>> Delete(String id) async {
+    if (!_isValidId(id)) {
+      return  const Err(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
+    }
+    return await LocalDbBridge.instance.delete(id);
+  }
   //
   // /// Removes all records from the database
   // // ignore: non_constant_identifier_names
@@ -122,4 +126,6 @@ class LocalDB {
     RegExp regex = RegExp(r'^[a-zA-Z0-9_-]{3,}$');
     return regex.hasMatch(text);
   }
+
+
 }
