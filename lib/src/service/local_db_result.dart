@@ -173,9 +173,9 @@ extension ResultExtensions<T, E> on LocalDbResult<T, E> {
   }
 }
 
-/// Extension methods for Future<LocalDbResult>
+/// Extension methods for [Future LocalDbResult]
 extension FutureResultExtensions<T, E> on Future<LocalDbResult<T, E>> {
-  /// Maps the success value of a Future<LocalDbResult>
+  /// Maps the success value of a [Future LocalDbResult]
   Future<LocalDbResult<R, E>> map<R>(R Function(T value) transform) async {
     final result = await this;
     return result.map(transform);

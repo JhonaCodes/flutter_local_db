@@ -6,19 +6,43 @@ import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'bridge/local_db_bridge.dart';
 import 'model/local_db_request_model.dart';
 
-/// Main interface for the LocalDB library
-/// Provides static methods for database operations with built-in validation
+/// A comprehensive local database management utility.
+///
+/// Provides static methods for performing CRUD (Create, Read, Update, Delete)
+/// operations on a local database with robust validation and error handling.
+///
+/// Uses a bridge pattern to abstract database interactions and provides
+/// type-safe results using [LocalDbResult].
 class LocalDB {
-  /// Initializes the database with optional configuration
-  /// @param config Optional database configuration (defaults to ConfigDBModel())
+  /// Initializes the local database with a specified name.
+  ///
+  /// This method must be called before performing any database operations.
+  ///
+  /// Parameters:
+  /// - [localDbName]: A unique name for the local database instance
+  ///
+  /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
     await LocalDbBridge.instance.initialize(localDbName);
   }
 
-  /// Creates a new record in the database
-  /// @param key Unique identifier for the record (must be alphanumeric, min 9 chars)
-  /// @param data Map containing the data to store
-  /// @throws Exception if key is invalid
+  /// Creates a new record in the database.
+  ///
+  /// Validates the key and data before attempting to create the record.
+  ///
+  /// Parameters:
+  /// - [key]: A unique identifier for the record
+  ///   - Must be at least 3 characters long
+  ///   - Can only contain letters, numbers, hyphens, and underscores
+  /// - [data]: A map containing the data to be stored
+  /// - [lastUpdate]: Optional timestamp for the record (not used in this implementation)
+  ///
+  /// Returns:
+  /// - [Ok] with the created [LocalDbRequestModel] if successful
+  /// - [Err] with an error message if:
+  ///   - The key is invalid
+  ///   - The data cannot be serialized
+  ///   - A record with the same key already exists
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel, String>> Post(
       String key, Map<String, dynamic> data,
@@ -28,15 +52,15 @@ class LocalDB {
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    if (!_isValidMap(data))
+    if (!_isValidMap(data)) {
       return Err('The provided format data is invalid.\n$data');
+    }
 
     final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
       return Err(
           "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.");
-      ;
     }
 
     final model = LocalDbRequestModel(
@@ -48,19 +72,27 @@ class LocalDB {
     return await LocalDbBridge.instance.post(model);
   }
 
-  /// Retrieves all records from the local database
+  /// Retrieves all records from the local database.
   ///
   /// Returns:
-  ///   - Ok(List<LocalDbRequestModel>): List of records if successful. Empty list if no records found
-  ///   - Err(String): Error message if the operation fails, particularly if a null pointer is returned from FFI
-// ignore: non_constant_identifier_names
+  /// - [Ok] with a list of [LocalDbRequestModel]
+  ///   - Returns an empty list if no records are found
+  /// - [Err] with an error message if the operation fails
   static Future<LocalDbResult<List<LocalDbRequestModel>, String>>
+      // ignore: non_constant_identifier_names
       GetAll() async {
     return await LocalDbBridge.instance.getAll();
   }
 
-  /// Retrieves a single record by its ID
-  /// @param id Unique identifier of the record
+  /// Retrieves a single record by its unique identifier.
+  ///
+  /// Parameters:
+  /// - [id]: The unique identifier of the record to retrieve
+  ///
+  /// Returns:
+  /// - [Ok] with the [LocalDbRequestModel] if found
+  /// - [Ok] with `null` if no record matches the ID
+  /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(
       String id) async {
@@ -72,9 +104,15 @@ class LocalDB {
     return await LocalDbBridge.instance.getById(id);
   }
 
-  /// Updates an existing record
-  /// @param id Unique identifier of the record to update
-  /// @param data New data to store
+  /// Updates an existing record in the database.
+  ///
+  /// Parameters:
+  /// - [key]: The unique identifier of the record to update
+  /// - [data]: The new data to store
+  ///
+  /// Returns:
+  /// - [Ok] with the updated [LocalDbRequestModel] if successful
+  /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel, String>> Put(
       String key, Map<String, dynamic> data) async {
@@ -93,8 +131,14 @@ class LocalDB {
         "Record '$key' not found. Use POST method to create new records.");
   }
 
-  /// Deletes a record by its ID
-  /// @param id Unique identifier of the record to delete
+  /// Deletes a record by its unique identifier.
+  ///
+  /// Parameters:
+  /// - [id]: The unique identifier of the record to delete
+  ///
+  /// Returns:
+  /// - [Ok] with `true` if the record was successfully deleted
+  /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<bool, String>> Delete(String id) async {
     if (!_isValidId(id)) {
@@ -104,33 +148,13 @@ class LocalDB {
     return await LocalDbBridge.instance.delete(id);
   }
 
-  //
-  // /// Removes all records from the database
-  // // ignore: non_constant_identifier_names
-  // static Future<bool> Clean() async {
-  //   return await LocalDataBaseNotifier.instanceDatabase.notifier.clean();
-  // }
-  //
-  // /// Performs a complete reset of the database
-  // // ignore: non_constant_identifier_names
-  // static Future<bool> DeepClean() async {
-  //   return await LocalDataBaseNotifier.instanceDatabase.notifier.deepClean();
-  // }
-
-  /// Calculates the size of a map in kilobytes
-  /// @param map Map to calculate size for
-  /// @return Size in KB with 3 decimal places
-  static double _mapToKb(Map map) => double.parse(
-      (utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
-
-  /// Generates a hash from map values
-  /// @param values Iterable of values to hash
-  /// @return Hash code for the values
-  static int _toHash(Iterable<dynamic> values) => Object.hashAll(values);
-
-  /// Validates that a map can be properly serialized to JSON
-  /// @param map Map to validate
-  /// @return true if map can be serialized, false otherwise
+  /// Validates that a map can be properly serialized to JSON.
+  ///
+  /// Parameters:
+  /// - [map]: The map to validate
+  ///
+  /// Returns:
+  /// `true` if the map can be successfully serialized, `false` otherwise
   static bool _isValidMap(dynamic map) {
     try {
       String jsonString = jsonEncode(map);
@@ -143,10 +167,17 @@ class LocalDB {
     }
   }
 
-  /// Validates ID format using regex
-  /// Ensures ID is alphanumeric and at least 9 characters long
-  /// @param text ID to validate
-  /// @return true if ID is valid, false otherwise
+  /// Validates the format of a database record identifier.
+  ///
+  /// Checks that the ID:
+  /// - Is at least 3 characters long
+  /// - Contains only letters, numbers, hyphens, and underscores
+  ///
+  /// Parameters:
+  /// - [text]: The ID to validate
+  ///
+  /// Returns:
+  /// `true` if the ID is valid, `false` otherwise
   static bool _isValidId(String text) {
     RegExp regex = RegExp(r'^[a-zA-Z0-9_-]{3,}$');
     return regex.hasMatch(text);
