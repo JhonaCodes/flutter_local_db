@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
 
   /// Local db initialization.
   await LocalDB.init(localDbName: 'example_local_db');
@@ -62,9 +60,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           if (snapShot.data != null)
                             snapShot.data!.when(
                               ok: (data) => Text('${data?.id}'),
-                              err: (error) => Center(child: Text('Error: $error')),
+                              err: (error) =>
+                                  Center(child: Text('Error: $error')),
                             )
-
                         ],
                       ),
                     );
@@ -109,12 +107,8 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             FloatingActionButton(
               onPressed: () async {
-
-                await LocalDB.Post("29h8f2789f82gf2g72983f", {
-                  "id": "29h8f2789f82gf2g72983f",
-                  "name": "Jhonacode"
-                });
-
+                await LocalDB.Post("29h8f2789f82gf2g72983f",
+                    {"id": "29h8f2789f82gf2g72983f", "name": "Jhonacode"});
               },
               tooltip: 'Increment',
               child: const Icon(Icons.add),

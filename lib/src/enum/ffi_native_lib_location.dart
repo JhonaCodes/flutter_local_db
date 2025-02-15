@@ -1,4 +1,4 @@
-enum FFiNativeLibLocation{
+enum FFiNativeLibLocation {
   android('liboffline_first_core.so'),
   ios('ios/liboffline_first_core.a'),
   macos('macos/liboffline_first_core.dylib'),

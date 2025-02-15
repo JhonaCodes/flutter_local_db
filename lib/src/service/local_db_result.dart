@@ -1,4 +1,3 @@
-
 /// Because help to use [when] and [map] methods.
 /// Represents a result that can be either successful (Ok) or an error (Err)
 ///
@@ -33,13 +32,15 @@ abstract class LocalDbResult<T, E> {
   LocalDbResult<R, E> map<R>(R Function(T value) transform);
 
   /// Chains operations that might fail
-  LocalDbResult<R, E> flatMap<R>(LocalDbResult<R, E> Function(T value) transform);
+  LocalDbResult<R, E> flatMap<R>(
+      LocalDbResult<R, E> Function(T value) transform);
 
   /// Safely attempts to get the success value
   R whenData<R>(R Function(T) ok) {
     return this.when(
       ok: ok,
-      err: (error) => throw StateError('Cannot access data on Err value: $error'),
+      err: (error) =>
+          throw StateError('Cannot access data on Err value: $error'),
     );
   }
 
@@ -65,9 +66,9 @@ abstract class LocalDbResult<T, E> {
 
   @override
   String toString() => this.when(
-    ok: (data) => 'Ok($data)',
-    err: (error) => 'Err($error)',
-  );
+        ok: (data) => 'Ok($data)',
+        err: (error) => 'Err($error)',
+      );
 
   @override
   bool operator ==(Object other) {
@@ -79,14 +80,13 @@ abstract class LocalDbResult<T, E> {
 
   @override
   int get hashCode => this.when(
-    ok: (data) => data.hashCode,
-    err: (error) => error.hashCode,
-  );
+        ok: (data) => data.hashCode,
+        err: (error) => error.hashCode,
+      );
 }
 
 /// Represents a successful result
 class Ok<T, E> extends LocalDbResult<T, E> {
-
   @override
   final T data;
 
@@ -106,7 +106,8 @@ class Ok<T, E> extends LocalDbResult<T, E> {
   }
 
   @override
-  LocalDbResult<R, E> flatMap<R>(LocalDbResult<R, E> Function(T value) transform) {
+  LocalDbResult<R, E> flatMap<R>(
+      LocalDbResult<R, E> Function(T value) transform) {
     return transform(data);
   }
 }
@@ -131,7 +132,8 @@ class Err<T, E> extends LocalDbResult<T, E> {
   }
 
   @override
-  LocalDbResult<R, E> flatMap<R>(LocalDbResult<R, E> Function(T value) transform) {
+  LocalDbResult<R, E> flatMap<R>(
+      LocalDbResult<R, E> Function(T value) transform) {
     return Err(error);
   }
 }
@@ -181,8 +183,8 @@ extension FutureResultExtensions<T, E> on Future<LocalDbResult<T, E>> {
 
   /// Chains async operations that might fail
   Future<LocalDbResult<R, E>> flatMap<R>(
-      Future<LocalDbResult<R, E>> Function(T value) transform,
-      ) async {
+    Future<LocalDbResult<R, E>> Function(T value) transform,
+  ) async {
     final result = await this;
     return result.when(
       ok: transform,

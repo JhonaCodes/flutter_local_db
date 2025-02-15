@@ -20,18 +20,22 @@ class LocalDB {
   /// @param data Map containing the data to store
   /// @throws Exception if key is invalid
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbRequestModel, String>> Post(String key, Map<String, dynamic> data, {String? lastUpdate}) async {
+  static Future<LocalDbResult<LocalDbRequestModel, String>> Post(
+      String key, Map<String, dynamic> data,
+      {String? lastUpdate}) async {
     if (!_isValidId(key)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    if (!_isValidMap(data)) return Err('The provided format data is invalid.\n$data');
+    if (!_isValidMap(data))
+      return Err('The provided format data is invalid.\n$data');
 
     final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
-      return Err("Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.");
+      return Err(
+          "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.");
       ;
     }
 
@@ -50,14 +54,16 @@ class LocalDB {
   ///   - Ok(List<LocalDbRequestModel>): List of records if successful. Empty list if no records found
   ///   - Err(String): Error message if the operation fails, particularly if a null pointer is returned from FFI
 // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<List<LocalDbRequestModel>, String>> GetAll() async {
+  static Future<LocalDbResult<List<LocalDbRequestModel>, String>>
+      GetAll() async {
     return await LocalDbBridge.instance.getAll();
   }
 
   /// Retrieves a single record by its ID
   /// @param id Unique identifier of the record
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(String id) async {
+  static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(
+      String id) async {
     if (!_isValidId(id)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
@@ -70,16 +76,21 @@ class LocalDB {
   /// @param id Unique identifier of the record to update
   /// @param data New data to store
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbRequestModel, String>> Put(String key, Map<String, dynamic> data) async {
+  static Future<LocalDbResult<LocalDbRequestModel, String>> Put(
+      String key, Map<String, dynamic> data) async {
     final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
-      final currentData = LocalDbRequestModel(id: key, data: data, hash: DateTime.now().millisecondsSinceEpoch.toString());
+      final currentData = LocalDbRequestModel(
+          id: key,
+          data: data,
+          hash: DateTime.now().millisecondsSinceEpoch.toString());
 
       return await LocalDbBridge.instance.put(currentData);
     }
 
-    return Err("Record '$key' not found. Use POST method to create new records.");
+    return Err(
+        "Record '$key' not found. Use POST method to create new records.");
   }
 
   /// Deletes a record by its ID
@@ -109,7 +120,8 @@ class LocalDB {
   /// Calculates the size of a map in kilobytes
   /// @param map Map to calculate size for
   /// @return Size in KB with 3 decimal places
-  static double _mapToKb(Map map) => double.parse((utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
+  static double _mapToKb(Map map) => double.parse(
+      (utf8.encode(jsonEncode(map)).length / 1024).toStringAsFixed(3));
 
   /// Generates a hash from map values
   /// @param values Iterable of values to hash

@@ -14,19 +14,18 @@ import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:path_provider/path_provider.dart';
 
-
 /// opaque extension
 final class AppDbState extends Opaque {}
 
 /// Typedef for the rust functions
-typedef PointerStringFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerStringFFICallBack = Pointer<Utf8> Function(
+    Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
-typedef PointerBoolFFICallBack = Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerBoolFFICallBack = Pointer<Bool> Function(
+    Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
-
-class LocalDbBridge extends LocalSbRequestImpl{
-
+class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbBridge._();
 
   static final LocalDbBridge instance = LocalDbBridge._();
@@ -34,9 +33,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
   late LocalDbResult<DynamicLibrary, String> _lib;
   late Pointer<AppDbState> _dbInstance;
 
-
   Future<void> initialize(String databaseName) async {
-
     /// Initialize native library.
     _lib = await CurrentPlatform.loadRustNativeLib();
 
@@ -48,13 +45,7 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
     /// Initialize database with default route and database name.
     _init('${appDir.path}/$databaseName');
-
   }
-
-
-
-
-
 
   /// Functions registration
   late final Pointer<AppDbState> Function(Pointer<Utf8>) _createDatabase;
@@ -64,48 +55,50 @@ class LocalDbBridge extends LocalSbRequestImpl{
   late final PointerStringFFICallBack _put;
   late final PointerBoolFFICallBack _delete;
 
-
   /// Bind functiopns for initialization
-  void _bindFunctions(){
-    switch(_lib){
+  void _bindFunctions() {
+    switch (_lib) {
       case Ok(data: DynamicLibrary lib):
-        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck, PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
-        _post = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get = lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(FFiFunctions.getAll.cName);
-        _getById = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.getById.cName);
-        _put = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        _delete = lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(FFiFunctions.delete.cName);
+        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck,
+            PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
+        _post = lib.lookupFunction<PointerStringFFICallBack,
+            PointerStringFFICallBack>(FFiFunctions.pushData.cName);
+        _get =
+            lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+                FFiFunctions.getAll.cName);
+        _getById = lib.lookupFunction<PointerStringFFICallBack,
+            PointerStringFFICallBack>(FFiFunctions.getById.cName);
+        _put = lib.lookupFunction<PointerStringFFICallBack,
+            PointerStringFFICallBack>(FFiFunctions.updateData.cName);
+        _delete =
+            lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+                FFiFunctions.delete.cName);
         break;
-        case Err(error: String error):
-          log(error);
-          throw Exception(error);
+      case Err(error: String error):
+        log(error);
+        throw Exception(error);
     }
   }
 
-  Future<void> _init(String dbName)async{
-    try{
-
+  Future<void> _init(String dbName) async {
+    try {
       final dbNamePointer = dbName.toNativeUtf8();
       _dbInstance = _createDatabase(dbNamePointer);
 
       calloc.free(dbNamePointer);
-
-    }catch(error, stackTrace){
+    } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
     }
   }
 
-
   @override
-  Future<LocalDbResult<LocalDbRequestModel,String>> post(LocalDbRequestModel model) async{
-
+  Future<LocalDbResult<LocalDbRequestModel, String>> post(
+      LocalDbRequestModel model) async {
     final jsonString = jsonEncode(model.toJson());
     final jsonPointer = jsonString.toNativeUtf8();
 
-    try{
-
-
+    try {
       final resultPushPointer = _post(_dbInstance, jsonPointer);
 
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
@@ -114,23 +107,19 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
       calloc.free(jsonPointer);
 
-      final  modelData = LocalDbRequestModel.fromJson(jsonDecode(dataResult));
+      final modelData = LocalDbRequestModel.fromJson(jsonDecode(dataResult));
 
       return Ok(modelData);
-
-    }catch(error, stack){
+    } catch (error, stack) {
       log(error.toString());
       log(stack.toString());
       return Err(error.toString());
     }
-
   }
 
-
   @override
-  Future<LocalDbResult<LocalDbRequestModel?,String>> getById(String id) async{
+  Future<LocalDbResult<LocalDbRequestModel?, String>> getById(String id) async {
     try {
-
       final idPtr = id.toNativeUtf8();
       final resultFfi = _getById(_dbInstance, idPtr);
 
@@ -144,11 +133,11 @@ class LocalDbBridge extends LocalSbRequestImpl{
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
       malloc.free(resultFfi);
 
-      final  modelData = LocalDbRequestModel.fromJson(jsonDecode(resultTransformed));
+      final modelData =
+          LocalDbRequestModel.fromJson(jsonDecode(resultTransformed));
 
       return Ok(modelData);
-
-    } catch(error, stackTrace) {
+    } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
       return Err(error.toString());
@@ -156,9 +145,9 @@ class LocalDbBridge extends LocalSbRequestImpl{
   }
 
   @override
-  Future<LocalDbResult<LocalDbRequestModel, String>> put(LocalDbRequestModel model) async{
-    try{
-
+  Future<LocalDbResult<LocalDbRequestModel, String>> put(
+      LocalDbRequestModel model) async {
+    try {
       final jsonString = jsonEncode(model.toJson());
       final jsonPointer = jsonString.toNativeUtf8();
       final resultFfi = _put(_dbInstance, jsonPointer);
@@ -173,13 +162,13 @@ class LocalDbBridge extends LocalSbRequestImpl{
       malloc.free(resultFfi);
 
       return Ok(LocalDbRequestModel.fromJson(jsonDecode(result)));
-    }catch(error, stackTrace){
+    } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
       return Err(error.toString());
     }
   }
-  
+
   // @override
   // Future<bool> cleanDatabase(LocalDbRequestModel model) {
   //   // TODO: implement cleanDatabase
@@ -187,32 +176,27 @@ class LocalDbBridge extends LocalSbRequestImpl{
   // }
 
   @override
-  Future<LocalDbResult<bool, String>> delete(String id) async{
-
-    try{
+  Future<LocalDbResult<bool, String>> delete(String id) async {
+    try {
       final idPtr = id.toNativeUtf8();
       final deleteResult = _delete(_dbInstance, idPtr);
 
       calloc.free(idPtr);
 
       return Ok(deleteResult.address == 1);
-
-    }catch(e,stack){
+    } catch (e, stack) {
       log(e.toString());
       log(stack.toString());
       return Err(e.toString());
     }
-
-
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll() async{
-    try{
-
+  Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll() async {
+    try {
       final resultFfi = _get(_dbInstance);
 
-      if(resultFfi == nullptr){
+      if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
         return Err('Failed to retrieve data: null pointer returned');
       }
@@ -224,23 +208,21 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
       final List<dynamic> jsonList = jsonDecode(resultTransformed);
 
-      final List<LocalDbRequestModel> dataList = jsonList.map((json) => LocalDbRequestModel.fromJson(json)).toList();
+      final List<LocalDbRequestModel> dataList =
+          jsonList.map((json) => LocalDbRequestModel.fromJson(json)).toList();
 
       return Ok(dataList);
-
-
-    }catch(e, stack){
+    } catch (e, stack) {
       log(e.toString());
       log(stack.toString());
       return Err(e.toString());
     }
   }
-
 }
 
 sealed class CurrentPlatform {
-  static Future<LocalDbResult<DynamicLibrary, String>> loadRustNativeLib() async{
-
+  static Future<LocalDbResult<DynamicLibrary, String>>
+      loadRustNativeLib() async {
     if (Platform.isAndroid) {
       return Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
     }
