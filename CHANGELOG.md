@@ -2,7 +2,7 @@
 
 # Changelog
 
-## [0.3.0] - February 16, 2025
+## [0.3.0-alpha.1] - February 16, 2025
 
 ⚠️ **BREAKING CHANGES WARNING**
 This version introduces significant architectural changes by replacing the JSON-based storage with RedB (Rust Embedded Database). There is no automatic migration system available. Please ensure you have backed up your data before upgrading, as you will need to manually migrate your existing data to the new format.
