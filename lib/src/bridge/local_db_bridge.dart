@@ -34,12 +34,17 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
 
   Future<void> initialize(String databaseName) async {
+
+    /// Initialize native library.
     _lib = await CurrentPlatform.loadRustNativeLib();
 
-    _bindFunctions(_lib);
+    /// Bind functions.
+    _bindFunctions();
 
+    /// Define default route.
     final appDir = await getApplicationDocumentsDirectory();
 
+    /// Initialize database with default route and database name.
     _init('${appDir.path}/$databaseName');
 
   }
@@ -58,8 +63,8 @@ class LocalDbBridge extends LocalSbRequestImpl{
 
 
   /// Bind functiopns for initialization
-  void _bindFunctions(LocalDbResult<DynamicLibrary, String> rLib){
-    switch(rLib){
+  void _bindFunctions(){
+    switch(_lib){
       case Ok(data: DynamicLibrary lib):
         _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck, PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
         _post = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.pushData.cName);
@@ -179,15 +184,15 @@ sealed class CurrentPlatform {
   static Future<LocalDbResult<DynamicLibrary, String>> loadRustNativeLib() async{
 
     if (Platform.isAndroid) {
-      Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
+      return Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
     }
 
     if (Platform.isMacOS) {
-      Ok(DynamicLibrary.open(FFiNativeLibLocation.macos.lib));
+      return Ok(DynamicLibrary.open(FFiNativeLibLocation.macos.lib));
     }
 
     if (Platform.isIOS) {
-      Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
+      return Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
     }
 
     return Err("Unsupported platform: ${Platform.operatingSystem}");
