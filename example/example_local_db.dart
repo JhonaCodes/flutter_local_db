@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
+import 'package:flutter_local_db/src/service/local_db_result.dart';
 
 
 void main() async {
@@ -7,7 +8,7 @@ void main() async {
 
 
   /// Local db initialization.
-  await LocalDB.init(config: const ConfigDBModel(maxRecordsPerFile: 5));
+  await LocalDB.init(localDbName: 'example_local_db');
 
   runApp(const ExampleLocalDb());
 }
@@ -50,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
               FutureBuilder(
-                future: LocalDB.Get(),
+                future: LocalDB.GetById('id'),
                 builder: (context, snapShot) {
                   if (snapShot.hasData) {
                     return SingleChildScrollView(
@@ -59,9 +60,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (snapShot.data != null)
-                            ...snapShot.data!.map((data) {
-                              return Text(data.id);
-                            })
+                            snapShot.data!.when(
+                              ok: (data) => Text('${data?.id}'),
+                              err: (error) => Center(child: Text('Error: $error')),
+                            )
+
                         ],
                       ),
                     );
@@ -99,8 +102,8 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             FloatingActionButton(
               onPressed: () async {
-                await LocalDB.Clean();
-                setState(() {});
+                // await LocalDB();
+                //setState(() {});
               },
               child: const Icon(Icons.delete),
             ),
