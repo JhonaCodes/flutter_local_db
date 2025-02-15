@@ -25,10 +25,10 @@ class LocalDB {
 
     if (!_isValidId(key)) {
       return  const Err(
-          "The provided key is invalid. Please ensure it contains only letters and numbers, with a minimum length of 9 characters.");
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    if(!_isValidMap(data)) return const Err('The provided format data is invalid.');
+    if(!_isValidMap(data)) return Err('The provided format data is invalid.\n$data');
 
     final model = LocalDbRequestModel(
       id: key,
@@ -47,7 +47,7 @@ class LocalDB {
 
     if (!_isValidId(id)) {
       return const Err(
-          "The provided key is invalid. Please ensure it contains only letters and numbers, with a minimum length of 9 characters.");
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
     return await LocalDbBridge.instance.getById(id);
@@ -119,7 +119,7 @@ class LocalDB {
   /// @param text ID to validate
   /// @return true if ID is valid, false otherwise
   static bool _isValidId(String text) {
-    RegExp regex = RegExp(r'^[a-zA-Z0-9-]{9,}$');
+    RegExp regex = RegExp(r'^[a-zA-Z0-9_-]{3,}$');
     return regex.hasMatch(text);
   }
 }
