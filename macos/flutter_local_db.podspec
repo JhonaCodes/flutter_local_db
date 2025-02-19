@@ -14,28 +14,24 @@ Flutter local database functionality with Rust FFI implementation.
   s.source           = { :path => '.' }
   s.platform = :osx, '10.11'
 
-  # No source files needed for FFI
   s.source_files = ''
 
-  # Configuración básica
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'FRAMEWORK_SEARCH_PATHS' => '$(PLATFORM_DIR)/Developer/Library/Frameworks'
   }
 
-  # Preservar las bibliotecas en sus respectivas carpetas
   s.preserve_paths = 'Frameworks/**/*.dylib'
 
-  # Script simple para copiar la biblioteca según la arquitectura
-  s.script_phase = {
-    :name => 'Copy Rust library',
-    :script => <<-SCRIPT
-      set -e
-      ARCH="$(uname -m)"
-      mkdir -p "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/$ARCH"
-      cp -f "${PODS_TARGET_SRCROOT}/Frameworks/$ARCH/liboffline_first_core.dylib" "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/$ARCH/"
-    SCRIPT
-    ,
-    :execution_position => :after_compile
-  }
+  s.script_phases = [
+    {
+      :name => 'Copy Rust library',
+      :shell_path => '/bin/sh',
+      :script => 'ARCH="$(uname -m)"
+mkdir -p "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/$ARCH"
+cp -f "${PODS_TARGET_SRCROOT}/Frameworks/$ARCH/liboffline_first_core.dylib" "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/$ARCH/"
+',
+      :execution_position => :after_compile
+    }
+  ]
 end
