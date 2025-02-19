@@ -148,6 +148,23 @@ class LocalDB {
     return await LocalDbBridge.instance.delete(id);
   }
 
+
+  /// Clear all data on the database.
+  ///
+  /// Returns:
+  /// - [Ok] with `true` if the record was successfully deleted
+  /// - [Err] with an error message if the key is invalid or deletion fails
+  // ignore: non_constant_identifier_names
+  static Future<LocalDbResult<bool, String>> ClearData() async {
+    return await LocalDbBridge.instance.cleanDatabase();
+  }
+
+
+  // ignore: non_constant_identifier_names
+  // static Future<LocalDbResult<bool, String>> ResetDatabase() async {
+  //   return await LocalDbBridge.instance.clear();
+  // }
+
   /// Validates that a map can be properly serialized to JSON.
   ///
   /// Parameters:

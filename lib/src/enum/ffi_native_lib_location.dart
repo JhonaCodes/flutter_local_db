@@ -7,19 +7,19 @@ enum FFiNativeLibLocation {
 
   /// iOS static library (.a)
   /// Located in the ios subdirectory
-  ios('ios/liboffline_first_core.a'),
+  ios('liboffline_first_core.a'),
 
   /// macOS dynamic library (.dylib)
   /// Located in the macos subdirectory
-  macos('macos/liboffline_first_core.dylib'),
+  macos('liboffline_first_core.dylib'),
 
   /// Linux dynamic library (.dylib)
   /// Located in the linux subdirectory
-  linux('linux/liboffline_first_core.dylib'),
+  linux('liboffline_first_core.dylib'),
 
   /// Windows executable library (.exe)
   /// Located in the windows subdirectory
-  windows('windows/liboffline_first_core.exe');
+  windows('liboffline_first_core.exe');
 
   /// The platform-specific library path and filename
   /// This path is relative to the application's library directory
