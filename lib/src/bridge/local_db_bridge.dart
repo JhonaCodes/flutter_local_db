@@ -14,6 +14,9 @@ import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'dart:io' show Platform, Directory, Process;
+import 'package:path/path.dart' as path;
+
 /// opaque extension
 final class AppDbState extends Opaque {}
 
@@ -239,7 +242,26 @@ sealed class CurrentPlatform {
     }
 
     if (Platform.isMacOS) {
-      return Ok(DynamicLibrary.open(FFiNativeLibLocation.macos.lib));
+      try{
+
+        // Detectar arquitectura
+        final result = await Process.run('uname', ['-m']);
+        final String arch = result.stdout.toString().trim();
+
+        // Construir la ruta usando la carpeta de arquitectura
+        final String frameworksPath = path.join(
+            'Frameworks',
+            arch,
+            FFiNativeLibLocation.macos.lib
+        );
+
+        return Ok(DynamicLibrary.open(frameworksPath));
+      }catch(err, stack){
+        log('Error loading library: $err');
+        log('Stack trace: $stack');
+        return Err('Failed to load dynamic library: $err');
+      }
+
     }
 
     if (Platform.isIOS) {

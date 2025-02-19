@@ -11,7 +11,7 @@ enum FFiNativeLibLocation {
 
   /// macOS dynamic library (.dylib)
   /// Located in the macos subdirectory
-  macos('macos/liboffline_first_core.dylib'),
+  macos('liboffline_first_core.dylib'),
 
   /// Linux dynamic library (.dylib)
   /// Located in the linux subdirectory
@@ -27,4 +27,5 @@ enum FFiNativeLibLocation {
 
   /// Constructor that maps each platform to its corresponding library path
   const FFiNativeLibLocation(this.lib);
+
 }
