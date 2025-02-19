@@ -28,8 +28,7 @@ Flutter local database functionality with Rust FFI implementation.
       :name => 'Copy Rust library',
       :shell_path => '/bin/sh',
       :script => 'ARCH="$(uname -m)"
-mkdir -p "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/$ARCH"
-cp -f "${PODS_TARGET_SRCROOT}/Frameworks/$ARCH/liboffline_first_core.dylib" "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/$ARCH/"
+cp -f "${PODS_TARGET_SRCROOT}/Frameworks/$ARCH/liboffline_first_core.dylib" "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/liboffline_first_core.dylib"
 ',
       :execution_position => :after_compile
     }

@@ -244,18 +244,17 @@ sealed class CurrentPlatform {
     if (Platform.isMacOS) {
       try{
 
-        // Detectar arquitectura
-        final result = await Process.run('uname', ['-m']);
-        final String arch = result.stdout.toString().trim();
+        final executableDir = Directory(Platform.resolvedExecutable).parent;
 
-        // Construir la ruta usando la carpeta de arquitectura
-        final String frameworksPath = path.join(
+        final String libraryPath = path.join(
+            executableDir.path,
+            '..',
             'Frameworks',
-            arch,
             FFiNativeLibLocation.macos.lib
         );
 
-        return Ok(DynamicLibrary.open(frameworksPath));
+
+        return Ok(DynamicLibrary.open(libraryPath));
       }catch(err, stack){
         log('Error loading library: $err');
         log('Stack trace: $stack');
