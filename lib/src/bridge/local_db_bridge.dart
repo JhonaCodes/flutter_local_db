@@ -179,7 +179,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
     try{
       final resultFfi =_clearAllRecords(_dbInstance);
       final result = resultFfi.address == 1;
-      malloc.free(resultFfi);
       return Ok(result);
     }catch(error, stackTrace){
       log(error.toString());
