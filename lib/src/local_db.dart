@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 
 import 'bridge/local_db_bridge.dart';
@@ -46,7 +47,7 @@ class LocalDB {
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel, String>> Post(
       String key, Map<String, dynamic> data,
-      {String? lastUpdate}) async {
+      {String? lastUpdate, bool withIsolate = false}) async {
     if (!_isValidId(key)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
@@ -69,6 +70,8 @@ class LocalDB {
       data: data,
     );
 
+    if(withIsolate) return  await compute(LocalDbBridge.instance.post, model);
+
     return await LocalDbBridge.instance.post(model);
   }
 
@@ -80,8 +83,12 @@ class LocalDB {
   /// - [Err] with an error message if the operation fails
   static Future<LocalDbResult<List<LocalDbRequestModel>, String>>
       // ignore: non_constant_identifier_names
-      GetAll() async {
-    return await LocalDbBridge.instance.getAll();
+      GetAll({bool withIsolate = false}) async {
+      if(withIsolate) {
+        return await compute((msm) => LocalDbBridge.instance.getAll(), null);
+      }
+
+      return await LocalDbBridge.instance.getAll();
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -95,10 +102,14 @@ class LocalDB {
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(
-      String id) async {
+      String id, {bool withIsolate = false}) async {
     if (!_isValidId(id)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
+    }
+
+    if(withIsolate) {
+      return await compute(LocalDbBridge.instance.getById, id);
     }
 
     return await LocalDbBridge.instance.getById(id);
@@ -115,7 +126,7 @@ class LocalDB {
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel, String>> Put(
-      String key, Map<String, dynamic> data) async {
+      String key, Map<String, dynamic> data, {bool withIsolate = false}) async {
     final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
@@ -123,6 +134,10 @@ class LocalDB {
           id: key,
           data: data,
           hash: DateTime.now().millisecondsSinceEpoch.toString());
+
+      if(withIsolate) {
+        return await compute(LocalDbBridge.instance.put, currentData);
+      }
 
       return await LocalDbBridge.instance.put(currentData);
     }
@@ -140,10 +155,14 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<bool, String>> Delete(String id) async {
+  static Future<LocalDbResult<bool, String>> Delete(String id, {bool withIsolate = false}) async {
     if (!_isValidId(id)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
+    }
+
+    if(withIsolate){
+      return await compute(LocalDbBridge.instance.delete, id);
     }
     return await LocalDbBridge.instance.delete(id);
   }

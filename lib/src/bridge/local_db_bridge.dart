@@ -55,7 +55,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late final PointerStringFFICallBack _getById;
   late final PointerStringFFICallBack _put;
   late final PointerBoolFFICallBack _delete;
-  late final PointerBoolFFICallBack _resetDatabase;
   late final PointerBoolFFICallBackDirect _clearAllRecords;
 
   /// Bind functiopns for initialization
@@ -76,7 +75,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
         _delete =
             lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
                 FFiFunctions.delete.cName);
-        _resetDatabase = lib.lookupFunction<PointerBoolFFICallBack,PointerBoolFFICallBack>(FFiFunctions.resetDatabase.cName);
         _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
         break;
       case Err(error: String error):
