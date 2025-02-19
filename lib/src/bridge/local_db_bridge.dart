@@ -178,7 +178,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Future<LocalDbResult<bool, String>> cleanDatabase() async{
     try{
       final resultFfi =_clearAllRecords(_dbInstance);
-      final result = resultFfi.address == 1;
+      final result = resultFfi != nullptr;
       malloc.free(resultFfi);
       return Ok(result);
     }catch(error, stackTrace){
