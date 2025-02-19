@@ -23,29 +23,26 @@ Flutter local database functionality with Rust FFI implementation.
     'FRAMEWORK_SEARCH_PATHS' => '$(PLATFORM_DIR)/Developer/Library/Frameworks',
   }
 
-  # Seleccionar la biblioteca correcta según la arquitectura
-  s.vendored_libraries = %w[arm64 x86_64].map { |arch|
-    "Frameworks/#{arch}/liboffline_first_core.dylib"
-  }
+  # Asegurar que las bibliotecas se copian al bundle
+  s.preserve_paths = [
+    'Frameworks/arm64/*.dylib',
+    'Frameworks/x86_64/*.dylib'
+  ]
 
-  # Asignar nombres únicos a las bibliotecas según la arquitectura
-  s.prepare_command = <<-SCRIPT
-    mkdir -p Frameworks
-    for arch in arm64 x86_64; do
-      if [ -f "Frameworks/$arch/liboffline_first_core.dylib" ]; then
-        mv "Frameworks/$arch/liboffline_first_core.dylib" "Frameworks/$arch/liboffline_first_core_$arch.dylib"
+  # Script para copiar la biblioteca correcta según la arquitectura
+  s.script_phase = {
+    :name => 'Copy Rust library',
+    :script => <<-SCRIPT
+      set -e
+      ARCH="$ARCHS"
+      if [[ $ARCH == *"arm64"* ]]; then
+        cp -f "${PODS_TARGET_SRCROOT}/Frameworks/arm64/liboffline_first_core.dylib" "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/liboffline_first_core_arm64.dylib"
       fi
-    done
-  SCRIPT
-
-  # Actualizar las rutas de búsqueda de bibliotecas
-  s.pod_target_xcconfig = {
-    'DEFINES_MODULE' => 'YES',
-    'FRAMEWORK_SEARCH_PATHS' => '$(PLATFORM_DIR)/Developer/Library/Frameworks',
-    'LIBRARY_SEARCH_PATHS' => [
-      '$(PODS_TARGET_SRCROOT)/Frameworks/arm64',
-      '$(PODS_TARGET_SRCROOT)/Frameworks/x86_64'
-    ].join(' '),
-    'OTHER_LDFLAGS' => '-loffline_first_core_$(ARCHS)'
+      if [[ $ARCH == *"x86_64"* ]]; then
+        cp -f "${PODS_TARGET_SRCROOT}/Frameworks/x86_64/liboffline_first_core.dylib" "${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/liboffline_first_core_x86_64.dylib"
+      fi
+    SCRIPT
+    ,
+    :execution_position => :after_compile
   }
 end
