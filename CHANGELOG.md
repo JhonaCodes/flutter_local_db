@@ -1,5 +1,32 @@
 # Changelog
 
+
+### 0.4.0
+
+#### Added
+- Full support for iOS arm64 architecture
+- Expanded macOS support (arm64/x86_64)
+- Additional test cases for data integrity and concurrent operations
+- Comprehensive performance testing suite
+- Memory leak detection and prevention
+- New unit tests for error handling scenarios
+
+#### Changed
+- Improved Rust binary management and linking
+- Enhanced error handling in FFI layer
+- Optimized database operations for better performance
+- Updated internal dependencies
+- Refactored platform-specific code
+- Strengthened type safety in FFI bridge
+
+#### Fixed
+- Critical crash on macOS app launch
+- Memory leaks in Rust FFI implementation
+- Race conditions in concurrent database operations
+- Incorrect error propagation in async operations
+- Path handling issues on macOS
+- Binary loading issues on arm64 architectures
+
 ### 0.3.0-alpha.4
 
 #### Changed

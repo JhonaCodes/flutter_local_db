@@ -20,7 +20,7 @@ Add to your pubspec.yaml:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.3.0-alpha.4
+  flutter_local_db: ^0.4.0
 ```
 
 ## Basic Usage
@@ -32,7 +32,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize with database name
-  await LocalDB.init(localDbName: "my_app_db");
+  // use .db extension
+  await LocalDB.init(localDbName: "my_app.db");
   
   runApp(MyApp());
 }

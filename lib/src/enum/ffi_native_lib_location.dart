@@ -17,11 +17,11 @@ enum FFiNativeLibLocation {
 
   /// Linux dynamic library (.dylib)
   /// Located in the linux subdirectory
-  linux('liboffline_first_core.dylib'),
+  linux('liboffline_first_core.so'),
 
   /// Windows executable library (.exe)
   /// Located in the windows subdirectory
-  windows('liboffline_first_core.exe');
+  windows('liboffline_first_core.dll');
 
   /// The platform-specific library path and filename
   /// This path is relative to the application's library directory

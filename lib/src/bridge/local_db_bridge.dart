@@ -37,6 +37,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late Pointer<AppDbState> _dbInstance;
 
   Future<void> initialize(String databaseName) async {
+    if(!databaseName.contains('.db')){
+      databaseName = '$databaseName.db';
+    }
+
     /// Initialize native library.
     _lib = await CurrentPlatform.loadRustNativeLib();
 
