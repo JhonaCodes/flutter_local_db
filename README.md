@@ -6,9 +6,9 @@ A high-performance local database for Flutter that leverages Rust's RedB embedde
 
 ## Features
 
-🦀 **Rust Powered**: Uses ![RedB](https://docs.rs/redb/latest/redb) embedded database for maximum performance and reliability  
+🦀 **Rust Powered**: Uses [RedB](https://docs.rs/redb/latest/redb) embedded database for maximum performance and reliability  
 🔄 **FFI Integration**: Seamless integration between Flutter and Rust  
-🎯 **Simple API**: Store and retrieve JSON data with minimal code, ![FFI-DART](https://github.com/JhonaCodes/offline_first_core)  
+🎯 **Simple API**: Store and retrieve JSON data with minimal code, [FFI-DART](https://github.com/JhonaCodes/offline_first_core)  
 🛡️ **Result Types**: Rust-inspired Result types for better error handling  
 📱 **Cross-Platform**: Supports Android, iOS, and macOS  
 ⚡ **Async Operations**: All database operations are asynchronous  
