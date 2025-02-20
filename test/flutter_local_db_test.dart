@@ -258,25 +258,26 @@ void main() {
       final baseData = {'counter': 0};
       await LocalDB.Post('concurrent-counter', baseData);
 
-      final current = await LocalDB.GetById('concurrent-counter');
+      for (int i = 1; i <= 100; i++) {
+        final current = await LocalDB.GetById('concurrent-counter');
 
-      if (current.isOk && current.data != null) {
+        if (current.isOk && current.data != null) {
+          final newCounter = current.data!.data['counter'] + 1;
+          final updateResult = await LocalDB.Put('concurrent-counter', {'counter': newCounter});
 
-        for (int i = 1; i < 101; i++) {
-          final newCounter = current.data!.data['counter'] + i;
-          await LocalDB.Put('concurrent-counter', {'counter': newCounter});
+          expect(updateResult.isOk, true, reason: 'Failed to update counter at iteration $i');
+        } else {
+          fail('Failed to fetch current counter value at iteration $i');
         }
-
       }
 
       final finalResult = await LocalDB.GetById('concurrent-counter');
       finalResult.when(
-        ok: (data) {
-          expect(data?.data['counter'], 100);
-        },
+        ok: (data) => expect(data?.data['counter'], 100, reason: 'Final counter value mismatch'),
         err: (error) => fail('Failed to verify concurrent operations: $error'),
       );
     });
+
   });
 
   group('Error Recovery Tests', () {

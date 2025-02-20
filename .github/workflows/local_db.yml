@@ -1,4 +1,4 @@
-name: Local Db Tests
+name: Local Database Tests
 
 on:
   push:
@@ -8,14 +8,22 @@ on:
 
 jobs:
   test:
+    name: Run Flutter Tests
     runs-on: macos-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: subosito/flutter-action@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
           flutter-version: 3.27.4
           architecture: arm64
-      - run: |
-          flutter pub get
-          TEST_NO_LOGS=1 flutter test
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test --verbose
