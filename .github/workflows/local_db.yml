@@ -18,4 +18,4 @@ jobs:
           architecture: arm64
       - run: |
           flutter pub get
-          TEST_NO_LOGS=1 flutter test --platform macos
+          TEST_NO_LOGS=1 flutter test
