@@ -10,6 +10,16 @@
 # 👨‍💻 Author: Jhonacode Team (team@jhonacode.com)
 #═══════════════════════════════════════════════════════════════════════════
 
+# Determine architecture and set library path
+arch = `uname -m`.strip
+if arch == 'arm64'
+ ARCH_LIB = "Frameworks/liboffline_first_core_arm64.dylib"
+ CURRENT_ARCH = "arm64"
+else
+ ARCH_LIB = "Frameworks/liboffline_first_core_x86_64.dylib"
+ CURRENT_ARCH = "x86_64"
+end
+
 Pod::Spec.new do |s|
  s.name             = 'flutter_local_db'
  s.version          = '0.0.1'
@@ -24,10 +34,7 @@ Pod::Spec.new do |s|
  #══════════════════════════════════════════
  # 📚 Library Architecture Configuration
  #══════════════════════════════════════════
- s.vendored_libraries = [
-   "Frameworks/liboffline_first_core_arm64.dylib",
-   "Frameworks/liboffline_first_core_x86_64.dylib"
- ]
+ s.vendored_libraries = ARCH_LIB
  s.preserve_paths = 'Frameworks/**/*.dylib'
 
  #══════════════════════════════════════════
@@ -39,48 +46,48 @@ Pod::Spec.new do |s|
    'DYLIB_INSTALL_NAME_BASE' => '@rpath',
    'CODE_SIGN_ENTITLEMENTS' => '${PODS_TARGET_SRCROOT}/macos/flutter_local_db.entitlements',
    'ENABLE_HARDENED_RUNTIME' => 'YES',
-   'OTHER_LDFLAGS' => '-Wl,-no_fixup_chains'
+   'OTHER_LDFLAGS' => '-Wl,-no_fixup_chains',
+   'VALID_ARCHS' => CURRENT_ARCH,
+   'FRAMEWORK_SEARCH_PATHS' => '$(PODS_ROOT)/Frameworks $(BUILT_PRODUCTS_DIR)',
+   'DYLIB_COMPATIBILITY_VERSION' => '1',
+   'DYLIB_CURRENT_VERSION' => '1'
  }
 
  #══════════════════════════════════════════
  # 🔄 Dynamic Library Setup Script
  #══════════════════════════════════════════
- s.script_phases = [
-   {
-     :name => 'Setup Library Permissions',
-     :shell_path => '/bin/sh',
-     :script => <<-SCRIPT
-       #!/bin/sh
-       # 🔍 Detect current architecture
-       ARCH=$(uname -m)
-       if [ "$ARCH" = "arm64" ]; then
-         LIB_NAME="liboffline_first_core_arm64.dylib"
-       else
-         LIB_NAME="liboffline_first_core_x86_64.dylib"
-       fi
+ s.script_phases = [{
+   :name => 'Setup Library Permissions',
+   :shell_path => '/bin/sh',
+   :execution_position => :after_compile,
+   :input_files => [
+     "${PODS_TARGET_SRCROOT}/#{ARCH_LIB}"
+   ],
+   :output_files => [
+     "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/Contents/Frameworks/#{File.basename(ARCH_LIB)}"
+   ],
+   :script => %Q(
+#!/bin/sh
+# 🔍 Setup paths
+FRAMEWORKS_DIR="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/Contents/Frameworks"
+LIB_NAME="#{File.basename(ARCH_LIB)}"
+DEST_PATH="${FRAMEWORKS_DIR}/${LIB_NAME}"
 
-       FRAMEWORKS_DIR="${TARGET_BUILD_DIR}/${EXECUTABLE_FOLDER_PATH}/Contents/Frameworks"
-       DEST_PATH="${FRAMEWORKS_DIR}/${LIB_NAME}"
+# Create frameworks directory if needed
+mkdir -p "${FRAMEWORKS_DIR}"
 
-       # 📁 Create directory if needed
-       mkdir -p "${FRAMEWORKS_DIR}"
+# Copy and configure library
+echo "Processing ${LIB_NAME}..."
+cp -f "${PODS_TARGET_SRCROOT}/#{ARCH_LIB}" "${DEST_PATH}"
+chmod +x "${DEST_PATH}"
+install_name_tool -id "@rpath/${LIB_NAME}" "${DEST_PATH}"
 
-       # 📋 Copy library from source
-       cp -f "${PODS_TARGET_SRCROOT}/Frameworks/${LIB_NAME}" "${DEST_PATH}"
-
-       # 🔒 Set execution permissions
-       chmod +x "${DEST_PATH}"
-
-       # 🔧 Configure @rpath
-       install_name_tool -id "@rpath/${LIB_NAME}" "${DEST_PATH}"
-
-       # ✅ Verify configuration
-       echo "Checking library permissions and signature:"
-       ls -la "${DEST_PATH}"
-       codesign -dvv "${DEST_PATH}" || true
-     SCRIPT
-   }
- ]
+# ✅ Verify configuration
+echo "Checking library permissions and signature:"
+ls -la "${DEST_PATH}"
+codesign -dvv "${DEST_PATH}" || true
+   )
+ }]
 
  #══════════════════════════════════════════
  # 📑 Additional Resources
