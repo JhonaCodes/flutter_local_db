@@ -24,12 +24,14 @@ void main() {
   PathProviderPlatform.instance = mockProvider;
 
   setUpAll(() async {
-
     if (!await mockProvider.testDir.exists()) {
       await mockProvider.testDir.create(recursive: true);
     }
 
-    await LocalDB.initForTesting(localDbName: 'test.db', binaryPath: '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
+    await LocalDB.initForTesting(
+        localDbName: 'test.db',
+        binaryPath:
+            '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
   });
 
   setUp(() async {
@@ -50,7 +52,8 @@ void main() {
 
     test('Should update existing data', () async {
       await LocalDB.Post('update-key', {'value': 'initial'});
-      final updateResult = await LocalDB.Put('update-key', {'value': 'updated'});
+      final updateResult =
+          await LocalDB.Put('update-key', {'value': 'updated'});
       expect(updateResult.isOk, true);
 
       final retrieved = await LocalDB.GetById('update-key');
@@ -70,8 +73,7 @@ void main() {
       // Verify deletion - should return Ok(null) no Err
       final retrieved = await LocalDB.GetById('delete-key');
       retrieved.when(
-        ok: (data) {
-        },
+        ok: (data) {},
         err: (err) {
           expect(err, 'Not found');
         },
@@ -81,9 +83,8 @@ void main() {
 
   group('LocalDB Concurrent Operations', () {
     test('Should handle multiple concurrent writes', () async {
-      final futures = List.generate(10, (index) =>
-          LocalDB.Post('concurrent-$index', {'value': index})
-      );
+      final futures = List.generate(
+          10, (index) => LocalDB.Post('concurrent-$index', {'value': index}));
 
       final results = await Future.wait(futures);
       expect(results.every((r) => r.isOk), true);
@@ -96,26 +97,22 @@ void main() {
 
   group('LocalDB Performance', () {
     test('Should perform bulk operations efficiently', () async {
-      final Stopwatch stopwatch = Stopwatch()
-        ..start();
+      final Stopwatch stopwatch = Stopwatch()..start();
 
-      final futures = List.generate(50, (index) =>
-          LocalDB.Post('bulk-$index', {
-            'data': 'test-data-$index',
-            'timestamp': DateTime.now().toIso8601String(),
-          })
-      );
+      final futures = List.generate(
+          50,
+          (index) => LocalDB.Post('bulk-$index', {
+                'data': 'test-data-$index',
+                'timestamp': DateTime.now().toIso8601String(),
+              }));
 
       final results = await Future.wait(futures);
-      final insertTime = stopwatch.elapsedMilliseconds;
 
       stopwatch.reset();
       stopwatch.start();
-      final readFutures = List.generate(50, (index) =>
-          LocalDB.GetById('bulk-$index')
-      );
+      final readFutures =
+          List.generate(50, (index) => LocalDB.GetById('bulk-$index'));
       await Future.wait(readFutures);
-      final readTime = stopwatch.elapsedMilliseconds;
 
       expect(results.every((r) => r.isOk), true);
     });
@@ -131,13 +128,14 @@ void main() {
     });
 
     test('Should handle non-existent keys for Put operation', () async {
-      final updateResult = await LocalDB.Put('non-existent-key', {'data': 'test'});
+      final updateResult =
+          await LocalDB.Put('non-existent-key', {'data': 'test'});
       expect(updateResult.isErr, true);
 
       updateResult.when(
           ok: (data) => fail('Should not succeed for non-existent key'),
-          err: (error) => expect(error, "Record 'non-existent-key' not found. Use POST method to create new records.")
-      );
+          err: (error) => expect(error,
+              "Record 'non-existent-key' not found. Use POST method to create new records."));
     });
 
     test('Should handle empty data gracefully', () async {
@@ -207,14 +205,15 @@ void main() {
     test('Should reject invalid JSON data', () async {
       // Test with invalid JSON data types
       final Map<String, dynamic> invalidData = {
-        'invalid': double.infinity,  // Infinity no es serializable en JSON
-        'nan': double.nan,          // NaN no es serializable en JSON
+        'invalid': double.infinity, // Infinity no es serializable en JSON
+        'nan': double.nan, // NaN no es serializable en JSON
       };
 
       final result = await LocalDB.Post('invalid-json', invalidData);
       result.when(
         ok: (_) => fail('Should reject non-serializable JSON data'),
-        err: (error) => expect(error.contains('The provided format data is invalid'), true),
+        err: (error) =>
+            expect(error.contains('The provided format data is invalid'), true),
       );
 
       // Test with deeply nested structures
@@ -231,7 +230,8 @@ void main() {
       final resultNested = await LocalDB.Post('invalid-nested', deeplyNested);
       resultNested.when(
         ok: (data) => expect(data.id, 'invalid-nested'),
-        err: (error) => fail('Valid nested structure should be accepted: $error'),
+        err: (error) =>
+            fail('Valid nested structure should be accepted: $error'),
       );
     });
   });
@@ -263,9 +263,11 @@ void main() {
 
         if (current.isOk && current.data != null) {
           final newCounter = current.data!.data['counter'] + 1;
-          final updateResult = await LocalDB.Put('concurrent-counter', {'counter': newCounter});
+          final updateResult =
+              await LocalDB.Put('concurrent-counter', {'counter': newCounter});
 
-          expect(updateResult.isOk, true, reason: 'Failed to update counter at iteration $i');
+          expect(updateResult.isOk, true,
+              reason: 'Failed to update counter at iteration $i');
         } else {
           fail('Failed to fetch current counter value at iteration $i');
         }
@@ -273,17 +275,19 @@ void main() {
 
       final finalResult = await LocalDB.GetById('concurrent-counter');
       finalResult.when(
-        ok: (data) => expect(data?.data['counter'], 100, reason: 'Final counter value mismatch'),
+        ok: (data) => expect(data?.data['counter'], 100,
+            reason: 'Final counter value mismatch'),
         err: (error) => fail('Failed to verify concurrent operations: $error'),
       );
     });
-
   });
 
   group('Error Recovery Tests', () {
     test('Should handle database cleanup after failed operations', () async {
       // Simulate a failed operation
-      final invalidData = {'key': double.infinity}; // Will fail JSON serialization
+      final invalidData = {
+        'key': double.infinity
+      }; // Will fail JSON serialization
       await LocalDB.Post('failed-op', invalidData);
 
       // Verify database is still operational
@@ -319,15 +323,13 @@ void main() {
 
   group('Performance Optimization Tests', () {
     test('Should maintain performance with large datasets', () async {
-      final stopwatch = Stopwatch()
-        ..start();
+      final stopwatch = Stopwatch()..start();
 
       // Create 1000 records
-      final futures = List.generate(1000, (i) =>
-          LocalDB.Post(
-              'perf-test-$i',
-              {'data': List.generate(100, (j) => 'value-$j').join(',')}
-          ));
+      final futures = List.generate(
+          1000,
+          (i) => LocalDB.Post('perf-test-$i',
+              {'data': List.generate(100, (j) => 'value-$j').join(',')}));
 
       await Future.wait(futures);
       final writeTime = stopwatch.elapsedMilliseconds;
@@ -350,13 +352,11 @@ void main() {
     });
 
     test('Should handle rapid sequential operations efficiently', () async {
-      final stopwatch = Stopwatch()
-        ..start();
+      final stopwatch = Stopwatch()..start();
 
       // Perform 100 rapid sequential operations
       for (int i = 0; i < 100; i++) {
         await LocalDB.Post('rapid-$i', {'value': i});
-        final retrieved = await LocalDB.GetById('rapid-$i');
         await LocalDB.Put('rapid-$i', {'value': i + 1});
         await LocalDB.Delete('rapid-$i');
       }
@@ -374,15 +374,18 @@ void main() {
       for (final id in ['valid-123', 'test_123', 'abc123']) {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
-          ok: (data) => expect(data.id, id, reason: 'Should accept valid ID: $id'),
-          err: (error) => fail('Should not reject valid ID: $id. Error: $error'),
+          ok: (data) =>
+              expect(data.id, id, reason: 'Should accept valid ID: $id'),
+          err: (error) =>
+              fail('Should not reject valid ID: $id. Error: $error'),
         );
 
         // Verify the data was stored
         final retrieved = await LocalDB.GetById(id);
         retrieved.when(
           ok: (data) => expect(data?.id, id),
-          err: (error) => fail('Should find stored valid ID: $id. Error: $error'),
+          err: (error) =>
+              fail('Should find stored valid ID: $id. Error: $error'),
         );
 
         // Clean up
@@ -431,13 +434,14 @@ void main() {
 
       final result = await LocalDB.Post(longKey, testData);
       result.when(
-        ok: (data) async{
+        ok: (data) async {
           expect(data.id, longKey);
 
           final retrieved = await LocalDB.GetById(longKey);
           retrieved.when(
             ok: (retrievedData) {
-              expect(retrievedData?.data['description'], 'Testing maximum key length');
+              expect(retrievedData?.data['description'],
+                  'Testing maximum key length');
             },
             err: (error) => fail('Failed to retrieve long key data'),
           );
@@ -504,29 +508,28 @@ void main() {
     });
 
     test('Should handle maximum data payload size', () async {
-
       final largePayload = {
         'big_data': List.generate(10000, (index) => 'chunk-$index').join()
       };
 
       final result = await LocalDB.Post('large-payload', largePayload);
       result.when(
-        ok: (data) async{
+        ok: (data) async {
           final retrieved = await LocalDB.GetById('large-payload');
           retrieved.when(
             ok: (retrievedData) {
-              expect(retrievedData?.data['big_data'].length, largePayload['big_data']!.length);
+              expect(retrievedData?.data['big_data'].length,
+                  largePayload['big_data']!.length);
             },
             err: (error) => fail('Failed to retrieve large payload'),
           );
         },
         err: (error) => fail('Should accept large payload: $error'),
       );
-
     });
 
-    test('Should provide transaction-like behavior for critical updates', () async {
-
+    test('Should provide transaction-like behavior for critical updates',
+        () async {
       await LocalDB.Post('transaction-test', {'balance': 100});
 
       try {
@@ -554,7 +557,8 @@ void main() {
         }
       } catch (e) {
         // Manejo de errores
-        final rollback = await LocalDB.Put('transaction-test', {'balance': 100});
+        final rollback =
+            await LocalDB.Put('transaction-test', {'balance': 100});
         expect(rollback.isOk, true);
       }
     });
@@ -583,16 +587,14 @@ void main() {
       // Probar estructuras de datos profundamente anidadas
       Map<String, dynamic> createNestedStructure(int depth) {
         if (depth == 0) return {'leaf': 'value'};
-        return {
-          'nested': createNestedStructure(depth - 1)
-        };
+        return {'nested': createNestedStructure(depth - 1)};
       }
 
       final deepNested = createNestedStructure(20); // Profundidad de 20 niveles
 
       final result = await LocalDB.Post('deep-nested', deepNested);
       result.when(
-        ok: (data) async{
+        ok: (data) async {
           final retrieved = await LocalDB.GetById('deep-nested');
           retrieved.when(
             ok: (retrievedData) {
@@ -603,6 +605,7 @@ void main() {
                 }
                 return obj['leaf'] == 'value';
               }
+
               expect(checkNesting(retrievedData?.data), true);
             },
             err: (error) => fail('Failed to retrieve deeply nested data'),
@@ -617,7 +620,7 @@ void main() {
       final key = 'conflict-key';
       await LocalDB.Post(key, {'counter': 0});
 
-      final conflictOperations = List.generate(100, (i) async {
+      List.generate(100, (i) async {
         final current = await LocalDB.GetById(key);
         if (current.isOk && current.data != null) {
           final currentValue = current.data!.data['counter'] ?? 0;
@@ -625,8 +628,6 @@ void main() {
         }
         return Future.value(Err('Failed to read'));
       });
-
-      final results = await Future.wait(conflictOperations);
 
       final finalResult = await LocalDB.GetById(key);
       finalResult.when(
@@ -661,12 +662,12 @@ void main() {
     });
 
     test('Should maintain data integrity under stress', () async {
-
       final stressOperations = <Future>[];
 
       for (int i = 0; i < 100; i++) {
         stressOperations.add(LocalDB.Post('stress-$i', {'index': i}));
-        stressOperations.add(LocalDB.Put('stress-${i % 10}', {'updated': true}));
+        stressOperations
+            .add(LocalDB.Put('stress-${i % 10}', {'updated': true}));
         stressOperations.add(LocalDB.GetById('stress-${i % 10}'));
       }
 
@@ -674,5 +675,4 @@ void main() {
       expect(results.length, 300);
     });
   });
-
 }

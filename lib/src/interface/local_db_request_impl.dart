@@ -13,14 +13,16 @@ abstract class LocalSbRequestImpl {
   /// or an error message if the operation fails.
   ///
   /// Note: Implemented as Future for upcoming async Rust implementation.
-  Future<LocalDbResult<LocalDbRequestModel, String>> post(LocalDbRequestModel model);
+  Future<LocalDbResult<LocalDbRequestModel, String>> post(
+      LocalDbRequestModel model);
 
   /// Updates an existing record in the database.
   ///
   /// Takes a [LocalDbRequestModel] containing the updated data.
   /// Returns a [LocalDbResult] that either contains the updated record
   /// or an error message if the operation fails.
-  Future<LocalDbResult<LocalDbRequestModel, String>> put(LocalDbRequestModel model);
+  Future<LocalDbResult<LocalDbRequestModel, String>> put(
+      LocalDbRequestModel model);
 
   /// Retrieves all records from the database.
   ///

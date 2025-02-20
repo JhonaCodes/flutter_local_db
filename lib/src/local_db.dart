@@ -27,7 +27,8 @@ class LocalDB {
     await LocalDbBridge.instance.initialize(localDbName);
   }
 
-  static Future<void> initForTesting({required String localDbName, required String binaryPath}) async {
+  static Future<void> initForTesting(
+      {required String localDbName, required String binaryPath}) async {
     await LocalDbBridge.instance.initForTesting(localDbName, binaryPath);
   }
 
@@ -74,7 +75,7 @@ class LocalDB {
       data: data,
     );
 
-    if(withIsolate) return  await compute(LocalDbBridge.instance.post, model);
+    if (withIsolate) return await compute(LocalDbBridge.instance.post, model);
 
     return await LocalDbBridge.instance.post(model);
   }
@@ -88,11 +89,11 @@ class LocalDB {
   static Future<LocalDbResult<List<LocalDbRequestModel>, String>>
       // ignore: non_constant_identifier_names
       GetAll({bool withIsolate = false}) async {
-      if(withIsolate) {
-        return await compute((msm) => LocalDbBridge.instance.getAll(), null);
-      }
+    if (withIsolate) {
+      return await compute((msm) => LocalDbBridge.instance.getAll(), null);
+    }
 
-      return await LocalDbBridge.instance.getAll();
+    return await LocalDbBridge.instance.getAll();
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -105,14 +106,14 @@ class LocalDB {
   /// - [Ok] with `null` if no record matches the ID
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(
-      String id, {bool withIsolate = false}) async {
+  static Future<LocalDbResult<LocalDbRequestModel?, String>> GetById(String id,
+      {bool withIsolate = false}) async {
     if (!_isValidId(id)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    if(withIsolate) {
+    if (withIsolate) {
       return await compute(LocalDbBridge.instance.getById, id);
     }
 
@@ -130,7 +131,8 @@ class LocalDB {
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbRequestModel, String>> Put(
-      String key, Map<String, dynamic> data, {bool withIsolate = false}) async {
+      String key, Map<String, dynamic> data,
+      {bool withIsolate = false}) async {
     final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
@@ -139,7 +141,7 @@ class LocalDB {
           data: data,
           hash: DateTime.now().millisecondsSinceEpoch.toString());
 
-      if(withIsolate) {
+      if (withIsolate) {
         return await compute(LocalDbBridge.instance.put, currentData);
       }
 
@@ -159,18 +161,18 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<bool, String>> Delete(String id, {bool withIsolate = false}) async {
+  static Future<LocalDbResult<bool, String>> Delete(String id,
+      {bool withIsolate = false}) async {
     if (!_isValidId(id)) {
       return const Err(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    if(withIsolate){
+    if (withIsolate) {
       return await compute(LocalDbBridge.instance.delete, id);
     }
     return await LocalDbBridge.instance.delete(id);
   }
-
 
   /// Clear all data on the database.
   ///
@@ -181,7 +183,6 @@ class LocalDB {
   static Future<LocalDbResult<bool, String>> ClearData() async {
     return await LocalDbBridge.instance.cleanDatabase();
   }
-
 
   // ignore: non_constant_identifier_names
   // static Future<LocalDbResult<bool, String>> ResetDatabase() async {

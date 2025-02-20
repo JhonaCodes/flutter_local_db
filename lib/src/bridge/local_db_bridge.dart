@@ -25,7 +25,8 @@ typedef PointerStringFFICallBack = Pointer<Utf8> Function(
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
 typedef PointerBoolFFICallBack = Pointer<Bool> Function(
     Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(Pointer<AppDbState>);
+typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(
+    Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 class LocalDbBridge extends LocalSbRequestImpl {
@@ -36,8 +37,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late LocalDbResult<DynamicLibrary, String> _lib;
   late Pointer<AppDbState> _dbInstance;
 
-  Future<void> initForTesting(String databaseName, String libPath)async{
-    if(!databaseName.contains('.db')){
+  Future<void> initForTesting(String databaseName, String libPath) async {
+    if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';
     }
 
@@ -55,7 +56,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   Future<void> initialize(String databaseName) async {
-    if(!databaseName.contains('.db')){
+    if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';
     }
 
@@ -99,7 +100,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
         _delete =
             lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
                 FFiFunctions.delete.cName);
-        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
+            PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -197,13 +199,13 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, String>> cleanDatabase() async{
-    try{
-      final resultFfi =_clearAllRecords(_dbInstance);
+  Future<LocalDbResult<bool, String>> cleanDatabase() async {
+    try {
+      final resultFfi = _clearAllRecords(_dbInstance);
       final result = resultFfi != nullptr;
       malloc.free(resultFfi);
       return Ok(result);
-    }catch(error, stackTrace){
+    } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
       return Err(error.toString());
@@ -273,5 +275,4 @@ sealed class CurrentPlatform {
 
     return Err("Unsupported platform: ${Platform.operatingSystem}");
   }
-
 }

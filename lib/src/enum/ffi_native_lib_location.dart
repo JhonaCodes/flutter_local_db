@@ -30,9 +30,10 @@ enum FFiNativeLibLocation {
   /// Constructor that maps each platform to its corresponding library path
   const FFiNativeLibLocation(this.lib);
 
-  Future<String> toMacosArchPath() async{
+  Future<String> toMacosArchPath() async {
     final result = await Process.run('uname', ['-m']);
     result.stdout.toString().trim();
-    return lib.replaceAll('liboffline_first_core', 'liboffline_first_core_${result.stdout.toString().trim()}');
+    return lib.replaceAll('liboffline_first_core',
+        'liboffline_first_core_${result.stdout.toString().trim()}');
   }
 }
