@@ -506,7 +506,7 @@ void main() {
     test('Should handle maximum data payload size', () async {
 
       final largePayload = {
-        'big_data': List.generate(100, (index) => 'chunk-$index').join()
+        'big_data': List.generate(10000, (index) => 'chunk-$index').join()
       };
 
       final result = await LocalDB.Post('large-payload', largePayload);
