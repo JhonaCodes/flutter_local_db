@@ -1,3 +1,5 @@
+import 'dart:io';
+
 /// Defines the locations and filenames of the native libraries for different platforms.
 /// Each platform requires its own specific library format and location.
 enum FFiNativeLibLocation {
@@ -28,4 +30,9 @@ enum FFiNativeLibLocation {
   /// Constructor that maps each platform to its corresponding library path
   const FFiNativeLibLocation(this.lib);
 
+  Future<String> toMacosArchPath() async{
+    final result = await Process.run('uname', ['-m']);
+    result.stdout.toString().trim();
+    return lib.replaceAll('liboffline_first_core', 'liboffline_first_core_${result.stdout.toString().trim()}');
+  }
 }

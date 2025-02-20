@@ -242,25 +242,8 @@ sealed class CurrentPlatform {
     }
 
     if (Platform.isMacOS) {
-      try{
-
-        final executableDir = Directory(Platform.resolvedExecutable).parent;
-
-        final String libraryPath = path.join(
-            executableDir.path,
-            '..',
-            'Frameworks',
-            FFiNativeLibLocation.macos.lib
-        );
-
-
-        return Ok(DynamicLibrary.open(libraryPath));
-      }catch(err, stack){
-        log('Error loading library: $err');
-        log('Stack trace: $stack');
-        return Err('Failed to load dynamic library: $err');
-      }
-
+      final arch = await FFiNativeLibLocation.macos.toMacosArchPath();
+      return Ok(DynamicLibrary.open(arch));
     }
 
     if (Platform.isIOS) {

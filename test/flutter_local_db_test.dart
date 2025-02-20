@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
@@ -9,7 +6,7 @@ import 'dart:io';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 class MockPathProvider extends PathProviderPlatform {
-  final testDir = Directory('test_db');
+  final testDir = Directory('test_db.db');
 
   @override
   Future<String> getApplicationDocumentsPath() async {
