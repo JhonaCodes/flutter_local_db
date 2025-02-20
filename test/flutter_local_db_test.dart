@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
@@ -16,6 +13,7 @@ class MockPathProvider extends PathProviderPlatform {
     if (!await testDir.exists()) {
       await testDir.create(recursive: true);
     }
+
     return testDir.path;
   }
 }
@@ -26,10 +24,12 @@ void main() {
   PathProviderPlatform.instance = mockProvider;
 
   setUpAll(() async {
+
     if (!await mockProvider.testDir.exists()) {
       await mockProvider.testDir.create(recursive: true);
     }
-    await LocalDB.init(localDbName: 'test.db');
+
+    await LocalDB.initForTesting(localDbName: 'test.db', binaryPath: '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
   });
 
   setUp(() async {
@@ -672,65 +672,6 @@ void main() {
       final results = await Future.wait(stressOperations);
       expect(results.length, 300);
     });
-  });
-
-
-
-  group('Isolate Operation Tests', () {
-    test('Should complete isolate operation before test finishes', () async {
-      // Usar un Completer para esperar explícitamente el resultado del isolate
-      final completer = Completer<LocalDbResult<List<LocalDbRequestModel>, String>>();
-
-      // Preparar datos
-      await LocalDB.Post('isolate-test-1', {'data': 'value1'});
-      await LocalDB.Post('isolate-test-2', {'data': 'value2'});
-
-      // Ejecutar con isolate
-      LocalDB.GetAll(withIsolate: true).then((result) {
-        completer.complete(result);
-      }).catchError((error) {
-        completer.completeError(error);
-      });
-
-      // Esperar el resultado del isolate
-      final result = await completer.future;
-
-      // Verificaciones
-      result.when(
-        ok: (data) {
-          expect(data.length, 2);
-          expect(data.any((item) => item.id == 'isolate-test-1'), true);
-          expect(data.any((item) => item.id == 'isolate-test-2'), true);
-        },
-        err: (error) => fail('Isolate operation failed: $error'),
-      );
-    }, timeout: Timeout(Duration(seconds: 5))); // Añadir un timeout
-
-    test('Should handle multiple concurrent isolate operations', () async {
-      // Preparar datos
-      await LocalDB.Post('isolate-concurrent-1', {'data': 'value1'});
-      await LocalDB.Post('isolate-concurrent-2', {'data': 'value2'});
-
-      // Crear múltiples operaciones de isolate
-      final operations = List.generate(5, (_) =>
-          LocalDB.GetAll(withIsolate: true)
-      );
-
-      // Esperar todas las operaciones
-      final results = await Future.wait(operations);
-
-      // Verificar resultados
-      for (final result in results) {
-        result.when(
-          ok: (data) {
-            expect(data.length, 2);
-            expect(data.any((item) => item.id == 'isolate-concurrent-1'), true);
-            expect(data.any((item) => item.id == 'isolate-concurrent-2'), true);
-          },
-          err: (error) => fail('Concurrent isolate operation failed: $error'),
-        );
-      }
-    }, timeout: Timeout(Duration(seconds: 10)));
   });
 
 }

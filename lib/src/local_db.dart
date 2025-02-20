@@ -27,6 +27,10 @@ class LocalDB {
     await LocalDbBridge.instance.initialize(localDbName);
   }
 
+  static Future<void> initForTesting({required String localDbName, required String binaryPath}) async {
+    await LocalDbBridge.instance.initForTesting(localDbName, binaryPath);
+  }
+
   /// Creates a new record in the database.
   ///
   /// Validates the key and data before attempting to create the record.

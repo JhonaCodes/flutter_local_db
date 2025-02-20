@@ -36,6 +36,24 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late LocalDbResult<DynamicLibrary, String> _lib;
   late Pointer<AppDbState> _dbInstance;
 
+  Future<void> initForTesting(String databaseName, String libPath)async{
+    if(!databaseName.contains('.db')){
+      databaseName = '$databaseName.db';
+    }
+
+    /// Initialize native library.
+    _lib = Ok(DynamicLibrary.open(libPath));
+
+    /// Bind functions.
+    _bindFunctions();
+
+    /// Define default route.
+    final appDir = await getApplicationDocumentsDirectory();
+
+    /// Initialize database with default route and database name.
+    _init('${appDir.path}/$databaseName');
+  }
+
   Future<void> initialize(String databaseName) async {
     if(!databaseName.contains('.db')){
       databaseName = '$databaseName.db';
@@ -255,4 +273,5 @@ sealed class CurrentPlatform {
 
     return Err("Unsupported platform: ${Platform.operatingSystem}");
   }
+
 }
