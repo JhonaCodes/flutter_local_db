@@ -14,8 +14,7 @@ import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'dart:io' show Platform, Directory, Process;
-import 'package:path/path.dart' as path;
+import 'dart:io' show Platform;
 
 /// opaque extension
 final class AppDbState extends Opaque {}
