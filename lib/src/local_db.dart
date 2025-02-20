@@ -27,6 +27,8 @@ class LocalDB {
     await LocalDbBridge.instance.initialize(localDbName);
   }
 
+  /// Avoid to use on production.
+  ///
   static Future<void> initForTesting(
       {required String localDbName, required String binaryPath}) async {
     await LocalDbBridge.instance.initForTesting(localDbName, binaryPath);
