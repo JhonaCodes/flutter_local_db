@@ -1,7 +1,7 @@
 # Changelog
 
 
-### 0.4.0
+### 0.3.0
 
 #### Added
 - Full support for iOS arm64 architecture
