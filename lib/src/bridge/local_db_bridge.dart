@@ -270,16 +270,7 @@ sealed class CurrentPlatform {
     }
 
     if (Platform.isIOS) {
-      try {
-
-        return Ok(DynamicLibrary.process());
-      } catch (e) { // Si falla, intenta con ruta relativa
-        try {
-          return Ok(DynamicLibrary.open("Frameworks/liboffline_first_core.dylib"));
-        } catch (e2) {
-          return Err("No se pudo cargar la biblioteca: $e2");
-        }
-      }
+      return Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
     }
 
     return Err("Unsupported platform: ${Platform.operatingSystem}");

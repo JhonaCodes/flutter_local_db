@@ -12,25 +12,29 @@ Pod::Spec.new do |s|
   LIB_NAME = 'liboffline_first_core.dylib'
   FRAMEWORKS_DIR = 'Frameworks'
 
-  # Asegura que la librería esté incluida correctamente
-  s.vendored_libraries = "../Frameworks/liboffline_first_core.dylib"
+  # Cambiado: Utilizamos rutas relativas para la biblioteca
+  s.vendored_libraries = "#{FRAMEWORKS_DIR}/#{LIB_NAME}"
   s.preserve_paths = "#{FRAMEWORKS_DIR}/#{LIB_NAME}"
 
   # Configuración de Xcode
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
-    'LD_RUNPATH_SEARCH_PATHS' => '@executable_path/Frameworks',
+    'LD_RUNPATH_SEARCH_PATHS' => '@executable_path/Frameworks $(inherited)',
     'OTHER_LDFLAGS' => '-Wl,-rpath,@executable_path/Frameworks',
     'ARCHS' => '$(ARCHS_STANDARD)',
     'VALID_ARCHS' => 'arm64 x86_64'
   }
 
-  # Verifica que la librería esté en su lugar antes de compilar
-  s.prepare_command = <<-CMD
-    mkdir -p #{FRAMEWORKS_DIR}
-    if [ ! -f "#{FRAMEWORKS_DIR}/#{LIB_NAME}" ]; then
-      echo "Error: #{LIB_NAME} no encontrado en #{FRAMEWORKS_DIR}"
-      exit 1
-    fi
-  CMD
+  # Script para copiar la biblioteca al bundle final
+  s.script_phases = [
+    {
+      :name => 'Copy Rust Library',
+      :execution_position => :before_compile,
+      :shell_path => '/bin/sh',
+      :script => <<-SCRIPT
+        mkdir -p "${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}"
+        cp -f "${PODS_TARGET_SRCROOT}/#{FRAMEWORKS_DIR}/#{LIB_NAME}" "${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/"
+      SCRIPT
+    }
+  ]
 end
