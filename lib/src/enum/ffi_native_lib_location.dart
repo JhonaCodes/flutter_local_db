@@ -9,7 +9,7 @@ enum FFiNativeLibLocation {
 
   /// iOS static library (.a)
   /// Located in the ios subdirectory
-  ios('ios/liboffline_first_core.a'),
+  ios('liboffline_first_core.dylib'),
 
   /// macOS dynamic library (.dylib)
   /// Located in the macos subdirectory
