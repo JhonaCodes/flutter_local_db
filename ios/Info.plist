@@ -22,5 +22,13 @@
     <string>11.0</string>
     <key>NSDocumentsFolderUsageDescription</key>
     <string>Access needed to store application data</string>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>

@@ -35,14 +35,14 @@ Pod::Spec.new do |s|
  # 📚 Library Architecture Configuration
  #══════════════════════════════════════════
  s.vendored_libraries = ARCH_LIB
- s.preserve_paths = 'Frameworks/**/*.dylib'
+ s.preserve_paths = 'Frameworks/*.dylib'
 
  #══════════════════════════════════════════
  # ⚙️ XCode Build Configuration
  #══════════════════════════════════════════
  s.pod_target_xcconfig = {
    'DEFINES_MODULE' => 'YES',
-   'LD_RUNPATH_SEARCH_PATHS' => '@executable_path/../Frameworks @loader_path/Frameworks',
+   'LD_RUNPATH_SEARCH_PATHS' => '@executable_path/Frameworks $(inherited)',
    'DYLIB_INSTALL_NAME_BASE' => '@rpath',
    'CODE_SIGN_ENTITLEMENTS' => '${PODS_TARGET_SRCROOT}/macos/flutter_local_db.entitlements',
    'ENABLE_HARDENED_RUNTIME' => 'YES',

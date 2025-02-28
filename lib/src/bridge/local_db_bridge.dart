@@ -56,21 +56,29 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   Future<void> initialize(String databaseName) async {
-    if (!databaseName.contains('.db')) {
-      databaseName = '$databaseName.db';
+    try {
+      log('Initializing DB on platform: ${Platform.operatingSystem}');
+
+      /// Initialize native library.
+      _lib = await CurrentPlatform.loadRustNativeLib();
+      log('Library loaded: ${_lib}');
+
+      /// Bind functions.
+      _bindFunctions();
+      log('Functions bound successfully');
+
+      /// Define default route.
+      final appDir = await getApplicationDocumentsDirectory();
+      log('Using app directory: ${appDir.path}');
+
+      /// Initialize database with default route and database name.
+      _init('${appDir.path}/$databaseName');
+      log('Database initialized successfully');
+    } catch (e, stack) {
+      log('Error initializing database: $e');
+      log('Stack trace: $stack');
+      rethrow;
     }
-
-    /// Initialize native library.
-    _lib = await CurrentPlatform.loadRustNativeLib();
-
-    /// Bind functions.
-    _bindFunctions();
-
-    /// Define default route.
-    final appDir = await getApplicationDocumentsDirectory();
-
-    /// Initialize database with default route and database name.
-    _init('${appDir.path}/$databaseName');
   }
 
   /// Functions registration
@@ -270,7 +278,15 @@ sealed class CurrentPlatform {
     }
 
     if (Platform.isIOS) {
-      return Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
+      try {
+        return Ok(DynamicLibrary.process());
+      } catch (e) {
+        try {
+          return Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
+        } catch (error) {
+          return Err("Error loading library on iOS: $error");
+        }
+      }
     }
 
     return Err("Unsupported platform: ${Platform.operatingSystem}");
