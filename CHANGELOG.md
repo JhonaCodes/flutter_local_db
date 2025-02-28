@@ -1,5 +1,21 @@
 # Changelog
 
+### 0.4.0
+
+#### Added
+- Full compatibility with iOS and macOS platforms
+- Compiled Rust binary for multiple iOS architectures
+- Dynamic binary support for iOS
+
+#### Changed
+- Database file extension defaults to .db when only name is provided
+- Improved distribution scripts logic for binary deployment
+- Enhanced Rust binary compilation for cross-platform support
+
+#### Fixed
+- Compatibility issues with Gradle configuration
+- Binary distribution problems across different platforms
+
 
 ### 0.3.0
 
