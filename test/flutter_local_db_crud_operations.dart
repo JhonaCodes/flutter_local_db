@@ -4,7 +4,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 
 import 'mock_path.dart';
 
-void main(){
+void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final mockProvider = MockPathProvider();
   PathProviderPlatform.instance = mockProvider;
@@ -17,7 +17,7 @@ void main(){
     await LocalDB.initForTesting(
         localDbName: 'test.db',
         binaryPath:
-        '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
+            '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
   });
 
   setUp(() async {
@@ -25,7 +25,6 @@ void main(){
   });
 
   group('LocalDB post', () {
-
     test('Benchmark for writing operations', () async {
       final stopwatch = Stopwatch()..start();
 
@@ -45,9 +44,9 @@ void main(){
       // Un benchmark agresivo que busca al menos 2000 operaciones por segundo
       // Esto sería comparable con SQLite en modo optimizado
       expect(operationsPerSecond >= 2000, true,
-          reason: 'Performance benchmark failed: $operationsPerSecond ops/s is below target of 2000 ops/s');
+          reason:
+              'Performance benchmark failed: $operationsPerSecond ops/s is below target of 2000 ops/s');
     });
-
 
     test('Benchmark for reading operations', () async {
       // Preparar datos para lectura
@@ -70,9 +69,8 @@ void main(){
 
       // Las lecturas deberían ser más rápidas que las escrituras, al menos 5000 ops/s
       expect(operationsPerSecond >= 5000, true,
-          reason: 'Read performance benchmark failed: $operationsPerSecond ops/s is below target of 5000 ops/s');
+          reason:
+              'Read performance benchmark failed: $operationsPerSecond ops/s is below target of 5000 ops/s');
     });
-
   });
-
 }

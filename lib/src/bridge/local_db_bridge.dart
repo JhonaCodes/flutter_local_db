@@ -42,10 +42,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
       databaseName = '$databaseName.db';
     }
 
-    if(_lib == null) {
+    if (_lib == null) {
       /// Initialize native library.
       _lib = Ok(DynamicLibrary.open(libPath));
     }
+
     /// Bind functions.
     _bindFunctions();
 
@@ -61,10 +62,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Initializing DB on platform: ${Platform.operatingSystem}');
 
       /// Initialize native library.
-      if(_lib == null) {
+      if (_lib == null) {
         _lib = await CurrentPlatform.loadRustNativeLib();
         log('Library loaded: ${_lib}');
       }
+
       /// Bind functions.
       _bindFunctions();
       log('Functions bound successfully');

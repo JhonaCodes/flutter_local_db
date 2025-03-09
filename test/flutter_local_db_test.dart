@@ -6,8 +6,6 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 
 import 'mock_path.dart';
 
-
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final mockProvider = MockPathProvider();
@@ -356,8 +354,6 @@ void main() {
       print("Total time: $totalTime");
       expect(totalTime < 1600, true); // Should complete within 5 seconds
     });
-
-
   });
 
   group('Data Format Validation Tests', () {
