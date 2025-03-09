@@ -34,7 +34,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   static final LocalDbBridge instance = LocalDbBridge._();
 
-  late LocalDbResult<DynamicLibrary, String> _lib;
+  LocalDbResult<DynamicLibrary, String>? _lib;
   late Pointer<AppDbState> _dbInstance;
 
   Future<void> initForTesting(String databaseName, String libPath) async {
@@ -42,9 +42,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
       databaseName = '$databaseName.db';
     }
 
-    /// Initialize native library.
-    _lib = Ok(DynamicLibrary.open(libPath));
-
+    if(_lib == null) {
+      /// Initialize native library.
+      _lib = Ok(DynamicLibrary.open(libPath));
+    }
     /// Bind functions.
     _bindFunctions();
 
@@ -60,9 +61,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Initializing DB on platform: ${Platform.operatingSystem}');
 
       /// Initialize native library.
-      _lib = await CurrentPlatform.loadRustNativeLib();
-      log('Library loaded: ${_lib}');
-
+      if(_lib == null) {
+        _lib = await CurrentPlatform.loadRustNativeLib();
+        log('Library loaded: ${_lib}');
+      }
       /// Bind functions.
       _bindFunctions();
       log('Functions bound successfully');

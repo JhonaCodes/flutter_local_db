@@ -2,21 +2,11 @@ import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
 
-import 'dart:io';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
-class MockPathProvider extends PathProviderPlatform {
-  final testDir = Directory('test_db');
+import 'mock_path.dart';
 
-  @override
-  Future<String> getApplicationDocumentsPath() async {
-    if (!await testDir.exists()) {
-      await testDir.create(recursive: true);
-    }
 
-    return testDir.path;
-  }
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -366,6 +356,8 @@ void main() {
       print("Total time: $totalTime");
       expect(totalTime < 1600, true); // Should complete within 5 seconds
     });
+
+
   });
 
   group('Data Format Validation Tests', () {

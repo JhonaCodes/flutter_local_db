@@ -1,5 +1,10 @@
 # Changelog
 
+### 0.4.1
+- Update description.
+- Improve database initialization.
+- More test cases.
+
 ### 0.4.0
 
 #### Added
