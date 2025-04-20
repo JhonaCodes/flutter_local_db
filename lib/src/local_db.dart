@@ -23,8 +23,20 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    Dispose();
-    await LocalDbBridge.instance.initialize(localDbName);
+    final response = IsOpen();
+
+    response.when(
+      ok: (isOpen) async {
+        if(!isOpen){
+          await LocalDbBridge.instance.initialize(localDbName);
+        }
+      },
+      err: (err){
+        log("Error on validating Database, closing database");
+        Dispose();
+      },
+    );
+
   }
 
   /// Avoid to use on production.
@@ -168,8 +180,12 @@ class LocalDB {
 
   /// Close database connection.
   // ignore: non_constant_identifier_names
-  static LocalDbResult<bool, String> Dispose() {
+  static LocalDbResult<void, String> Dispose() {
     return LocalDbBridge.instance.dispose();
+  }
+
+  static LocalDbResult<bool, String> IsOpen() {
+    return LocalDbBridge.instance.isOpen();
   }
 
   // ignore: non_constant_identifier_names
