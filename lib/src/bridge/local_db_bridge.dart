@@ -134,8 +134,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbRequestModel, String>> post(
-      LocalDbRequestModel model) async {
+  LocalDbResult<LocalDbRequestModel, String> post(
+      LocalDbRequestModel model) {
     final jsonString = jsonEncode(model.toJson());
     final jsonPointer = jsonString.toNativeUtf8();
 
@@ -159,7 +159,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbRequestModel?, String>> getById(String id) async {
+  LocalDbResult<LocalDbRequestModel?, String> getById(String id) {
     try {
       final idPtr = id.toNativeUtf8();
       final resultFfi = _getById(_dbInstance, idPtr);
@@ -186,8 +186,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbRequestModel, String>> put(
-      LocalDbRequestModel model) async {
+  LocalDbResult<LocalDbRequestModel, String> put(
+      LocalDbRequestModel model) {
     try {
       final jsonString = jsonEncode(model.toJson());
       final jsonPointer = jsonString.toNativeUtf8();
@@ -211,7 +211,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, String>> cleanDatabase() async {
+  LocalDbResult<bool, String> cleanDatabase()  {
     try {
       final resultFfi = _clearAllRecords(_dbInstance);
       final result = resultFfi != nullptr;
@@ -225,7 +225,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, String>> delete(String id) async {
+  LocalDbResult<bool, String> delete(String id) {
     try {
       final idPtr = id.toNativeUtf8();
       final deleteResult = _delete(_dbInstance, idPtr);
@@ -241,7 +241,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll() async {
+  LocalDbResult<List<LocalDbRequestModel>, String> getAll()  {
     try {
       final resultFfi = _get(_dbInstance);
 

@@ -13,7 +13,7 @@ abstract class LocalSbRequestImpl {
   /// or an error message if the operation fails.
   ///
   /// Note: Implemented as Future for upcoming async Rust implementation.
-  Future<LocalDbResult<LocalDbRequestModel, String>> post(
+  LocalDbResult<LocalDbRequestModel, String> post(
       LocalDbRequestModel model);
 
   /// Updates an existing record in the database.
@@ -21,30 +21,30 @@ abstract class LocalSbRequestImpl {
   /// Takes a [LocalDbRequestModel] containing the updated data.
   /// Returns a [LocalDbResult] that either contains the updated record
   /// or an error message if the operation fails.
-  Future<LocalDbResult<LocalDbRequestModel, String>> put(
+  LocalDbResult<LocalDbRequestModel, String> put(
       LocalDbRequestModel model);
 
   /// Retrieves all records from the database.
   ///
   /// Returns a [LocalDbResult] that either contains a list of all records
   /// or an error message if the operation fails.
-  Future<LocalDbResult<List<LocalDbRequestModel>, String>> getAll();
+  LocalDbResult<List<LocalDbRequestModel>, String> getAll();
 
   /// Retrieves a single record by its ID.
   ///
   /// Takes an [id] string to identify the record.
   /// Returns a [LocalDbResult] that either contains the requested record
   /// (or null if not found) or an error message if the operation fails.
-  Future<LocalDbResult<LocalDbRequestModel?, String>> getById(String id);
+  LocalDbResult<LocalDbRequestModel?, String> getById(String id);
 
   /// Deletes a record from the database.
   ///
   /// Takes an [id] string to identify the record to delete.
   /// Returns a [LocalDbResult] that either contains a boolean indicating
   /// success (true) or failure (false), or an error message if the operation fails.
-  Future<LocalDbResult<bool, String>> delete(String id);
+  LocalDbResult<bool, String> delete(String id);
 
   /// Cleans the entire database.
   ///
-  Future<LocalDbResult<bool, String>> cleanDatabase();
+  LocalDbResult<bool, String> cleanDatabase();
 }

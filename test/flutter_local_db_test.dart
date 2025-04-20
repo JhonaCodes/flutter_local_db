@@ -74,8 +74,8 @@ void main() {
       final futures = List.generate(
           10, (index) => LocalDB.Post('concurrent-$index', {'value': index}));
 
-      final results = await Future.wait(futures);
-      expect(results.every((r) => r.isOk), true);
+
+      expect(futures.every((r) => r.isOk), true);
 
       final allData = await LocalDB.GetAll();
       expect(allData.isOk, true);
@@ -94,15 +94,12 @@ void main() {
                 'timestamp': DateTime.now().toIso8601String(),
               }));
 
-      final results = await Future.wait(futures);
+
 
       stopwatch.reset();
       stopwatch.start();
-      final readFutures =
-          List.generate(50, (index) => LocalDB.GetById('bulk-$index'));
-      await Future.wait(readFutures);
 
-      expect(results.every((r) => r.isOk), true);
+      expect(futures.every((r) => r.isOk), true);
     });
   });
 
@@ -238,8 +235,7 @@ void main() {
         LocalDB.Post('large-data', largeData),
       ];
 
-      final results = await Future.wait(operations);
-      expect(results.every((r) => r.isOk), true);
+      expect(operations.every((r) => r.isOk), true);
     });
 
     test('Should maintain data consistency in concurrent operations', () async {
@@ -314,12 +310,12 @@ void main() {
       final stopwatch = Stopwatch()..start();
 
       // Create 1000 records
-      final futures = List.generate(
+      List.generate(
           1000,
           (i) => LocalDB.Post('perf-test-$i',
               {'data': List.generate(100, (j) => 'value-$j').join(',')}));
 
-      await Future.wait(futures);
+
       final writeTime = stopwatch.elapsedMilliseconds;
 
       stopwatch.reset();
@@ -448,10 +444,8 @@ void main() {
         LocalDB.GetById('mixed-1'),
       ];
 
-      final results = await Future.wait(operations);
-
       // Verificar que no haya errores inesperados
-      expect(results.length, 5);
+      expect(operations.length, 5);
     });
 
     test('Should handle data persistence across multiple sessions', () async {
@@ -650,7 +644,7 @@ void main() {
     });
 
     test('Should maintain data integrity under stress', () async {
-      final stressOperations = <Future>[];
+      final stressOperations = [];
 
       for (int i = 0; i < 100; i++) {
         stressOperations.add(LocalDB.Post('stress-$i', {'index': i}));
@@ -659,8 +653,7 @@ void main() {
         stressOperations.add(LocalDB.GetById('stress-${i % 10}'));
       }
 
-      final results = await Future.wait(stressOperations);
-      expect(results.length, 300);
+      expect(stressOperations.length, 300);
     });
   });
 }
