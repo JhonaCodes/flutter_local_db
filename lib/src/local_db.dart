@@ -14,9 +14,6 @@ import 'model/local_db_request_model.dart';
 /// Uses a bridge pattern to abstract database interactions and provides
 /// type-safe results using [LocalDbResult].
 class LocalDB {
-
-  static LocalDbBridge get _localDb => LocalDbBridge();
-
   /// Initializes the local database with a specified name.
   ///
   /// This method must be called before performing any database operations.
@@ -31,12 +28,12 @@ class LocalDB {
     response.when(
       ok: (isOpen) async {
         if(!isOpen){
-          await _localDb.initialize(localDbName);
+          await LocalDbBridge.instance.initialize(localDbName);
         }
       },
       err: (err){
         log("Error on validating Database, closing database");
-        //Dispose();
+        Dispose();
       },
     );
 
@@ -46,7 +43,7 @@ class LocalDB {
   ///
   static Future<void> initForTesting(
       {required String localDbName, required String binaryPath}) async {
-    await _localDb.initForTesting(localDbName, binaryPath);
+    await LocalDbBridge.instance.initForTesting(localDbName, binaryPath);
   }
 
   /// Creates a new record in the database.
@@ -92,7 +89,7 @@ class LocalDB {
       data: data,
     );
 
-    return _localDb.post(model);
+    return LocalDbBridge.instance.post(model);
   }
 
   /// Retrieves all records from the local database.
@@ -104,7 +101,7 @@ class LocalDB {
   static LocalDbResult<List<LocalDbRequestModel>, String>
       // ignore: non_constant_identifier_names
       GetAll() {
-    return _localDb.getAll();
+    return LocalDbBridge.instance.getAll();
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -123,7 +120,7 @@ class LocalDB {
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    return _localDb.getById(id);
+    return LocalDbBridge.instance.getById(id);
   }
 
   /// Updates an existing record in the database.
@@ -146,7 +143,7 @@ class LocalDB {
           data: data,
           hash: DateTime.now().millisecondsSinceEpoch.toString());
 
-      return _localDb.put(currentData);
+      return LocalDbBridge.instance.put(currentData);
     }
 
     return Err(
@@ -168,7 +165,7 @@ class LocalDB {
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
     }
 
-    return _localDb.delete(id);
+    return LocalDbBridge.instance.delete(id);
   }
 
   /// Clear all data on the database.
@@ -178,17 +175,17 @@ class LocalDB {
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<bool, String>> ClearData() async {
-    return await _localDb.cleanDatabase();
+    return await LocalDbBridge.instance.cleanDatabase();
   }
 
   /// Close database connection.
   // ignore: non_constant_identifier_names
   static LocalDbResult<void, String> Dispose() {
-    return _localDb.dispose();
+    return LocalDbBridge.instance.dispose();
   }
 
   static LocalDbResult<bool, String> IsOpen() {
-    return _localDb.isOpen();
+    return LocalDbBridge.instance.isOpen();
   }
 
   // ignore: non_constant_identifier_names
