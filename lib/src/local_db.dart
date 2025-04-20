@@ -23,20 +23,7 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    final response = IsOpen();
-
-    response.when(
-      ok: (isOpen) async {
-        if(!isOpen){
-          await LocalDbBridge.instance.initialize(localDbName);
-        }
-      },
-      err: (err){
-        log("Error on validating Database, closing database");
-        Dispose();
-      },
-    );
-
+    await LocalDbBridge.instance.initialize(localDbName);
   }
 
   /// Avoid to use on production.
