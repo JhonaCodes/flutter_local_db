@@ -31,9 +31,6 @@ typedef CloseDb = Pointer<Void> Function(Pointer<AppDbState>);
 typedef IsDatabaseOpenNative = Pointer<Bool> Function(Pointer<AppDbState>);
 
 class LocalDbBridge extends LocalSbRequestImpl {
-  LocalDbBridge._();
-
-  static final LocalDbBridge instance = LocalDbBridge._();
 
   LocalDbResult<DynamicLibrary, String>? _lib;
   late Pointer<AppDbState> _dbInstance;
@@ -55,7 +52,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
     final appDir = await getApplicationDocumentsDirectory();
 
     /// Initialize database with default route and database name.
-    _init('${appDir.path}/$databaseName');
+    await _init('${appDir.path}/$databaseName');
   }
 
   Future<void> initialize(String databaseName) async {
@@ -77,7 +74,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Using app directory: ${appDir.path}');
 
       /// Initialize database with default route and database name.
-      _init('${appDir.path}/$databaseName');
+      await _init('${appDir.path}/$databaseName');
       log('Database initialized successfully');
     } catch (e, stack) {
       log('Error initializing database: $e');
