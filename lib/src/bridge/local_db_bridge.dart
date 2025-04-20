@@ -25,9 +25,9 @@ typedef PointerStringFFICallBack = Pointer<Utf8> Function(
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
 typedef PointerBoolFFICallBack = Pointer<Bool> Function(
     Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(
-    Pointer<AppDbState>);
+typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
+typedef CloseDb = Pointer<void> Function(Pointer<AppDbState>);
 
 class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbBridge._();
@@ -93,6 +93,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late final PointerStringFFICallBack _put;
   late final PointerBoolFFICallBack _delete;
   late final PointerBoolFFICallBackDirect _clearAllRecords;
+  late final CloseDb _dispose;
 
   /// Bind functiopns for initialization
   void _bindFunctions() {
@@ -114,6 +115,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
                 FFiFunctions.delete.cName);
         _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
             PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+        _dispose = lib.lookupFunction(FFiFunctions.dispose.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -265,6 +267,18 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log(e.toString());
       log(stack.toString());
       return Err(e.toString());
+    }
+  }
+
+  @override
+  LocalDbResult<bool, String> dispose() {
+    try {
+      _dispose(_dbInstance);
+      return Ok(true);
+    } catch (error, stackTrace) {
+      log(error.toString());
+      log(stackTrace.toString());
+      return Err(error.toString());
     }
   }
 }

@@ -47,4 +47,8 @@ abstract class LocalSbRequestImpl {
   /// Cleans the entire database.
   ///
   LocalDbResult<bool, String> cleanDatabase();
+
+  /// Close database
+  ///
+  LocalDbResult<bool, String> dispose();
 }

@@ -23,6 +23,7 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
+    Dispose();
     await LocalDbBridge.instance.initialize(localDbName);
   }
 
@@ -163,6 +164,12 @@ class LocalDB {
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<bool, String>> ClearData() async {
     return await LocalDbBridge.instance.cleanDatabase();
+  }
+
+  /// Close database connection.
+  // ignore: non_constant_identifier_names
+  static LocalDbResult<bool, String> Dispose() {
+    return LocalDbBridge.instance.dispose();
   }
 
   // ignore: non_constant_identifier_names
