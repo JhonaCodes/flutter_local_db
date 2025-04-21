@@ -6,6 +6,7 @@ import 'dart:developer';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_db/src/enum/ffi_functions.dart';
 
 import 'package:flutter_local_db/src/enum/ffi_native_lib_location.dart';
@@ -29,7 +30,8 @@ typedef PointerBoolFFICallBack = Pointer<Bool> Function(
 typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
-class LocalDbBridge extends LocalSbRequestImpl {
+
+class LocalDbBridge extends LocalSbRequestImpl with WidgetsBindingObserver {
   LocalDbBridge._();
 
   static final LocalDbBridge instance = LocalDbBridge._();
@@ -37,6 +39,38 @@ class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbResult<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
   String? _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
+
+
+  void registerLifecycleObserver() {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void unregisterLifecycleObserver() {
+    WidgetsBinding.instance.removeObserver(this);
+  }
+
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        log('App paused, preparing to save state');
+        // Podríamos hacer alguna limpieza parcial aquí
+        break;
+      case AppLifecycleState.resumed:
+        log('App resumed, checking database connection');
+        // Verificar la conexión cuando la app se reanuda
+        ensureConnectionValid();
+        break;
+      case AppLifecycleState.detached:
+        log('App detached, cleaning up resources');
+        dispose();
+        break;
+      default:
+      // Manejar otros estados
+        break;
+    }
+  }
 
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
@@ -61,6 +95,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   Future<void> initialize(String databaseName) async {
     try {
+      // Limpiar recursos previos si existen
+      await dispose();
+
+      WidgetsBinding.instance.addObserver(this);
+
       log('Initializing DB on platform: ${Platform.operatingSystem}');
 
       _lastDatabaseName = databaseName;
@@ -79,9 +118,33 @@ class LocalDbBridge extends LocalSbRequestImpl {
       final appDir = await getApplicationDocumentsDirectory();
       log('Using app directory: ${appDir.path}');
 
-      /// Initialize database with default route and database name.
-      await _init('${appDir.path}/$databaseName');
-      log('Database initialized successfully');
+      /// Initialize database with retries
+      int retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          await _init('${appDir.path}/$databaseName');
+          log('Database initialized successfully on attempt ${retryCount + 1}');
+
+          if (_dbInstance != null && _dbInstance != nullptr) {
+            break;
+          } else {
+            log('Warning: _init completed but _dbInstance is null or nullptr');
+            await Future.delayed(Duration(milliseconds: 200 * (retryCount + 1)));
+            retryCount++;
+          }
+        } catch (e) {
+          log('Error initializing database on attempt ${retryCount + 1}: $e');
+          await Future.delayed(Duration(milliseconds: 200 * (retryCount + 1)));
+          retryCount++;
+        }
+      }
+
+      if (_dbInstance == null || _dbInstance == nullptr) {
+        log('Failed to initialize database after $maxRetries attempts');
+        // Podrías lanzar una excepción aquí o simplemente continuar
+      }
 
     } catch (e, stack) {
       log('Error initializing database: $e');
@@ -140,6 +203,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late final PointerStringFFICallBack _put;
   late final PointerBoolFFICallBack _delete;
   late final PointerBoolFFICallBackDirect _clearAllRecords;
+  late final void Function(Pointer<AppDbState>) _closeDatabase;
 
   /// Bind functiopns for initialization
   void _bindFunctions() {
@@ -161,6 +225,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
                 FFiFunctions.delete.cName);
         _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
             PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+
+        _closeDatabase = lib.lookupFunction<Void Function(Pointer<AppDbState>),
+            void Function(Pointer<AppDbState>)>(FFiFunctions.closeDatabase.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -393,6 +460,28 @@ class LocalDbBridge extends LocalSbRequestImpl {
       return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
+
+
+  Future<void> dispose() async {
+    // Si _dbInstance no es nulo, deberíamos limpiarlo
+    if (_dbInstance != null && _dbInstance != nullptr) {
+      try {
+        // Usar la función FFI para cerrar/liberar la base de datos
+        _closeDatabase(_dbInstance!);
+
+        // Establecer _dbInstance a null después de cerrarla
+        _dbInstance = null;
+
+        log('Database resources successfully released');
+      } catch (e) {
+        log('Error disposing database: $e');
+
+        // Aún así, intentar establecer _dbInstance a null para evitar problemas futuros
+        _dbInstance = null;
+      }
+    }
+  }
+
 }
 
 sealed class CurrentPlatform {
