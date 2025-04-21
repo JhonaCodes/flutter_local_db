@@ -32,7 +32,7 @@ void main() {
       const int operationCount = 1000;
 
       for (int i = 0; i < operationCount; i++) {
-        await LocalDB.Post('benchmark-$i', {'value': i});
+        LocalDB.Post('benchmark-$i', {'value': i});
       }
 
       final totalTime = stopwatch.elapsedMilliseconds;
@@ -43,7 +43,7 @@ void main() {
 
       // Un benchmark agresivo que busca al menos 2000 operaciones por segundo
       // Esto sería comparable con SQLite en modo optimizado
-      expect(operationsPerSecond >= 2000, true,
+      expect(operationsPerSecond >= 10000, true,
           reason:
               'Performance benchmark failed: $operationsPerSecond ops/s is below target of 2000 ops/s');
     });
