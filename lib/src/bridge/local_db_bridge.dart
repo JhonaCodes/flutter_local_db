@@ -287,16 +287,12 @@ class LocalDbBridge extends LocalSbRequestImpl {
         return Err(ErrorLocalDb.fromRustError(resultTransformed));
       }
 
-      final Map<String, dynamic> jsonData = jsonDecode(resultTransformed);
 
-
-
-
-      final List<dynamic> jsonList =  jsonDecode(jsonData.containsKey("Ok") ? jsonData['Ok'] : jsonData['Err']);
+      final List<dynamic> jsonList =  jsonDecode(response['Ok']);
 
 
       final List<LocalDbModel> dataList =
-          jsonList.map((json) => LocalDbModel.fromJson(json)).toList();
+      jsonList.map((json) => LocalDbModel.fromJson(Map<String,dynamic>.from(json))).toList();
 
       return Ok(dataList);
     } catch (error, stackTrace) {
