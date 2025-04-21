@@ -65,10 +65,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       _lastDatabaseName = databaseName;
 
-      /// Initialize native library.
-      _lib = await CurrentPlatform.loadRustNativeLib();
-      log('Library loaded: ${_lib}');
-
+      if(_lib == null) {
+        /// Initialize native library.
+        _lib = await CurrentPlatform.loadRustNativeLib();
+        log('Library loaded: ${_lib}');
+      }
       /// Bind functions.
       _bindFunctions();
       log('Functions bound successfully');
@@ -164,7 +165,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log('Error in _init: $error');
       log(stackTrace.toString());
-      rethrow;
     }
   }
 
