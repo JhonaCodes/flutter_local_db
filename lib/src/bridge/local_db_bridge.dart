@@ -1,566 +1,424 @@
 import 'dart:io';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-// Asegúrate que estas rutas sean correctas y apunten a tus archivos
 import 'package:flutter_local_db/src/enum/ffi_functions.dart';
+
 import 'package:flutter_local_db/src/enum/ffi_native_lib_location.dart';
 import 'package:flutter_local_db/src/interface/local_db_request_impl.dart';
-// Importa tus modelos de error y datos
-import 'package:flutter_local_db/src/model/local_db_error_model.dart'; // Contiene ErrorLocalDb, ErrorType, DetailsModel
-
+import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:path_provider/path_provider.dart';
+
 import 'dart:io' show Platform;
 
 /// opaque extension
 final class AppDbState extends Opaque {}
 
-/// Typedefs (sin cambios)
+/// Typedef for the rust functions
 typedef PointerStringFFICallBack = Pointer<Utf8> Function(
     Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerAppDbStateCallBack = Pointer<AppDbState> Function(Pointer<Utf8>);
-typedef PointerBoolFFICallBack = Pointer<Bool> Function( // Usado si delete/clear devuelven Bool
+typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
+typedef PointerBoolFFICallBack = Pointer<Bool> Function(
     Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function( // Usado si clear devuelve Bool sin ID
-    Pointer<AppDbState>);
+typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
-typedef VoidAppDbStateCallBack = Void Function(Pointer<AppDbState>); // Nativo
-typedef DartVoidAppDbStateCallBack = void Function(Pointer<AppDbState>); // Dart
 
-// Clase simplificada, sin WidgetsBindingObserver
 class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbBridge._();
 
   static final LocalDbBridge instance = LocalDbBridge._();
 
   LocalDbResult<DynamicLibrary, String>? _lib;
-  late Pointer<AppDbState> _dbInstance;
+  Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
+  String? _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
 
-  // initForTesting (sin cambios funcionales)
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';
     }
-    if (_lib == null) {
+
+    _lastDatabaseName = databaseName;
+
+    if(_lib == null) {
+      /// Initialize native library.
       _lib = Ok(DynamicLibrary.open(libPath));
     }
+    /// Bind functions.
     _bindFunctions();
+
+    /// Define default route.
     final appDir = await getApplicationDocumentsDirectory();
+
+    /// Initialize database with default route and database name.
     await _init('${appDir.path}/$databaseName');
   }
 
-  // initialize (simplificado)
   Future<void> initialize(String databaseName) async {
     try {
       log('Initializing DB on platform: ${Platform.operatingSystem}');
 
-      // --- LLAMADA A DISPOSE ---
-      // Intenta cerrar/liberar cualquier instancia nativa previa ANTES de continuar.
-      await dispose();
-      log('Previous instance disposed (if any).');
-      // ------------------------
+      _lastDatabaseName = databaseName;
 
-      // Añadir extensión .db si falta
-      if (!databaseName.contains('.db')) {
-        log('Adding .db extension to database name.');
-        databaseName = '$databaseName.db';
-      }
-
-      if (_lib == null) {
+      if(_lib == null) {
+        /// Initialize native library.
         _lib = await CurrentPlatform.loadRustNativeLib();
-        if (_lib case Err(error: final err)) {
-          // Si la carga de la librería falla, lanzar error inmediatamente
-          throw Exception("Failed to load native library: $err");
-        }
-        log('Library loaded: ${_lib}');
       }
+      log('Library loaded: ${_lib}');
 
-      // Vincular funciones (esto es seguro llamarlo varias veces si _lib ya existe)
+      /// Bind functions.
       _bindFunctions();
       log('Functions bound successfully');
 
+      /// Define default route.
       final appDir = await getApplicationDocumentsDirectory();
       log('Using app directory: ${appDir.path}');
 
-      // Llamar a _init para crear/abrir la nueva instancia
+      /// Initialize database with default route and database name.
       await _init('${appDir.path}/$databaseName');
       log('Database initialized successfully');
 
     } catch (e, stack) {
-      log('Error initializing database: $e \nStack: $stack');
-      // Relanzar para que el código que llama a initialize (ej. main) sepa del fallo.
+      log('Error initializing database: $e');
+      log('Stack trace: $stack');
       rethrow;
     }
   }
 
-  /// Function bindings (sin _closeDatabase)
+  Future<bool> ensureConnectionValid() async {
+    // Verificar si la instancia es válida
+    if (_dbInstance == null || _dbInstance == nullptr) {
+      log('Database connection invalid, attempting to reinitialize...');
+
+      if (_lastDatabaseName != null) {
+        try {
+          final appDir = await getApplicationDocumentsDirectory();
+          await _init('${appDir.path}/$_lastDatabaseName');
+
+          // Verificar si la reinicialización fue exitosa
+          if (_dbInstance != null && _dbInstance != nullptr) {
+            log('Database reinitialized successfully');
+            return true;
+          } else {
+            // Si después de reinicializar sigue siendo nulo, esperamos un poco y reintentamos
+            log('Reinitialization resulted in null pointer, waiting and retrying...');
+            await Future.delayed(Duration(milliseconds: 500));
+            await _init('${appDir.path}/$_lastDatabaseName');
+
+            // Verificar nuevamente
+            if (_dbInstance != null && _dbInstance != nullptr) {
+              log('Database reinitialized successfully on second attempt');
+              return true;
+            } else {
+              log('Failed to reinitialize database after multiple attempts');
+              return false;
+            }
+          }
+        } catch (e) {
+          log('Failed to reinitialize database: $e');
+          return false;
+        }
+      } else {
+        log('Cannot reinitialize: no previous database name stored');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /// Functions registration
   late final Pointer<AppDbState> Function(Pointer<Utf8>) _createDatabase;
   late final PointerStringFFICallBack _post;
   late final PointerListFFICallBack _get;
   late final PointerStringFFICallBack _getById;
   late final PointerStringFFICallBack _put;
-  // *** REVISAR TIPOS DE RETORNO DE RUST PARA delete Y clearAllRecords ***
-  // Asumiendo JSON para delete (como en el 2do ejemplo)
-  late final PointerStringFFICallBack _delete;
-  // Asumiendo JSON para clearAllRecords (para consistencia, aunque el 2do ejemplo usaba Bool)
-
+  late final PointerBoolFFICallBack _delete;
   late final PointerBoolFFICallBackDirect _clearAllRecords;
-  // Si devuelven Bool, usa los typedefs comentados abajo y ajusta el lookup y la lógica en los métodos.
-  // late final PointerBoolFFICallBack _delete;
-  late final DartVoidAppDbStateCallBack _closeDatabase;
 
-
-  // _bindFunctions (adaptado para asumir JSON en delete/clear)
+  /// Bind functiopns for initialization
   void _bindFunctions() {
     switch (_lib) {
       case Ok(data: DynamicLibrary lib):
-        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBack, PointerAppDbStateCallBack>(FFiFunctions.createDb.cName);
-        _post = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get = lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(FFiFunctions.getAll.cName);
-        _getById = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.getById.cName);
-        _put = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        // Asumiendo JSON
-        _delete = lib.lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(FFiFunctions.delete.cName);
-        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect, PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
-        // Si devuelven Bool, usa esto:
-        // _delete = lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(FFiFunctions.delete.cName);
-        // _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect, PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
-        _closeDatabase = lib.lookupFunction<VoidAppDbStateCallBack, DartVoidAppDbStateCallBack>(FFiFunctions.closeDatabase.cName);
-
+        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck,
+            PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
+        _post = lib.lookupFunction<PointerStringFFICallBack,
+            PointerStringFFICallBack>(FFiFunctions.pushData.cName);
+        _get =
+            lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+                FFiFunctions.getAll.cName);
+        _getById = lib.lookupFunction<PointerStringFFICallBack,
+            PointerStringFFICallBack>(FFiFunctions.getById.cName);
+        _put = lib.lookupFunction<PointerStringFFICallBack,
+            PointerStringFFICallBack>(FFiFunctions.updateData.cName);
+        _delete =
+            lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+                FFiFunctions.delete.cName);
+        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
+            PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
         break;
       case Err(error: String error):
         log(error);
-        throw Exception(error); // Fallo crítico al cargar la librería
+        throw Exception(error);
     }
   }
 
-  // _init (simplificado)
   Future<void> _init(String dbName) async {
-    Pointer<Utf8>? dbNamePointer; // Hacerlo nullable para el finally
     try {
-      dbNamePointer = dbName.toNativeUtf8();
-      _dbInstance = _createDatabase(dbNamePointer);
 
+      final dbFile = File(dbName);
+      final dbExists = await dbFile.exists();
+
+      final dbNamePointer = dbName.toNativeUtf8();
+
+      // Intentar crear/abrir la base de datos
+      _dbInstance = _createDatabase(dbNamePointer);
+      calloc.free(dbNamePointer);
+
+      // Manejar el caso donde _createDatabase devuelve null
       if (_dbInstance == nullptr) {
-        log('Error: _createDatabase returned a null pointer for $dbName');
-        // Lanzar excepción porque sin instancia no se puede operar
-        throw Exception('Failed to initialize database instance (null pointer).');
+        // En lugar de lanzar una excepción, registramos el problema
+        log('Warning: Database instance creation returned null pointer.');
+
+        // Si la base de datos existe físicamente pero no pudimos abrir la instancia
+        // podría ser por un problema temporal o de permisos
+        if (dbExists) {
+          log('Database file exists but could not be opened. This may be temporary.');
+          // No lanzamos excepción para permitir que la app continúe y pueda reintentar más tarde
+        } else {
+          // Si el archivo no existe, es un problema más serio
+          log('Database file does not exist and could not be created.');
+          // Aquí podrías lanzar una excepción, pero vamos a ser más permisivos
+        }
       } else {
-        log('Database instance created successfully for $dbName');
+        log('Database initialized successfully at: $dbName');
       }
     } catch (error, stackTrace) {
-      log('Error during _init: ${error.toString()}');
+      log('Error in _init: $error');
       log(stackTrace.toString());
-      // Relanzar para que initialize() lo maneje
-      throw Exception('Failed during FFI _init: $error');
-    } finally {
-      // Asegurar liberación del puntero
-      if (dbNamePointer != null) {
-        calloc.free(dbNamePointer);
-      }
+      // No relanzamos la excepción para permitir que la app continúe funcionando
+      // pero aún así registramos el error para depuración
     }
   }
 
-  // --- Métodos CRUD usando ErrorLocalDb y asumiendo JSON de FFI ---
-
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
-      LocalDbModel model) async {
-    Pointer<Utf8>? jsonPointer; // Nullable para finally
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
+    final jsonString = jsonEncode(model.toJson());
+    final jsonPointer = jsonString.toNativeUtf8();
+
     try {
-      // Simple check, _init debería haber lanzado error si falló
-      // ignore: unnecessary_null_comparison
-      if (_dbInstance == null || _dbInstance == nullptr) {
-        return Err(ErrorLocalDb.databaseError('Database instance is not valid.'));
-      }
-
-      final jsonString = jsonEncode(model.toJson());
-      jsonPointer = jsonString.toNativeUtf8();
-
-      final resultPushPointer = _post(_dbInstance, jsonPointer);
-
-      if (resultPushPointer == nullptr) {
-        log('Error: post FFI call returned null pointer.');
-        // Usar un error específico de DB/FFI
-        return Err(ErrorLocalDb.databaseError('FFI post returned null pointer'));
-      }
+      final resultPushPointer = _post(_dbInstance!, jsonPointer);
 
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
-      malloc.free(resultPushPointer); // Liberar resultado FFI
 
-      // Parsear la respuesta JSON esperada {"Ok":...} o {"Err":...}
-      final Map<String, dynamic> response = jsonDecode(dataResult);
+      calloc.free(resultPushPointer);
+      calloc.free(jsonPointer);
 
-      if (response.containsKey('Ok')) {
-        final okData = response['Ok'];
-        final Map<String, dynamic> modelJson;
-        if (okData is String) {
-          modelJson = jsonDecode(okData);
-        } else if (okData is Map) {
-          modelJson = Map<String, dynamic>.from(okData);
-        } else {
-          // Usar error de serialización
-          return Err(ErrorLocalDb.serializationError('Unexpected data type in "Ok" field for post'));
-        }
-        final modelData = LocalDbModel.fromJson(modelJson);
-        return Ok(modelData);
-      } else {
-        // Dejar que fromRustError interprete el error de Rust
+      final Map<String,dynamic> response = jsonDecode(dataResult);
+
+      if(!response.containsKey('Ok')){
         return Err(ErrorLocalDb.fromRustError(dataResult));
       }
-    } on FormatException catch (e, s) { // Error específico de jsonDecode
-      log('JSON FormatException in post: ${e.toString()}');
-      log(s.toString());
-      return Err(ErrorLocalDb.serializationError('Failed to decode FFI response JSON', originalError: e, stackTrace: s));
+
+      final modelData = LocalDbModel.fromJson(Map<String, dynamic>.from(jsonDecode(response['Ok'])));
+
+      return Ok(modelData);
     } catch (error, stack) {
-      log('Catch block error in post: ${error.toString()}');
+      log(error.toString());
       log(stack.toString());
-      // Usar error desconocido para excepciones generales de Dart
-      return Err(ErrorLocalDb.unknown('Dart exception during post', originalError: error, stackTrace: stack));
-    } finally {
-      // Asegurar liberación del puntero de entrada
-      if (jsonPointer != null) {
-        calloc.free(jsonPointer);
-      }
+      print(stack.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stack));
     }
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> getById(String id) async {
-    Pointer<Utf8>? idPtr; // Nullable para finally
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> getById(String id) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      // ignore: unnecessary_null_comparison
-      if (_dbInstance == null || _dbInstance == nullptr) {
-        return Err(ErrorLocalDb.databaseError('Database instance is not valid.'));
-      }
-      idPtr = id.toNativeUtf8();
-      final resultFfi = _getById(_dbInstance, idPtr);
+      final idPtr = id.toNativeUtf8();
+      final resultFfi = _getById(_dbInstance!, idPtr);
+
+      // Liberar memoria del id
+      calloc.free(idPtr);
 
       if (resultFfi == nullptr) {
-        // nullptr en getById específicamente significa "no encontrado" según convención común
-        return Err(ErrorLocalDb.notFound("No model found with id: $id (FFI returned null)"));
+        return Err(ErrorLocalDb.notFound("No model found with id: $id"));
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
-      malloc.free(resultFfi); // Liberar resultado FFI
+      malloc.free(resultFfi);
 
-      // Parsear respuesta JSON
       final Map<String, dynamic> response = jsonDecode(resultTransformed);
 
-      if (response.containsKey('Ok')) {
-        final okData = response['Ok'];
-        final Map<String, dynamic> modelJson;
-        if (okData is String) {
-          modelJson = jsonDecode(okData);
-        } else if (okData is Map) {
-          modelJson = Map<String, dynamic>.from(okData);
-        } else {
-          return Err(ErrorLocalDb.serializationError('Unexpected data type in "Ok" field for getById'));
-        }
-        final modelData = LocalDbModel.fromJson(modelJson);
-        return Ok(modelData);
-      } else {
-        // Dejar que fromRustError interprete la respuesta de error
+      if(!response.containsKey('Ok')){
         return Err(ErrorLocalDb.fromRustError(resultTransformed));
       }
-    } on FormatException catch (e, s) {
-      log('JSON FormatException in getById: ${e.toString()}');
-      log(s.toString());
-      return Err(ErrorLocalDb.serializationError('Failed to decode FFI response JSON', originalError: e, stackTrace: s));
+
+      final modelData =
+      LocalDbModel.fromJson(jsonDecode(response['Ok']));
+
+      return Ok(modelData);
     } catch (error, stackTrace) {
-      log('Catch block error in getById: ${error.toString()}');
+      log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.unknown('Dart exception during getById', originalError: error, stackTrace: stackTrace));
-    } finally {
-      if (idPtr != null) {
-        calloc.free(idPtr);
-      }
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
-      LocalDbModel model) async {
-    Pointer<Utf8>? jsonPointer; // Nullable para finally
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      // ignore: unnecessary_null_comparison
-      if (_dbInstance == null || _dbInstance == nullptr) {
-        return Err(ErrorLocalDb.databaseError('Database instance is not valid.'));
-      }
       final jsonString = jsonEncode(model.toJson());
-      jsonPointer = jsonString.toNativeUtf8();
-      final resultFfi = _put(_dbInstance, jsonPointer);
+      final jsonPointer = jsonString.toNativeUtf8();
+      final resultFfi = _put(_dbInstance!, jsonPointer);
+      final result = resultFfi.cast<Utf8>().toDartString();
+
+      calloc.free(jsonPointer);
 
       if (resultFfi == nullptr) {
-        return Err(ErrorLocalDb.databaseError("FFI put returned null pointer"));
+        return Err(ErrorLocalDb.notFound("No model found"));
       }
 
-      final result = resultFfi.cast<Utf8>().toDartString();
-      malloc.free(resultFfi); // Liberar resultado FFI
+      malloc.free(resultFfi);
 
-      // Parsear respuesta JSON
       final Map<String, dynamic> response = jsonDecode(result);
 
-      if (response.containsKey('Ok')) {
-        final okData = response['Ok'];
-        final Map<String, dynamic> modelJson;
-        if (okData is String) {
-          modelJson = jsonDecode(okData);
-        } else if (okData is Map) {
-          modelJson = Map<String, dynamic>.from(okData);
-        } else {
-          return Err(ErrorLocalDb.serializationError('Unexpected data type in "Ok" field for put'));
-        }
-        return Ok(LocalDbModel.fromJson(modelJson));
-      } else {
+      if(!response.containsKey('Ok')){
         return Err(ErrorLocalDb.fromRustError(result));
       }
-    } on FormatException catch (e, s) {
-      log('JSON FormatException in put: ${e.toString()}');
-      log(s.toString());
-      return Err(ErrorLocalDb.serializationError('Failed to decode FFI response JSON', originalError: e, stackTrace: s));
+
+      return Ok(LocalDbModel.fromJson(jsonDecode(response['Ok'])));
     } catch (error, stackTrace) {
-      log('Catch block error in put: ${error.toString()}');
+      log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.unknown('Dart exception during put', originalError: error, stackTrace: stackTrace));
-    } finally {
-      if (jsonPointer != null) {
-        calloc.free(jsonPointer);
-      }
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      // ignore: unnecessary_null_comparison
-      if (_dbInstance == null || _dbInstance == nullptr) {
-        return Err(ErrorLocalDb.databaseError('Database instance is not valid.'));
-      }
-
-      // *** ASUMIENDO QUE _clearAllRecords DEVUELVE JSON Pointer<Utf8> ***
-      final resultFfi = _clearAllRecords(_dbInstance);
-
-      if (resultFfi == nullptr) {
-        return Err(ErrorLocalDb.databaseError("FFI clearAllRecords returned null pointer"));
-      }
-
-      final result = resultFfi.cast<Utf8>().toDartString();
-      malloc.free(resultFfi); // Liberar resultado FFI
-
-      final Map<String, dynamic> response = jsonDecode(result);
-
-      if (response.containsKey('Ok')) {
-        // Asumiendo que Ok indica éxito booleano
-        return Ok(true);
-      } else {
-        return Err(ErrorLocalDb.fromRustError(result));
-      }
-      // --- Fin lógica JSON ---
-
-      /* --- LÓGICA ALTERNATIVA SI DEVUELVE Pointer<Bool> ---
-      // 1. Cambia el typedef y lookup de _clearAllRecords a PointerBoolFFICallBackDirect
-      // 2. Usa esta lógica:
-      final resultPtr = _clearAllRecords(_dbInstance);
-      bool success = resultPtr != nullptr;
-      // Liberar si es necesario (revisar Rust): if (success) { malloc.free(resultPtr); }
-      if (success) {
-         return Ok(true);
-      } else {
-         return Err(ErrorLocalDb.databaseError("FFI clearAllRecords failed (returned null)"));
-      }
-      */
-
-    } on FormatException catch (e, s) { // Solo si parseas JSON
-      log('JSON FormatException in cleanDatabase: ${e.toString()}');
-      log(s.toString());
-      return Err(ErrorLocalDb.serializationError('Failed to decode FFI response JSON', originalError: e, stackTrace: s));
+      final resultFfi = _clearAllRecords(_dbInstance!);
+      final result = resultFfi != nullptr;
+      malloc.free(resultFfi);
+      return Ok(result);
     } catch (error, stackTrace) {
-      log('Catch block error in cleanDatabase: ${error.toString()}');
+      log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.unknown('Dart exception during cleanDatabase', originalError: error, stackTrace: stackTrace));
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
-
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
-    Pointer<Utf8>? idPtr; // Nullable para finally
+  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      // ignore: unnecessary_null_comparison
-      if (_dbInstance == null || _dbInstance == nullptr) {
-        return Err(ErrorLocalDb.databaseError('Database instance is not valid.'));
-      }
-      idPtr = id.toNativeUtf8();
-
-      // *** ASUMIENDO QUE _delete DEVUELVE JSON Pointer<Utf8> ***
-      final resultFfi = _delete(_dbInstance, idPtr);
-
-      if (resultFfi == nullptr) {
-        return Err(ErrorLocalDb.databaseError("FFI delete returned null pointer"));
-      }
-      final result = resultFfi.cast<Utf8>().toDartString();
-      malloc.free(resultFfi); // Liberar resultado FFI
+      final idPtr = id.toNativeUtf8();
+      final deleteResult = _delete(_dbInstance!, idPtr);
+      final result = deleteResult.cast<Utf8>().toDartString();
+      calloc.free(idPtr);
 
       final Map<String, dynamic> response = jsonDecode(result);
 
-      if (response.containsKey('Ok')) {
-        // Asumiendo que Ok indica éxito booleano
-        return Ok(true);
-      } else {
+      if(!response.containsKey('Ok')){
         return Err(ErrorLocalDb.fromRustError(result));
       }
-      // --- Fin lógica JSON ---
 
-      /* --- LÓGICA ALTERNATIVA SI DEVUELVE Pointer<Bool> ---
-      // 1. Cambia el typedef y lookup de _delete a PointerBoolFFICallBack
-      // 2. Usa esta lógica:
-      final resultPtr = _delete(_dbInstance, idPtr);
-      bool success = resultPtr != nullptr;
-      // Liberar si es necesario (revisar Rust): if (success) { malloc.free(resultPtr); }
-      if (success) {
-         return Ok(true);
-      } else {
-         // Podría ser NotFound si el ID no existe, o DatabaseError si falla.
-         // Si Rust distingue, necesitarías más info. Asumamos error general.
-         return Err(ErrorLocalDb.databaseError("FFI delete failed (returned null or false)"));
-      }
-      */
-
-    } on FormatException catch (e, s) { // Solo si parseas JSON
-      log('JSON FormatException in delete: ${e.toString()}');
-      log(s.toString());
-      return Err(ErrorLocalDb.serializationError('Failed to decode FFI response JSON', originalError: e, stackTrace: s));
+      return Ok(true);
     } catch (error, stackTrace) {
-      log('Catch block error in delete: ${error.toString()}');
+      log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.unknown('Dart exception during delete', originalError: error, stackTrace: stackTrace));
-    } finally {
-      if (idPtr != null) {
-        calloc.free(idPtr);
-      }
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
-
 
   @override
   Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+    // Verificar la conexión antes de proceder
+    if (!await ensureConnectionValid()) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      // ignore: unnecessary_null_comparison
-      if (_dbInstance == null || _dbInstance == nullptr) {
-        return Err(ErrorLocalDb.databaseError('Database instance is not valid.'));
-      }
-      final resultFfi = _get(_dbInstance);
+      final resultFfi = _get(_dbInstance!);
 
       if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
-        // Un null aquí podría significar error o simplemente lista vacía.
-        // Si significa lista vacía, deberías retornar Ok([]).
-        // Asumamos que significa error FFI.
-        return Err(ErrorLocalDb.databaseError('FFI getAll returned null pointer'));
+        return Err(ErrorLocalDb.notFound('Failed to retrieve data: null pointer returned'));
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
-      malloc.free(resultFfi); // Liberar resultado FFI
 
-      // Parsear respuesta JSON {"Ok": [...]}
-      final Map<String, dynamic> response = jsonDecode(resultTransformed);
+      /// Because no need anymore and the reference is on [resultTransformed]
+      malloc.free(resultFfi);
 
-      if (response.containsKey('Ok')) {
-        final dynamic okData = response['Ok'];
-        List<dynamic> jsonList;
-        if (okData is String) {
-          jsonList = jsonDecode(okData);
-        } else if (okData is List) {
-          jsonList = okData;
-        } else {
-          return Err(ErrorLocalDb.serializationError('Unexpected data type in "Ok" field for getAll'));
-        }
-        // Mapear la lista usando LocalDbModel
-        final List<LocalDbModel> dataList = jsonList
-            .map((json) => LocalDbModel.fromJson(Map<String, dynamic>.from(json)))
-            .toList();
-        return Ok(dataList);
-      } else {
+      final Map<String, dynamic> response = await jsonDecode(resultTransformed);
+
+      if(!response.containsKey('Ok')){
         return Err(ErrorLocalDb.fromRustError(resultTransformed));
       }
-    } on FormatException catch (e, s) {
-      log('JSON FormatException in getAll: ${e.toString()}');
-      log(s.toString());
-      return Err(ErrorLocalDb.serializationError('Failed to decode FFI response JSON', originalError: e, stackTrace: s));
+
+      final List<dynamic> jsonList = await jsonDecode(response['Ok']);
+
+      final List<LocalDbModel> dataList =
+      jsonList.map((json) => LocalDbModel.fromJson(Map<String,dynamic>.from(json))).toList();
+
+      return Ok(dataList);
     } catch (error, stackTrace) {
-      log('Catch block error in getAll: ${error.toString()}');
+      log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.unknown('Dart exception during getAll', originalError: error, stackTrace: stackTrace));
-    }
-  }
-
-
-  // Método para llamar al cierre nativo
-  Future<void> dispose() async {
-    // Verificamos que _dbInstance no sea nullptr ANTES de intentar cerrarla.
-    // Esto es importante si initialize falló parcialmente o si dispose se llama accidentalmente dos veces.
-    // Como _dbInstance es `late final`, no puede ser null si initialize tuvo éxito.
-    // La comprobación principal es contra `nullptr`.
-    if (_dbInstance != nullptr) {
-      try {
-        log('Calling native close_database...');
-        // Llama a la función FFI que acabamos de vincular
-        _closeDatabase(_dbInstance);
-        log('Native close_database called successfully.');
-
-        // ¡Importante! Aunque la memoria nativa se libera, _dbInstance en Dart
-        // todavía contiene la dirección de memoria (ahora inválida).
-        // Para evitar usarla accidentalmente, lo IDEAL sería ponerla a null.
-        // PERO, como es `late final`, no podemos.
-        // La llamada a dispose() ANTES de _init() en el NUEVO initialize()
-        // se encargará de obtener una NUEVA instancia válida si es necesario.
-        // Solo debemos asegurarnos de no usar _dbInstance después de llamar a dispose
-        // hasta que initialize() la reasigne.
-
-      } catch (e, s) {
-        // Captura errores específicos de FFI si ocurren durante el cierre
-        log('Error calling native close_database: $e\n$s');
-        // Podrías decidir si relanzar o solo registrar el error.
-        // En general, un fallo al cerrar es menos crítico que uno al abrir.
-      }
-    } else {
-      log('dispose() called but _dbInstance is nullptr (already closed or never initialized?).');
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 }
 
-
-// CurrentPlatform se mantiene igual
 sealed class CurrentPlatform {
   static Future<LocalDbResult<DynamicLibrary, String>>
-  loadRustNativeLib() async {
+      loadRustNativeLib() async {
     if (Platform.isAndroid) {
-      // Ajusta esta ruta si es necesario
       return Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
     }
+
     if (Platform.isMacOS) {
       final arch = await FFiNativeLibLocation.macos.toMacosArchPath();
       return Ok(DynamicLibrary.open(arch));
     }
+
     if (Platform.isIOS) {
       try {
         return Ok(DynamicLibrary.process());
       } catch (e) {
         try {
-          // Ajusta esta ruta si es necesario
           return Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
         } catch (error) {
-          // Usar ErrorLocalDb aquí también podría ser una opción, pero String es más simple para la carga de la lib
           return Err("Error loading library on iOS: $error");
         }
       }
     }
+
     return Err("Unsupported platform: ${Platform.operatingSystem}");
   }
 }
