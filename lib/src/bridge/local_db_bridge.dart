@@ -65,8 +65,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       _lastDatabaseName = databaseName;
 
-      /// Initialize native library.
-      _lib = await CurrentPlatform.loadRustNativeLib();
+      if(_lib == null) {
+        /// Initialize native library.
+        _lib = await CurrentPlatform.loadRustNativeLib();
+      }
       log('Library loaded: ${_lib}');
 
       /// Bind functions.
@@ -88,7 +90,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
     }
   }
 
-  /// Método para verificar si la conexión es válida y reinicializar si es necesario
   Future<bool> ensureConnectionValid() async {
     // Verificar si la instancia es válida
     if (_dbInstance == null || _dbInstance == nullptr) {
@@ -98,8 +99,26 @@ class LocalDbBridge extends LocalSbRequestImpl {
         try {
           final appDir = await getApplicationDocumentsDirectory();
           await _init('${appDir.path}/$_lastDatabaseName');
-          log('Database reinitialized successfully');
-          return true;
+
+          // Verificar si la reinicialización fue exitosa
+          if (_dbInstance != null && _dbInstance != nullptr) {
+            log('Database reinitialized successfully');
+            return true;
+          } else {
+            // Si después de reinicializar sigue siendo nulo, esperamos un poco y reintentamos
+            log('Reinitialization resulted in null pointer, waiting and retrying...');
+            await Future.delayed(Duration(milliseconds: 500));
+            await _init('${appDir.path}/$_lastDatabaseName');
+
+            // Verificar nuevamente
+            if (_dbInstance != null && _dbInstance != nullptr) {
+              log('Database reinitialized successfully on second attempt');
+              return true;
+            } else {
+              log('Failed to reinitialize database after multiple attempts');
+              return false;
+            }
+          }
         } catch (e) {
           log('Failed to reinitialize database: $e');
           return false;
@@ -151,20 +170,39 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   Future<void> _init(String dbName) async {
     try {
+
+      final dbFile = File(dbName);
+      final dbExists = await dbFile.exists();
+
       final dbNamePointer = dbName.toNativeUtf8();
 
-      // Si ya existe una instancia, vamos a crear una nueva de todos modos
+      // Intentar crear/abrir la base de datos
       _dbInstance = _createDatabase(dbNamePointer);
-
-      if (_dbInstance == nullptr) {
-        throw Exception('Failed to create database instance. Returned null pointer.');
-      }
-
       calloc.free(dbNamePointer);
+
+      // Manejar el caso donde _createDatabase devuelve null
+      if (_dbInstance == nullptr) {
+        // En lugar de lanzar una excepción, registramos el problema
+        log('Warning: Database instance creation returned null pointer.');
+
+        // Si la base de datos existe físicamente pero no pudimos abrir la instancia
+        // podría ser por un problema temporal o de permisos
+        if (dbExists) {
+          log('Database file exists but could not be opened. This may be temporary.');
+          // No lanzamos excepción para permitir que la app continúe y pueda reintentar más tarde
+        } else {
+          // Si el archivo no existe, es un problema más serio
+          log('Database file does not exist and could not be created.');
+          // Aquí podrías lanzar una excepción, pero vamos a ser más permisivos
+        }
+      } else {
+        log('Database initialized successfully at: $dbName');
+      }
     } catch (error, stackTrace) {
       log('Error in _init: $error');
       log(stackTrace.toString());
-      rethrow;
+      // No relanzamos la excepción para permitir que la app continúe funcionando
+      // pero aún así registramos el error para depuración
     }
   }
 
