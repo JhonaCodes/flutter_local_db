@@ -69,6 +69,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
       _lib = await CurrentPlatform.loadRustNativeLib();
       log('Library loaded: ${_lib}');
 
+      /// Bind functions.
+      _bindFunctions();
+      log('Functions bound successfully');
+
       /// Define default route.
       final appDir = await getApplicationDocumentsDirectory();
       log('Using app directory: ${appDir.path}');
@@ -76,10 +80,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
       /// Initialize database with default route and database name.
       await _init('${appDir.path}/$databaseName');
       log('Database initialized successfully');
-
-      /// Bind functions.
-      _bindFunctions();
-      log('Functions bound successfully');
 
     } catch (e, stack) {
       log('Error initializing database: $e');
