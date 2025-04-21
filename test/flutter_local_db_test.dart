@@ -30,11 +30,11 @@ void main() {
     test('Should create and retrieve data', () async {
       final testData = {'name': 'test', 'value': 123};
 
-      final result = LocalDB.Post('test-key', testData);
+      final result = await LocalDB.Post('test-key', testData);
 
       expect(result.isOk, true);
 
-      final retrieved = LocalDB.GetById('test-key');
+      final retrieved = await LocalDB.GetById('test-key');
 
       expect(retrieved.isOk, true);
       expect(retrieved.data?.data['name'], 'test');
@@ -43,26 +43,26 @@ void main() {
     });
 
     test('Should update existing data', () async {
-      await LocalDB.Post('update-key', {'value': 'initial'});
-      final updateResult = LocalDB.Put('update-key', {'value': 'updated'});
+      await await LocalDB.Post('update-key', {'value': 'initial'});
+      final updateResult = await LocalDB.Put('update-key', {'value': 'updated'});
       expect(updateResult.isOk, true);
 
-      final retrieved = LocalDB.GetById('update-key');
+      final retrieved = await LocalDB.GetById('update-key');
       expect(retrieved.isOk, true);
       expect(retrieved.data?.data['value'], 'updated');
     });
 
     test('Should delete data', () async {
       // Create data
-      LocalDB.Post('delete-key', {'value': 'to-delete'});
+      await LocalDB.Post('delete-key', {'value': 'to-delete'});
 
       // Delete the data
-      final deleteResult = LocalDB.Delete('delete-key');
+      final deleteResult = await LocalDB.Delete('delete-key');
 
       expect(deleteResult.isOk, true);
 
       // Verify deletion - should return Ok(null) no Err
-      final retrieved = LocalDB.GetById('delete-key');
+      final retrieved = await LocalDB.GetById('delete-key');
       retrieved.when(
         ok: (data) {},
         err: (err) {
@@ -76,12 +76,16 @@ void main() {
 
   group('LocalDB Concurrent Operations', () {
     test('Should handle multiple concurrent writes', () async {
-      final futures = List.generate(
-          10, (index) => LocalDB.Post('concurrent-$index', {'value': index}));
+      // Crear una lista de Futures para ejecutar operaciones concurrentes
+      final futures = List.generate(10, (index) =>
+          LocalDB.Post('concurrent-$index', {'value': index})
+      );
 
+      // Esperar a que todas las operaciones se completen y verificar sus resultados
+      final results = await Future.wait(futures);
+      expect(results.every((result) => result.isOk), true);
 
-      expect(futures.every((r) => r.isOk), true);
-
+      // Verificar que todos los datos se guardaron correctamente
       final allData = await LocalDB.GetAll();
       expect(allData.isOk, true);
       expect(allData.data.length, 10);
@@ -92,33 +96,38 @@ void main() {
     test('Should perform bulk operations efficiently', () async {
       final Stopwatch stopwatch = Stopwatch()..start();
 
+      // Crear una lista de Futures para operaciones en lote
       final futures = List.generate(
           50,
-          (index) => LocalDB.Post('bulk-$index', {
-                'data': 'test-data-$index',
-                'timestamp': DateTime.now().toIso8601String(),
-              }));
+              (index) => LocalDB.Post('bulk-$index', {
+            'data': 'test-data-$index',
+            'timestamp': DateTime.now().toIso8601String(),
+          })
+      );
 
+      // Esperar a que todas las operaciones se completen
+      final results = await Future.wait(futures);
 
+      // Medir y mostrar el tiempo transcurrido
+      final elapsed = stopwatch.elapsed;
+      print('Bulk operations completed in: ${elapsed.inMilliseconds}ms');
 
-      stopwatch.reset();
-      stopwatch.start();
-
-      expect(futures.every((r) => r.isOk), true);
+      // Verificar que todas las operaciones fueron exitosas
+      expect(results.every((result) => result.isOk), true);
     });
   });
 
   group('LocalDB Error Handling', () {
     test('Should handle invalid keys gracefully', () async {
-      final result = LocalDB.Post('', {'test': 'data'});
+      final result = await LocalDB.Post('', {'test': 'data'});
       expect(result.isErr, true);
 
-      final result2 = LocalDB.Post('a', {'test': 'data'});
+      final result2 = await LocalDB.Post('a', {'test': 'data'});
       expect(result2.isErr, true);
     });
 
     test('Should handle non-existent keys for Put operation', () async {
-      final updateResult = LocalDB.Put('non-existent-key', {'data': 'test'});
+      final updateResult = await LocalDB.Put('non-existent-key', {'data': 'test'});
       print(" @@@##${updateResult.errorOrNull?.detailsResult.message}");
       expect(updateResult.isErr, true);
 
@@ -150,7 +159,7 @@ void main() {
       ];
 
       for (final id in invalidIds) {
-        final result = LocalDB.Post(id, {'test': 'data'});
+        final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
           err: (error) => expect(result.errorOrNull?.detailsResult.message.toString().contains('SerializationError'), true),
@@ -237,9 +246,9 @@ void main() {
           List.generate(1000, (i) => MapEntry('key$i', 'value$i')));
 
       final operations = [
-        LocalDB.Post('small-data', smallData),
-        LocalDB.Post('medium-data', mediumData),
-        LocalDB.Post('large-data', largeData),
+        await LocalDB.Post('small-data', smallData),
+        await LocalDB.Post('medium-data', mediumData),
+        await LocalDB.Post('large-data', largeData),
       ];
 
       expect(operations.every((r) => r.isOk), true);
@@ -316,14 +325,21 @@ void main() {
     test('Should maintain performance with large datasets', () async {
       final stopwatch = Stopwatch()..start();
 
-      // Create 1000 records
-      List.generate(
+      // Create 1000 records y esperar a que todos terminen
+      final writeFutures = List.generate(
           1000,
-          (i) => LocalDB.Post('perf-test-$i',
-              {'data': List.generate(100, (j) => 'value-$j').join(',')}));
+              (i) => LocalDB.Post('perf-test-$i',
+              {'data': List.generate(100, (j) => 'value-$j').join(',')})
+      );
 
+      // Esperar a que todas las escrituras se completen
+      final writeResults = await Future.wait(writeFutures);
+
+      // Verificar que todas las escrituras fueron exitosas
+      expect(writeResults.every((result) => result.isOk), true);
 
       final writeTime = stopwatch.elapsedMilliseconds;
+      print('Write time for 1000 records: ${writeTime}ms');
 
       stopwatch.reset();
       stopwatch.start();
@@ -331,15 +347,18 @@ void main() {
       // Read all records
       final readResult = await LocalDB.GetAll();
       final readTime = stopwatch.elapsedMilliseconds;
+      print('Read time for all records: ${readTime}ms');
 
       readResult.when(
         ok: (data) => expect(data.length, 1000),
         err: (error) => fail('Failed to read data: $error'),
       );
 
-      // Performance assertions
-      expect(writeTime / 1000 < 50, true); // Average 50ms per write
-      expect(readTime < 1000, true); // Less than 1 second for full read
+      // Performance assertions - ajustar según sea necesario para tu entorno
+      expect(writeTime / 1000 < 50, true,
+          reason: 'Average write time per record: ${writeTime/1000}ms exceeded 50ms limit');
+      expect(readTime < 1000, true,
+          reason: 'Total read time: ${readTime}ms exceeded 1000ms limit');
     });
 
     test('Should handle rapid sequential operations efficiently', () async {
@@ -462,7 +481,7 @@ void main() {
       // Reinicializar la base de datos
       await LocalDB.ClearData();
 
-      final retrieved = LocalDB.GetById('persistent-key');
+      final retrieved = await LocalDB.GetById('persistent-key');
       retrieved.when(
         ok: (data) => fail('Data should not persist after clear'),
         err: (error) => expect(error.detailsResult.message, 'Unknown'),

@@ -52,9 +52,9 @@ class LocalDB {
   ///   - The data cannot be serialized
   ///   - A record with the same key already exists
   // ignore: non_constant_identifier_names
-  static LocalDbResult<LocalDbModel, ErrorLocalDb> Post(
+  static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Post(
       String key, Map<String, dynamic> data,
-      {String? lastUpdate})  {
+      {String? lastUpdate})  async{
     if (!_isValidId(key)) {
       return Err(ErrorLocalDb.serializationError( "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
@@ -63,7 +63,7 @@ class LocalDB {
       return Err(ErrorLocalDb.serializationError('The provided format data is invalid.\n$data'));
     }
 
-    final verifyId =  GetById(key);
+    final verifyId =  await GetById(key);
 
     if (verifyId.isOk) {
       return Err(ErrorLocalDb.databaseError(
@@ -76,7 +76,7 @@ class LocalDB {
       data: data,
     );
 
-    return LocalDbBridge.instance.post(model);
+    return await LocalDbBridge.instance.post(model);
   }
 
   /// Retrieves all records from the local database.
@@ -101,13 +101,13 @@ class LocalDB {
   /// - [Ok] with `null` if no record matches the ID
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
-  static LocalDbResult<LocalDbModel?, ErrorLocalDb> GetById(String id) {
+  static Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> GetById(String id) async{
     if (!_isValidId(id)) {
       return Err(ErrorLocalDb.validationError(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
-    return LocalDbBridge.instance.getById(id);
+    return await LocalDbBridge.instance.getById(id);
   }
 
   /// Updates an existing record in the database.
@@ -120,9 +120,9 @@ class LocalDB {
   /// - [Ok] with the updated [LocalDbModel] if successful
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
-  static LocalDbResult<LocalDbModel, ErrorLocalDb> Put(
-      String key, Map<String, dynamic> data) {
-    final verifyId =  GetById(key);
+  static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Put(
+      String key, Map<String, dynamic> data) async{
+    final verifyId =  await GetById(key);
 
     if (verifyId.isErr) {
       return Err(verifyId.errorOrNull ?? ErrorLocalDb.notFound(
@@ -136,7 +136,7 @@ class LocalDB {
         data: data,
         hash: DateTime.now().millisecondsSinceEpoch.toString());
 
-    return LocalDbBridge.instance.put(currentData);
+    return await LocalDbBridge.instance.put(currentData);
   }
 
   /// Deletes a record by its unique identifier.
@@ -148,13 +148,13 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static LocalDbResult<bool, ErrorLocalDb> Delete(String id) {
+  static Future<LocalDbResult<bool, ErrorLocalDb>> Delete(String id) async{
     if (!_isValidId(id)) {
       return Err(ErrorLocalDb.serializationError(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
-    return LocalDbBridge.instance.delete(id);
+    return await LocalDbBridge.instance.delete(id);
   }
 
   /// Clear all data on the database.

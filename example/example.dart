@@ -69,33 +69,53 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final listData = LocalDB.GetById(userID);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Local DB Example'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: listData.when(
-          ok: (userData) => userData == null
-              ? const Center(child: Text('No user found'))
-              : Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('ID: ${userData.id}'),
-                  Text('Data: ${userData.data}'),
-                ],
-              ),
-            ),
-          ),
-          err: (error) => Center(
-            child: Text('Error: $error',
-                style: const TextStyle(color: Colors.red)),
-          ),
+        child: FutureBuilder(
+          future: LocalDB.GetById(userID),
+          builder: (context, asyncSnapShot){
+
+            if (asyncSnapShot.hasError) {
+              return Center(child: Text('Error: ${asyncSnapShot.error}'));
+            }
+
+            if (!asyncSnapShot.hasData || asyncSnapShot.data == null) {
+              return const Center(child: Text('User not found'));
+            }
+
+            if(asyncSnapShot.hasData && asyncSnapShot.data != null){
+              return asyncSnapShot.data!.when(
+                ok: (userData) => userData == null
+                    ? const Center(child: Text('No user found'))
+                    : Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('ID: ${userData.id}'),
+                        Text('Data: ${userData.data}'),
+                      ],
+                    ),
+                  ),
+                ),
+                err: (error) => Center(
+                  child: Text('Error: $error',
+                      style: const TextStyle(color: Colors.red)),
+                ),
+              );
+            }
+
+
+            return const Center(child: CircularProgressIndicator());
+
+          },
         ),
       ),
       floatingActionButton: Row(

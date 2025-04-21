@@ -35,16 +35,20 @@ class LocalDbBridge extends LocalSbRequestImpl {
   static final LocalDbBridge instance = LocalDbBridge._();
 
   LocalDbResult<DynamicLibrary, String>? _lib;
-  late Pointer<AppDbState> _dbInstance;
+  Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
+  String? _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
 
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';
     }
 
-    /// Initialize native library.
-    _lib = Ok(DynamicLibrary.open(libPath));
+    _lastDatabaseName = databaseName;
 
+    if(_lib == null) {
+      /// Initialize native library.
+      _lib = Ok(DynamicLibrary.open(libPath));
+    }
     /// Bind functions.
     _bindFunctions();
 
@@ -52,20 +56,18 @@ class LocalDbBridge extends LocalSbRequestImpl {
     final appDir = await getApplicationDocumentsDirectory();
 
     /// Initialize database with default route and database name.
-   await  _init('${appDir.path}/$databaseName');
+    await _init('${appDir.path}/$databaseName');
   }
 
   Future<void> initialize(String databaseName) async {
     try {
       log('Initializing DB on platform: ${Platform.operatingSystem}');
 
+      _lastDatabaseName = databaseName;
+
       /// Initialize native library.
       _lib = await CurrentPlatform.loadRustNativeLib();
       log('Library loaded: ${_lib}');
-
-      /// Bind functions.
-      _bindFunctions();
-      log('Functions bound successfully');
 
       /// Define default route.
       final appDir = await getApplicationDocumentsDirectory();
@@ -74,11 +76,41 @@ class LocalDbBridge extends LocalSbRequestImpl {
       /// Initialize database with default route and database name.
       await _init('${appDir.path}/$databaseName');
       log('Database initialized successfully');
+
+      /// Bind functions.
+      _bindFunctions();
+      log('Functions bound successfully');
+
     } catch (e, stack) {
       log('Error initializing database: $e');
       log('Stack trace: $stack');
       rethrow;
     }
+  }
+
+  /// Método para verificar si la conexión es válida y reinicializar si es necesario
+  Future<bool> ensureConnectionValid() async {
+    // Verificar si la instancia es válida
+    if (_dbInstance == null || _dbInstance == nullptr) {
+      log('Database connection invalid, attempting to reinitialize...');
+
+      if (_lastDatabaseName != null) {
+        try {
+          final appDir = await getApplicationDocumentsDirectory();
+          await _init('${appDir.path}/$_lastDatabaseName');
+          log('Database reinitialized successfully');
+          return true;
+        } catch (e) {
+          log('Failed to reinitialize database: $e');
+          return false;
+        }
+      } else {
+        log('Cannot reinitialize: no previous database name stored');
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /// Functions registration
@@ -120,29 +152,37 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Future<void> _init(String dbName) async {
     try {
       final dbNamePointer = dbName.toNativeUtf8();
+
+      // Si ya existe una instancia, vamos a crear una nueva de todos modos
       _dbInstance = _createDatabase(dbNamePointer);
+
+      if (_dbInstance == nullptr) {
+        throw Exception('Failed to create database instance. Returned null pointer.');
+      }
 
       calloc.free(dbNamePointer);
     } catch (error, stackTrace) {
-      log(error.toString());
+      log('Error in _init: $error');
       log(stackTrace.toString());
+      rethrow;
     }
   }
 
   @override
-  LocalDbResult<LocalDbModel, ErrorLocalDb> post(
-      LocalDbModel model) {
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     final jsonString = jsonEncode(model.toJson());
     final jsonPointer = jsonString.toNativeUtf8();
 
     try {
-      final resultPushPointer = _post(_dbInstance, jsonPointer);
+      final resultPushPointer = _post(_dbInstance!, jsonPointer);
 
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
 
-
       calloc.free(resultPushPointer);
-
       calloc.free(jsonPointer);
 
       final Map<String,dynamic> response = jsonDecode(dataResult);
@@ -152,7 +192,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
       }
 
       final modelData = LocalDbModel.fromJson(Map<String, dynamic>.from(jsonDecode(response['Ok'])));
-
 
       return Ok(modelData);
     } catch (error, stack) {
@@ -164,10 +203,14 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  LocalDbResult<LocalDbModel, ErrorLocalDb> getById(String id) {
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> getById(String id) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
       final idPtr = id.toNativeUtf8();
-      final resultFfi = _getById(_dbInstance, idPtr);
+      final resultFfi = _getById(_dbInstance!, idPtr);
 
       // Liberar memoria del id
       calloc.free(idPtr);
@@ -186,7 +229,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
       }
 
       final modelData =
-          LocalDbModel.fromJson(jsonDecode(response['Ok']));
+      LocalDbModel.fromJson(jsonDecode(response['Ok']));
 
       return Ok(modelData);
     } catch (error, stackTrace) {
@@ -197,12 +240,15 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  LocalDbResult<LocalDbModel, ErrorLocalDb> put(
-      LocalDbModel model) {
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
       final jsonString = jsonEncode(model.toJson());
       final jsonPointer = jsonString.toNativeUtf8();
-      final resultFfi = _put(_dbInstance, jsonPointer);
+      final resultFfi = _put(_dbInstance!, jsonPointer);
       final result = resultFfi.cast<Utf8>().toDartString();
 
       calloc.free(jsonPointer);
@@ -228,9 +274,13 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  LocalDbResult<bool, ErrorLocalDb> cleanDatabase()  {
+  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      final resultFfi = _clearAllRecords(_dbInstance);
+      final resultFfi = _clearAllRecords(_dbInstance!);
       final result = resultFfi != nullptr;
       malloc.free(resultFfi);
       return Ok(result);
@@ -242,10 +292,14 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  LocalDbResult<bool, ErrorLocalDb> delete(String id) {
+  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async{
+    if (!(await ensureConnectionValid())) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
       final idPtr = id.toNativeUtf8();
-      final deleteResult = _delete(_dbInstance, idPtr);
+      final deleteResult = _delete(_dbInstance!, idPtr);
       final result = deleteResult.cast<Utf8>().toDartString();
       calloc.free(idPtr);
 
@@ -264,22 +318,24 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll()  async{
+  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+    // Verificar la conexión antes de proceder
+    if (!await ensureConnectionValid()) {
+      return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
+    }
+
     try {
-      final resultFfi = _get(_dbInstance);
+      final resultFfi = _get(_dbInstance!);
 
       if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
         return Err(ErrorLocalDb.notFound('Failed to retrieve data: null pointer returned'));
       }
 
-
-
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
 
       /// Because no need anymore and the reference is on [resultTransformed]
       malloc.free(resultFfi);
-
 
       final Map<String, dynamic> response = await jsonDecode(resultTransformed);
 
@@ -287,9 +343,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
         return Err(ErrorLocalDb.fromRustError(resultTransformed));
       }
 
-
-      final List<dynamic> jsonList =  await jsonDecode(response['Ok']);
-
+      final List<dynamic> jsonList = await jsonDecode(response['Ok']);
 
       final List<LocalDbModel> dataList =
       jsonList.map((json) => LocalDbModel.fromJson(Map<String,dynamic>.from(json))).toList();
@@ -301,7 +355,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
       return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
-
 }
 
 sealed class CurrentPlatform {
