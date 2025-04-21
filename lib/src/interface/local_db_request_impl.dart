@@ -48,13 +48,6 @@ abstract class LocalSbRequestImpl {
   ///
   LocalDbResult<bool, String> cleanDatabase();
 
-  /// Close database
-  ///
-  LocalDbResult<void, String> dispose();
-
-  /// Verify if database is open
-  ///
-  LocalDbResult<bool, String> isOpen();
 
 
 }

@@ -165,16 +165,6 @@ class LocalDB {
     return await LocalDbBridge.instance.cleanDatabase();
   }
 
-  /// Close database connection.
-  // ignore: non_constant_identifier_names
-  static LocalDbResult<void, String> Dispose() {
-    return LocalDbBridge.instance.dispose();
-  }
-
-  static LocalDbResult<bool, String> IsOpen() {
-    return LocalDbBridge.instance.isOpen();
-  }
-
   // ignore: non_constant_identifier_names
   // static Future<LocalDbResult<bool, String>> ResetDatabase() async {
   //   return await LocalDbBridge.instance.clear();

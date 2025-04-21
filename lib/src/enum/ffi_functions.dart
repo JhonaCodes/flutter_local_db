@@ -27,13 +27,7 @@ enum FFiFunctions {
 
   /// Clears all records from the database
   /// Rust function: `clear_all_records`
-  clearAllRecords('clear_all_records'),
-
-  /// Just close database connection
-  dispose('close_database'),
-
-  /// Verifies if the database is open
-  isOpen('is_database_open');
+  clearAllRecords('clear_all_records');
 
   /// The corresponding C function name in the Rust FFI layer
   /// This name must match exactly with the function exported in the Rust code

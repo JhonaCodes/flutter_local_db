@@ -27,8 +27,6 @@ typedef PointerBoolFFICallBack = Pointer<Bool> Function(
     Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
-typedef CloseDb = Pointer<Void> Function(Pointer<AppDbState>);
-typedef IsDatabaseOpenNative = Pointer<Bool> Function(Pointer<AppDbState>);
 
 class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbBridge._();
@@ -53,7 +51,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
     final appDir = await getApplicationDocumentsDirectory();
 
     /// Initialize database with default route and database name.
-    _init('${appDir.path}/$databaseName');
+   await  _init('${appDir.path}/$databaseName');
   }
 
   Future<void> initialize(String databaseName) async {
@@ -73,7 +71,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Using app directory: ${appDir.path}');
 
       /// Initialize database with default route and database name.
-      _init('${appDir.path}/$databaseName');
+      await _init('${appDir.path}/$databaseName');
       log('Database initialized successfully');
     } catch (e, stack) {
       log('Error initializing database: $e');
@@ -90,8 +88,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late final PointerStringFFICallBack _put;
   late final PointerBoolFFICallBack _delete;
   late final PointerBoolFFICallBackDirect _clearAllRecords;
-  late final CloseDb _dispose;
-  late final IsDatabaseOpenNative _isDatabaseOpen;
 
   /// Bind functiopns for initialization
   void _bindFunctions() {
@@ -113,8 +109,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
                 FFiFunctions.delete.cName);
         _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
             PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
-        _dispose = lib.lookupFunction<CloseDb,CloseDb>(FFiFunctions.dispose.cName);
-        _isDatabaseOpen = lib.lookupFunction<IsDatabaseOpenNative,IsDatabaseOpenNative>(FFiFunctions.isOpen.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -269,30 +263,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
     }
   }
 
-  @override
-  LocalDbResult<void, String> dispose() {
-    try {
-      _dispose(_dbInstance);
-      return Ok(true);
-    } catch (error, stackTrace) {
-      log(error.toString());
-      log(stackTrace.toString());
-      return Err(error.toString());
-    }
-  }
-
-  @override
-  LocalDbResult<bool, String> isOpen() {
-    try {
-      final resultPtr = _isDatabaseOpen(_dbInstance);
-      final result = resultPtr.value;
-      malloc.free(resultPtr);
-      return Ok(result);
-    } catch (error) {
-      log(error.toString());
-      return Err(error.toString());
-    }
-  }
 }
 
 sealed class CurrentPlatform {
