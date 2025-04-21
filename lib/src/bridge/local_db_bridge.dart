@@ -264,7 +264,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  LocalDbResult<List<LocalDbModel>, ErrorLocalDb> getAll()  {
+  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll()  async{
     try {
       final resultFfi = _get(_dbInstance);
 
@@ -281,14 +281,14 @@ class LocalDbBridge extends LocalSbRequestImpl {
       malloc.free(resultFfi);
 
 
-      final Map<String, dynamic> response = jsonDecode(resultTransformed);
+      final Map<String, dynamic> response = await jsonDecode(resultTransformed);
 
       if(!response.containsKey('Ok')){
         return Err(ErrorLocalDb.fromRustError(resultTransformed));
       }
 
 
-      final List<dynamic> jsonList =  jsonDecode(response['Ok']);
+      final List<dynamic> jsonList =  await jsonDecode(response['Ok']);
 
 
       final List<LocalDbModel> dataList =

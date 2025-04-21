@@ -85,10 +85,10 @@ class LocalDB {
   /// - [Ok] with a list of [LocalDbModel]
   ///   - Returns an empty list if no records are found
   /// - [Err] with an error message if the operation fails
-  static LocalDbResult<List<LocalDbModel>, ErrorLocalDb>
+  static Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>>
       // ignore: non_constant_identifier_names
-      GetAll() {
-    return  LocalDbBridge.instance.getAll();
+      GetAll() async{
+    return  await LocalDbBridge.instance.getAll();
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -125,7 +125,6 @@ class LocalDB {
     final verifyId =  GetById(key);
 
     if (verifyId.isErr) {
-      print("@@@ IS error from put");
       return Err(verifyId.errorOrNull ?? ErrorLocalDb.notFound(
           "Record '$key' not found. Use POST method to create new records."));
     }

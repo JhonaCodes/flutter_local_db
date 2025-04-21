@@ -29,7 +29,7 @@ abstract class LocalSbRequestImpl {
   ///
   /// Returns a [LocalDbResult] that either contains a list of all records
   /// or an error message if the operation fails.
-  LocalDbResult<List<LocalDbModel>, ErrorLocalDb> getAll();
+  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll();
 
   /// Retrieves a single record by its ID.
   ///
