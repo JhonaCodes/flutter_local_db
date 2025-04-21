@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 
 import 'bridge/local_db_bridge.dart';
@@ -45,32 +46,31 @@ class LocalDB {
   /// - [lastUpdate]: Optional timestamp for the record (not used in this implementation)
   ///
   /// Returns:
-  /// - [Ok] with the created [LocalDbRequestModel] if successful
+  /// - [Ok] with the created [LocalDbModel] if successful
   /// - [Err] with an error message if:
   ///   - The key is invalid
   ///   - The data cannot be serialized
   ///   - A record with the same key already exists
   // ignore: non_constant_identifier_names
-  static LocalDbResult<LocalDbRequestModel, String> Post(
+  static LocalDbResult<LocalDbModel, ErrorLocalDb> Post(
       String key, Map<String, dynamic> data,
       {String? lastUpdate})  {
     if (!_isValidId(key)) {
-      return const Err(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
+      return Err(ErrorLocalDb.serializationError( "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
     if (!_isValidMap(data)) {
-      return Err('The provided format data is invalid.\n$data');
+      return Err(ErrorLocalDb.serializationError('The provided format data is invalid.\n$data'));
     }
 
     final verifyId =  GetById(key);
 
     if (verifyId.isOk) {
-      return Err(
-          "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.");
+      return Err(ErrorLocalDb.databaseError(
+          "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records."));
     }
 
-    final model = LocalDbRequestModel(
+    final model = LocalDbModel(
       id: key,
       hash: DateTime.now().millisecondsSinceEpoch.toString(),
       data: data,
@@ -82,13 +82,13 @@ class LocalDB {
   /// Retrieves all records from the local database.
   ///
   /// Returns:
-  /// - [Ok] with a list of [LocalDbRequestModel]
+  /// - [Ok] with a list of [LocalDbModel]
   ///   - Returns an empty list if no records are found
   /// - [Err] with an error message if the operation fails
-  static LocalDbResult<List<LocalDbRequestModel>, String>
+  static LocalDbResult<List<LocalDbModel>, ErrorLocalDb>
       // ignore: non_constant_identifier_names
       GetAll() {
-    return LocalDbBridge.instance.getAll();
+    return  LocalDbBridge.instance.getAll();
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -97,14 +97,14 @@ class LocalDB {
   /// - [id]: The unique identifier of the record to retrieve
   ///
   /// Returns:
-  /// - [Ok] with the [LocalDbRequestModel] if found
+  /// - [Ok] with the [LocalDbModel] if found
   /// - [Ok] with `null` if no record matches the ID
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
-  static LocalDbResult<LocalDbRequestModel?, String> GetById(String id) {
+  static LocalDbResult<LocalDbModel?, ErrorLocalDb> GetById(String id) {
     if (!_isValidId(id)) {
-      return const Err(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
+      return Err(ErrorLocalDb.validationError(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
     return LocalDbBridge.instance.getById(id);
@@ -117,24 +117,27 @@ class LocalDB {
   /// - [data]: The new data to store
   ///
   /// Returns:
-  /// - [Ok] with the updated [LocalDbRequestModel] if successful
+  /// - [Ok] with the updated [LocalDbModel] if successful
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
-  static LocalDbResult<LocalDbRequestModel, String> Put(
+  static LocalDbResult<LocalDbModel, ErrorLocalDb> Put(
       String key, Map<String, dynamic> data) {
     final verifyId =  GetById(key);
 
-    if (verifyId.isOk) {
-      final currentData = LocalDbRequestModel(
-          id: key,
-          data: data,
-          hash: DateTime.now().millisecondsSinceEpoch.toString());
-
-      return LocalDbBridge.instance.put(currentData);
+    if (verifyId.isErr) {
+      print("@@@ IS error from put");
+      return Err(verifyId.errorOrNull ?? ErrorLocalDb.notFound(
+          "Record '$key' not found. Use POST method to create new records."));
     }
 
-    return Err(
-        "Record '$key' not found. Use POST method to create new records.");
+
+
+    final currentData = LocalDbModel(
+        id: key,
+        data: data,
+        hash: DateTime.now().millisecondsSinceEpoch.toString());
+
+    return LocalDbBridge.instance.put(currentData);
   }
 
   /// Deletes a record by its unique identifier.
@@ -146,10 +149,10 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static LocalDbResult<bool, String> Delete(String id) {
+  static LocalDbResult<bool, ErrorLocalDb> Delete(String id) {
     if (!_isValidId(id)) {
-      return const Err(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).");
+      return Err(ErrorLocalDb.serializationError(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
     return LocalDbBridge.instance.delete(id);
@@ -161,7 +164,7 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<bool, String>> ClearData() async {
+  static Future<LocalDbResult<bool, ErrorLocalDb>> ClearData() async {
     return await LocalDbBridge.instance.cleanDatabase();
   }
 

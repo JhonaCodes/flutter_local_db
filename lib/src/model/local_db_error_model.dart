@@ -1,76 +1,205 @@
+import 'dart:convert';
+
 /// A model class that represents errors that can occur during database operations.
 /// This class provides a structured way to handle and serialize error information.
-class LocalDbErrorModel {
-  /// The main title or category of the error
-  final String title;
+/// Representa los diferentes tipos de errores que pueden ocurrir en la aplicación.
+/// Basado en la enumeración AppResponse de Rust.
+enum ErrorType {
+  databaseError,
+  serializationError,
+  notFound,
+  validationError,
+  badRequest,
+  unknown
+}
 
-  /// Optional detailed message about the error
-  /// Can be null if no additional details are available
-  final String? message;
+/// Modelo para representar errores de la aplicación.
+/// Adaptado desde la enumeración AppResponse de Rust.
+class ErrorLocalDb {
+  /// El tipo de error que ocurrió
+  final ErrorType type;
 
-  /// The actual Error object that was caught
-  /// Contains the error type and basic error information
-  final Error err;
+  /// Mensaje detallado del error
+  final DetailsModel detailsResult;
 
-  /// Optional stack trace of where the error occurred
-  /// Can be null if stack trace capture was disabled or unavailable
+  /// Opcional: objeto de error original si está disponible
+  final Object? originalError;
+
+  /// Opcional: traza de la pila si está disponible
   final StackTrace? stackTrace;
 
-  /// Creates a new [LocalDbErrorModel] instance.
+  /// Crea una nueva instancia de [ErrorLocalDb].
   ///
-  /// [title] and [err] are required parameters.
-  /// [message] and [stackTrace] are optional and can be null.
-  LocalDbErrorModel({
-    required this.title,
-    this.message,
-    required this.err,
+  /// [type] y [detailsResult] son parámetros requeridos.
+  /// [originalError] y [stackTrace] son opcionales.
+  ErrorLocalDb({
+    required this.type,
+    required this.detailsResult,
+    this.originalError,
     this.stackTrace,
   });
 
-  /// Converts the error model to a JSON map.
-  ///
-  /// Useful for serialization and logging purposes.
-  /// All fields, including nullables, are included in the resulting map.
-  Map<String, dynamic> toJson() => {
-        'title': title,
-        'message': message,
-        'err': err,
-        'stackTrace': stackTrace
-      };
-
-  /// Creates a [LocalDbErrorModel] instance from a JSON map.
-  ///
-  /// Used for deserializing error data, typically from logs or stored error records.
-  factory LocalDbErrorModel.fromJson(Map<String, dynamic> json) =>
-      LocalDbErrorModel(
-          title: json['title'],
-          message: json['message'],
-          err: json['err'],
-          stackTrace: json['stackTrace']);
-
-  /// Provides a string representation of the error model.
-  ///
-  /// Useful for debugging and logging purposes.
-  @override
-  String toString() {
-    return 'LocalDbErrorModel{title: $title, message: $message, err: $err, stackTrace: $stackTrace}';
+  /// Crea un error de tipo DatabaseError
+  factory ErrorLocalDb.databaseError(String message, {Object? originalError, StackTrace? stackTrace}) {
+    return ErrorLocalDb(
+      type: ErrorType.databaseError,
+      detailsResult:DetailsModel.fromJson(message, 'DatabaseError'),
+      originalError: originalError,
+      stackTrace: stackTrace,
+    );
   }
 
-  /// Creates a copy of this error model with optional field updates.
-  ///
-  /// Fields that are not specified will retain their original values.
-  /// Useful for modifying error information while maintaining immutability.
-  LocalDbErrorModel copyWith({
-    String? title,
-    String? message,
-    Error? err,
+  /// Crea un error de tipo SerializationError
+  factory ErrorLocalDb.serializationError(String message, {Object? originalError, StackTrace? stackTrace}) {
+    return ErrorLocalDb(
+      type: ErrorType.serializationError,
+      detailsResult: DetailsModel.fromJson(message, 'SerializationError'),
+      originalError: originalError,
+      stackTrace: stackTrace,
+    );
+  }
+
+  /// Crea un error de tipo NotFound
+  factory ErrorLocalDb.notFound(String message, {Object? originalError, StackTrace? stackTrace}) {
+    return ErrorLocalDb(
+      type: ErrorType.notFound,
+      detailsResult:DetailsModel.fromJson(message, 'NotFound'),
+      originalError: originalError,
+      stackTrace: stackTrace,
+    );
+  }
+
+  /// Crea un error de tipo ValidationError
+  factory ErrorLocalDb.validationError(String message, {Object? originalError, StackTrace? stackTrace}) {
+    return ErrorLocalDb(
+      type: ErrorType.validationError,
+      detailsResult:DetailsModel.fromJson(message, 'ValidationError'),
+      originalError: originalError,
+      stackTrace: stackTrace,
+    );
+  }
+
+  /// Crea un error de tipo BadRequest
+  factory ErrorLocalDb.badRequest(String message, {Object? originalError, StackTrace? stackTrace}) {
+    return ErrorLocalDb(
+      type: ErrorType.badRequest,
+      detailsResult:DetailsModel.fromJson(message, 'BadRequest'),
+      originalError: originalError,
+      stackTrace: stackTrace,
+    );
+  }
+
+  /// Crea un error de tipo desconocido
+  factory ErrorLocalDb.unknown(String message, {Object? originalError, StackTrace? stackTrace}) {
+    return ErrorLocalDb(
+      type: ErrorType.unknown,
+      detailsResult:DetailsModel.fromJson(message, 'Unknown'),
+      originalError: originalError,
+      stackTrace: stackTrace,
+    );
+  }
+
+  /// Crea un modelo de error desde una cadena con formato de error Rust
+  /// Por ejemplo: "NotFound: No model found with id: current-fasting-plan"
+  factory ErrorLocalDb.fromRustError(String rustErrorString, {Object? originalError, StackTrace? stackTrace}) {
+    // Intentar parsear el mensaje de error
+    final colonIndex = rustErrorString.indexOf(':');
+    if (colonIndex == -1) {
+      return ErrorLocalDb.unknown(
+        rustErrorString,
+        originalError: originalError,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final errorType = rustErrorString.substring(0, colonIndex).trim();
+    final errorMessage = rustErrorString.substring(colonIndex + 1).trim();
+
+    switch (errorType) {
+      case 'DatabaseError':
+        return ErrorLocalDb.databaseError(errorMessage, originalError: originalError, stackTrace: stackTrace);
+      case 'SerializationError':
+        return ErrorLocalDb.serializationError(errorMessage, originalError: originalError, stackTrace: stackTrace);
+      case 'NotFound':
+        return ErrorLocalDb.notFound(errorMessage, originalError: originalError, stackTrace: stackTrace);
+      case 'ValidationError':
+        return ErrorLocalDb.validationError(errorMessage, originalError: originalError, stackTrace: stackTrace);
+      case 'BadRequest':
+        return ErrorLocalDb.badRequest(errorMessage, originalError: originalError, stackTrace: stackTrace);
+      default:
+        return ErrorLocalDb.unknown(
+          rustErrorString,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
+    }
+  }
+
+  /// Convierte el modelo de error a un mapa JSON.
+  Map<String, dynamic> toJson() => {
+    'type': type.toString().split('.').last,
+    'message': detailsResult,
+    'originalError': originalError?.toString(),
+    'stackTrace': stackTrace?.toString(),
+  };
+
+  /// Proporciona una representación en cadena del modelo de error.
+  @override
+  String toString() {
+    final typeString = type.toString().split('.').last;
+    return '$typeString: $detailsResult';
+  }
+
+  /// Crea una copia de este modelo de error con actualizaciones opcionales de campos.
+  ErrorLocalDb copyWith({
+    ErrorType? type,
+    DetailsModel? message,
+    Object? originalError,
     StackTrace? stackTrace,
   }) {
-    return LocalDbErrorModel(
-      title: title ?? this.title,
-      message: message ?? this.message,
-      err: err ?? this.err,
+    return ErrorLocalDb(
+      type: type ?? this.type,
+      detailsResult: message ?? this.detailsResult,
+      originalError: originalError ?? this.originalError,
       stackTrace: stackTrace ?? this.stackTrace,
     );
+  }
+}
+
+
+class DetailsModel {
+  final String type;
+  final String message;
+
+  DetailsModel(this.type, this.message);
+  
+  factory DetailsModel.fromJson(String jsonString, [String? type]){
+
+    final encoded = jsonEncode(jsonString);
+
+    final isString = jsonDecode(encoded).runtimeType == String;
+
+    Map<String,dynamic> response = {};
+
+    if(isString){
+      response = {
+        'type': type ?? 'Unknown',
+        'message': jsonDecode(jsonEncode(jsonString))
+      };
+    }else{
+      response = jsonDecode(jsonString);
+    }
+
+
+    
+    Map<String,dynamic> newJson = {
+      "type": response.keys.first ??'',
+      "message": response.values.first ?? ''
+    };
+    return DetailsModel(
+        newJson['type'],
+        newJson['message']
+    );
+    
   }
 }

@@ -10,6 +10,7 @@ import 'package:flutter_local_db/src/enum/ffi_functions.dart';
 
 import 'package:flutter_local_db/src/enum/ffi_native_lib_location.dart';
 import 'package:flutter_local_db/src/interface/local_db_request_impl.dart';
+import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/model/local_db_request_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:path_provider/path_provider.dart';
@@ -129,8 +130,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  LocalDbResult<LocalDbRequestModel, String> post(
-      LocalDbRequestModel model) {
+  LocalDbResult<LocalDbModel, ErrorLocalDb> post(
+      LocalDbModel model) {
     final jsonString = jsonEncode(model.toJson());
     final jsonPointer = jsonString.toNativeUtf8();
 
@@ -139,22 +140,31 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
 
+
       calloc.free(resultPushPointer);
 
       calloc.free(jsonPointer);
 
-      final modelData = LocalDbRequestModel.fromJson(jsonDecode(dataResult));
+      final Map<String,dynamic> response = jsonDecode(dataResult);
+
+      if(!response.containsKey('Ok')){
+        return Err(ErrorLocalDb.fromRustError(dataResult));
+      }
+
+      final modelData = LocalDbModel.fromJson(Map<String, dynamic>.from(jsonDecode(response['Ok'])));
+
 
       return Ok(modelData);
     } catch (error, stack) {
       log(error.toString());
       log(stack.toString());
-      return Err(error.toString());
+      print(stack.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stack));
     }
   }
 
   @override
-  LocalDbResult<LocalDbRequestModel?, String> getById(String id) {
+  LocalDbResult<LocalDbModel, ErrorLocalDb> getById(String id) {
     try {
       final idPtr = id.toNativeUtf8();
       final resultFfi = _getById(_dbInstance, idPtr);
@@ -163,26 +173,32 @@ class LocalDbBridge extends LocalSbRequestImpl {
       calloc.free(idPtr);
 
       if (resultFfi == nullptr) {
-        return const Err("Not found");
+        return Err(ErrorLocalDb.notFound("No model found with id: $id"));
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
       malloc.free(resultFfi);
 
+      final Map<String, dynamic> response = jsonDecode(resultTransformed);
+
+      if(!response.containsKey('Ok')){
+        return Err(ErrorLocalDb.fromRustError(resultTransformed));
+      }
+
       final modelData =
-          LocalDbRequestModel.fromJson(jsonDecode(resultTransformed));
+          LocalDbModel.fromJson(jsonDecode(response['Ok']));
 
       return Ok(modelData);
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(error.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 
   @override
-  LocalDbResult<LocalDbRequestModel, String> put(
-      LocalDbRequestModel model) {
+  LocalDbResult<LocalDbModel, ErrorLocalDb> put(
+      LocalDbModel model) {
     try {
       final jsonString = jsonEncode(model.toJson());
       final jsonPointer = jsonString.toNativeUtf8();
@@ -192,21 +208,27 @@ class LocalDbBridge extends LocalSbRequestImpl {
       calloc.free(jsonPointer);
 
       if (resultFfi == nullptr) {
-        return const Err("Not found");
+        return Err(ErrorLocalDb.notFound("No model found"));
       }
 
       malloc.free(resultFfi);
 
-      return Ok(LocalDbRequestModel.fromJson(jsonDecode(result)));
+      final Map<String, dynamic> response = jsonDecode(result);
+
+      if(!response.containsKey('Ok')){
+        return Err(ErrorLocalDb.fromRustError(result));
+      }
+
+      return Ok(LocalDbModel.fromJson(jsonDecode(response['Ok'])));
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(error.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 
   @override
-  LocalDbResult<bool, String> cleanDatabase()  {
+  LocalDbResult<bool, ErrorLocalDb> cleanDatabase()  {
     try {
       final resultFfi = _clearAllRecords(_dbInstance);
       final result = resultFfi != nullptr;
@@ -215,51 +237,72 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(error.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 
   @override
-  LocalDbResult<bool, String> delete(String id) {
+  LocalDbResult<bool, ErrorLocalDb> delete(String id) {
     try {
       final idPtr = id.toNativeUtf8();
       final deleteResult = _delete(_dbInstance, idPtr);
-
+      final result = deleteResult.cast<Utf8>().toDartString();
       calloc.free(idPtr);
 
-      return Ok(deleteResult.address == 1);
-    } catch (e, stack) {
-      log(e.toString());
-      log(stack.toString());
-      return Err(e.toString());
+      final Map<String, dynamic> response = jsonDecode(result);
+
+      if(!response.containsKey('Ok')){
+        return Err(ErrorLocalDb.fromRustError(result));
+      }
+
+      return Ok(true);
+    } catch (error, stackTrace) {
+      log(error.toString());
+      log(stackTrace.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 
   @override
-  LocalDbResult<List<LocalDbRequestModel>, String> getAll()  {
+  LocalDbResult<List<LocalDbModel>, ErrorLocalDb> getAll()  {
     try {
       final resultFfi = _get(_dbInstance);
 
       if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
-        return Err('Failed to retrieve data: null pointer returned');
+        return Err(ErrorLocalDb.notFound('Failed to retrieve data: null pointer returned'));
       }
+
+
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
 
       /// Because no need anymore and the reference is on [resultTransformed]
       malloc.free(resultFfi);
 
-      final List<dynamic> jsonList = jsonDecode(resultTransformed);
 
-      final List<LocalDbRequestModel> dataList =
-          jsonList.map((json) => LocalDbRequestModel.fromJson(json)).toList();
+      final Map<String, dynamic> response = jsonDecode(resultTransformed);
+
+      if(!response.containsKey('Ok')){
+        return Err(ErrorLocalDb.fromRustError(resultTransformed));
+      }
+
+      final Map<String, dynamic> jsonData = jsonDecode(resultTransformed);
+
+
+
+
+      final List<dynamic> jsonList =  jsonDecode(jsonData.containsKey("Ok") ? jsonData['Ok'] : jsonData['Err']);
+
+
+      final List<LocalDbModel> dataList =
+          jsonList.map((json) => LocalDbModel.fromJson(json)).toList();
 
       return Ok(dataList);
-    } catch (e, stack) {
-      log(e.toString());
-      log(stack.toString());
-      return Err(e.toString());
+    } catch (error, stackTrace) {
+      log(error.toString());
+      log(stackTrace.toString());
+      return Err(ErrorLocalDb.fromRustError(error.toString(), originalError: error, stackTrace: stackTrace));
     }
   }
 

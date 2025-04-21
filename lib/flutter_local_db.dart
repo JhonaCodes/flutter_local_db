@@ -7,6 +7,3 @@ library;
 
 /// Exports the main local database implementation from 'src/local_db.dart'
 export 'src/local_db.dart';
-
-/// Exports the response model for local database operations from 'src/model/local_db_response_model.dart'
-export 'src/model/local_db_response_model.dart';

@@ -1,6 +1,6 @@
 /// Model class representing a database request with associated data.
 /// This class is used for communication between Dart and Rust layers.
-class LocalDbRequestModel {
+class LocalDbModel {
   /// Unique identifier for the record.
   /// Must follow the ID format requirements (alphanumeric with - and _).
   final String id;
@@ -14,11 +14,11 @@ class LocalDbRequestModel {
   /// Must be JSON-serializable.
   final Map<String, dynamic> data;
 
-  /// Creates a new [LocalDbRequestModel] instance.
+  /// Creates a new [LocalDbModel] instance.
   ///
   /// [id] and [data] are required parameters.
   /// [hash] is optional and typically provided by the Rust backend.
-  LocalDbRequestModel({
+  LocalDbModel({
     required this.id,
     this.hash,
     required this.data,
@@ -34,16 +34,17 @@ class LocalDbRequestModel {
         'data': data,
       };
 
-  /// Creates a [LocalDbRequestModel] instance from a JSON map.
+  /// Creates a [LocalDbModel] instance from a JSON map.
   ///
   /// Used for deserializing data received from the Rust backend.
   /// Expects all fields to be present in the JSON map.
-  factory LocalDbRequestModel.fromJson(Map<String, dynamic> json) =>
-      LocalDbRequestModel(
-        id: json['id'],
-        hash: json['hash'],
-        data: json['data'],
-      );
+  factory LocalDbModel.fromJson(Map<String, dynamic> json) {
+    return LocalDbModel(
+      id: json['id'],
+      hash: json['hash'],
+      data: json['data'],
+    );
+  }
 
   /// Provides a string representation of the model.
   ///
@@ -57,12 +58,12 @@ class LocalDbRequestModel {
   ///
   /// Fields that are not specified will retain their original values.
   /// Useful for modifying model data while maintaining immutability.
-  LocalDbRequestModel copyWith({
+  LocalDbModel copyWith({
     String? id,
     String? hash,
     Map<String, dynamic>? data,
   }) =>
-      LocalDbRequestModel(
+      LocalDbModel(
         id: id ?? this.id,
         hash: hash ?? this.hash,
         data: data ?? this.data,

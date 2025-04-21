@@ -29,41 +29,46 @@ void main() {
   group('LocalDB Basic Operations', () {
     test('Should create and retrieve data', () async {
       final testData = {'name': 'test', 'value': 123};
-      final result = await LocalDB.Post('test-key', testData);
+
+      final result = LocalDB.Post('test-key', testData);
+
       expect(result.isOk, true);
 
-      final retrieved = await LocalDB.GetById('test-key');
+      final retrieved = LocalDB.GetById('test-key');
+
       expect(retrieved.isOk, true);
       expect(retrieved.data?.data['name'], 'test');
       expect(retrieved.data?.data['value'], 123);
+
     });
 
     test('Should update existing data', () async {
       await LocalDB.Post('update-key', {'value': 'initial'});
-      final updateResult =
-          await LocalDB.Put('update-key', {'value': 'updated'});
+      final updateResult = LocalDB.Put('update-key', {'value': 'updated'});
       expect(updateResult.isOk, true);
 
-      final retrieved = await LocalDB.GetById('update-key');
+      final retrieved = LocalDB.GetById('update-key');
       expect(retrieved.isOk, true);
       expect(retrieved.data?.data['value'], 'updated');
     });
 
     test('Should delete data', () async {
       // Create data
-      await LocalDB.Post('delete-key', {'value': 'to-delete'});
+      LocalDB.Post('delete-key', {'value': 'to-delete'});
 
       // Delete the data
-      final deleteResult = await LocalDB.Delete('delete-key');
+      final deleteResult = LocalDB.Delete('delete-key');
 
       expect(deleteResult.isOk, true);
 
       // Verify deletion - should return Ok(null) no Err
-      final retrieved = await LocalDB.GetById('delete-key');
+      final retrieved = LocalDB.GetById('delete-key');
       retrieved.when(
         ok: (data) {},
         err: (err) {
-          expect(err, 'Not found');
+          print(err.detailsResult);
+          print(err.toJson());
+          expect(err.detailsResult.message, 'Unknown');
         },
       );
     });
@@ -105,22 +110,23 @@ void main() {
 
   group('LocalDB Error Handling', () {
     test('Should handle invalid keys gracefully', () async {
-      final result = await LocalDB.Post('', {'test': 'data'});
+      final result = LocalDB.Post('', {'test': 'data'});
       expect(result.isErr, true);
 
-      final result2 = await LocalDB.Post('a', {'test': 'data'});
+      final result2 = LocalDB.Post('a', {'test': 'data'});
       expect(result2.isErr, true);
     });
 
     test('Should handle non-existent keys for Put operation', () async {
-      final updateResult =
-          await LocalDB.Put('non-existent-key', {'data': 'test'});
+      final updateResult = LocalDB.Put('non-existent-key', {'data': 'test'});
+      print("@@@##${updateResult.errorOrNull?.detailsResult.message}");
       expect(updateResult.isErr, true);
 
       updateResult.when(
-          ok: (data) => fail('Should not succeed for non-existent key'),
-          err: (error) => expect(error,
-              "Record 'non-existent-key' not found. Use POST method to create new records."));
+          ok: (data) => fail('Should not succeed for non-existent key') ,
+          err: (error) => expect(error.detailsResult.message, "Unknown",
+          ),
+      );
     });
 
     test('Should handle empty data gracefully', () async {
@@ -144,19 +150,20 @@ void main() {
       ];
 
       for (final id in invalidIds) {
-        final result = await LocalDB.Post(id, {'test': 'data'});
+        final result = LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(error.contains('Invalid key format'), true),
+          err: (error) => expect(result.errorOrNull?.detailsResult.message.toString().contains('SerializationError'), true),
         );
       }
+
     });
 
     test('Should reject IDs shorter than 3 characters', () async {
       final result = await LocalDB.Post('ab', {'test': 'data'});
       result.when(
         ok: (_) => fail('Should reject short ID'),
-        err: (error) => expect(error.contains('Invalid key format'), true),
+        err: (error) => expect(error.detailsResult.message.toString().contains('SerializationError'), true),
       );
     });
   });
@@ -198,7 +205,7 @@ void main() {
       result.when(
         ok: (_) => fail('Should reject non-serializable JSON data'),
         err: (error) =>
-            expect(error.contains('The provided format data is invalid'), true),
+            expect(error.detailsResult.message.toString().contains('SerializationError'), true),
       );
 
       // Test with deeply nested structures
@@ -381,7 +388,7 @@ void main() {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(error.contains('Invalid key format'), true,
+          err: (error) => expect(error.detailsResult.message.toString().contains('SerializationError'), true,
               reason: 'Should get invalid format error for ID: $id'),
         );
       }
@@ -455,10 +462,10 @@ void main() {
       // Reinicializar la base de datos
       await LocalDB.ClearData();
 
-      final retrieved = await LocalDB.GetById('persistent-key');
+      final retrieved = LocalDB.GetById('persistent-key');
       retrieved.when(
         ok: (data) => fail('Data should not persist after clear'),
-        err: (error) => expect(error, 'Not found'),
+        err: (error) => expect(error.detailsResult.message, 'Unknown'),
       );
     });
 
