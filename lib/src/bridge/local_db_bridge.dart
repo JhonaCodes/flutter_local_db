@@ -29,6 +29,8 @@ typedef PointerBoolFFICallBack = Pointer<Bool> Function( // Usado si delete/clea
 typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function( // Usado si clear devuelve Bool sin ID
     Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
+typedef VoidAppDbStateCallBack = Void Function(Pointer<AppDbState>); // Nativo
+typedef DartVoidAppDbStateCallBack = void Function(Pointer<AppDbState>); // Dart
 
 // Clase simplificada, sin WidgetsBindingObserver
 class LocalDbBridge extends LocalSbRequestImpl {
@@ -56,19 +58,42 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Future<void> initialize(String databaseName) async {
     try {
       log('Initializing DB on platform: ${Platform.operatingSystem}');
+
+      // --- LLAMADA A DISPOSE ---
+      // Intenta cerrar/liberar cualquier instancia nativa previa ANTES de continuar.
+      await dispose();
+      log('Previous instance disposed (if any).');
+      // ------------------------
+
+      // Añadir extensión .db si falta
+      if (!databaseName.contains('.db')) {
+        log('Adding .db extension to database name.');
+        databaseName = '$databaseName.db';
+      }
+
       if (_lib == null) {
         _lib = await CurrentPlatform.loadRustNativeLib();
+        if (_lib case Err(error: final err)) {
+          // Si la carga de la librería falla, lanzar error inmediatamente
+          throw Exception("Failed to load native library: $err");
+        }
         log('Library loaded: ${_lib}');
       }
+
+      // Vincular funciones (esto es seguro llamarlo varias veces si _lib ya existe)
       _bindFunctions();
       log('Functions bound successfully');
+
       final appDir = await getApplicationDocumentsDirectory();
       log('Using app directory: ${appDir.path}');
+
+      // Llamar a _init para crear/abrir la nueva instancia
       await _init('${appDir.path}/$databaseName');
       log('Database initialized successfully');
+
     } catch (e, stack) {
       log('Error initializing database: $e \nStack: $stack');
-      // Relanzar para que la app sepa que la inicialización falló
+      // Relanzar para que el código que llama a initialize (ej. main) sepa del fallo.
       rethrow;
     }
   }
@@ -87,7 +112,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late final PointerBoolFFICallBackDirect _clearAllRecords;
   // Si devuelven Bool, usa los typedefs comentados abajo y ajusta el lookup y la lógica en los métodos.
   // late final PointerBoolFFICallBack _delete;
-  // late final PointerBoolFFICallBackDirect _clearAllRecords;
+  late final DartVoidAppDbStateCallBack _closeDatabase;
 
 
   // _bindFunctions (adaptado para asumir JSON en delete/clear)
@@ -105,6 +130,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
         // Si devuelven Bool, usa esto:
         // _delete = lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(FFiFunctions.delete.cName);
         // _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect, PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+        _closeDatabase = lib.lookupFunction<VoidAppDbStateCallBack, DartVoidAppDbStateCallBack>(FFiFunctions.closeDatabase.cName);
+
         break;
       case Err(error: String error):
         log(error);
@@ -472,7 +499,40 @@ class LocalDbBridge extends LocalSbRequestImpl {
       return Err(ErrorLocalDb.unknown('Dart exception during getAll', originalError: error, stackTrace: stackTrace));
     }
   }
-// No hay método dispose
+
+
+  // Método para llamar al cierre nativo
+  Future<void> dispose() async {
+    // Verificamos que _dbInstance no sea nullptr ANTES de intentar cerrarla.
+    // Esto es importante si initialize falló parcialmente o si dispose se llama accidentalmente dos veces.
+    // Como _dbInstance es `late final`, no puede ser null si initialize tuvo éxito.
+    // La comprobación principal es contra `nullptr`.
+    if (_dbInstance != nullptr) {
+      try {
+        log('Calling native close_database...');
+        // Llama a la función FFI que acabamos de vincular
+        _closeDatabase(_dbInstance);
+        log('Native close_database called successfully.');
+
+        // ¡Importante! Aunque la memoria nativa se libera, _dbInstance en Dart
+        // todavía contiene la dirección de memoria (ahora inválida).
+        // Para evitar usarla accidentalmente, lo IDEAL sería ponerla a null.
+        // PERO, como es `late final`, no podemos.
+        // La llamada a dispose() ANTES de _init() en el NUEVO initialize()
+        // se encargará de obtener una NUEVA instancia válida si es necesario.
+        // Solo debemos asegurarnos de no usar _dbInstance después de llamar a dispose
+        // hasta que initialize() la reasigne.
+
+      } catch (e, s) {
+        // Captura errores específicos de FFI si ocurren durante el cierre
+        log('Error calling native close_database: $e\n$s');
+        // Podrías decidir si relanzar o solo registrar el error.
+        // En general, un fallo al cerrar es menos crítico que uno al abrir.
+      }
+    } else {
+      log('dispose() called but _dbInstance is nullptr (already closed or never initialized?).');
+    }
+  }
 }
 
 
