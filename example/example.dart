@@ -4,7 +4,11 @@ import 'package:flutter_local_db/flutter_local_db.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalDB.init(localDbName: 'example_local_db');
-  runApp(const ExampleApp());
+  
+  // Wrap with lifecycle manager to handle hot restart gracefully
+  runApp(const ExampleApp().withLocalDbLifecycle(
+    onHotRestart: () => debugPrint('Hot restart detected - database connection reset'),
+  ));
 }
 
 class ExampleApp extends StatelessWidget {

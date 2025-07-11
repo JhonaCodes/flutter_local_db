@@ -102,6 +102,49 @@ result.when(
 );
 ```
 
+## Hot Restart Support
+
+To prevent crashes during development hot restarts, wrap your app with the lifecycle manager:
+
+```dart
+import 'package:flutter_local_db/flutter_local_db.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LocalDB.init(localDbName: "my_app.db");
+  
+  runApp(MyApp().withLocalDbLifecycle());
+}
+
+// Or manually
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LocalDB.init(localDbName: "my_app.db");
+  
+  runApp(
+    LocalDbLifecycleManager(
+      child: MyApp(),
+      onHotRestart: () => print('Hot restart detected'),
+    ),
+  );
+}
+```
+
+### Manual Connection Management
+
+For advanced use cases, you can manually manage the database connection:
+
+```dart
+// Check if connection is valid
+final isValid = await LocalDB.IsConnectionValid();
+
+// Manually close database (useful before hot restart)
+await LocalDB.CloseDatabase();
+
+// Connection will be automatically re-established on next operation
+final result = await LocalDB.GetById('some-id');
+```
+
 ## ID Format Requirements
 
 - Must be at least 3 characters long

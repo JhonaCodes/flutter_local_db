@@ -167,6 +167,28 @@ class LocalDB {
     return await LocalDbBridge.instance.cleanDatabase();
   }
 
+  /// Closes the database connection and frees all resources.
+  /// This should be called during hot restart or app termination to prevent crashes.
+  ///
+  /// Returns:
+  /// - [Ok] with `true` if the database was successfully closed
+  /// - [Err] with an error message if closing fails
+  // ignore: non_constant_identifier_names
+  static Future<void> CloseDatabase() async {
+    await LocalDbBridge.instance.closeDatabase();
+  }
+
+  /// Validates if the current database connection is still valid.
+  /// Useful for debugging connection issues.
+  ///
+  /// Returns:
+  /// - `true` if the connection is valid
+  /// - `false` if the connection is invalid or null
+  // ignore: non_constant_identifier_names
+  static Future<bool> IsConnectionValid() async {
+    return await LocalDbBridge.instance.ensureConnectionValid();
+  }
+
   // ignore: non_constant_identifier_names
   // static Future<LocalDbResult<bool, String>> ResetDatabase() async {
   //   return await LocalDbBridge.instance.clear();

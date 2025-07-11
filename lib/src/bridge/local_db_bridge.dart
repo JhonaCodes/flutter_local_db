@@ -89,29 +89,73 @@ class LocalDbBridge extends LocalSbRequestImpl {
     }
   }
 
-  /// Método para verificar si la conexión es válida y reinicializar si es necesario
-  Future<bool> ensureConnectionValid() async {
-    // Verificar si la instancia es válida
-    if (_dbInstance == null || _dbInstance == nullptr) {
-      log('Database connection invalid, attempting to reinitialize...');
-
-      if (_lastDatabaseName != null) {
-        try {
-          final appDir = await getApplicationDocumentsDirectory();
-          await _init('${appDir.path}/$_lastDatabaseName');
-          log('Database reinitialized successfully');
-          return true;
-        } catch (e) {
-          log('Failed to reinitialize database: $e');
-          return false;
+  /// Closes the current database connection and cleans up resources
+  Future<void> _closeCurrentConnection() async {
+    if (_dbInstance != null && _dbInstance != nullptr) {
+      try {
+        // Check if the database instance is still valid in Rust
+        if (_isDatabaseValid(_dbInstance!)) {
+          final closeResult = _closeDatabase(_dbInstance!);
+          if (closeResult != nullptr) {
+            final resultStr = closeResult.cast<Utf8>().toDartString();
+            log('Database close result: $resultStr');
+            _freeCString(closeResult); // Free the response string
+          }
         }
-      } else {
-        log('Cannot reinitialize: no previous database name stored');
-        return false;
+      } catch (e) {
+        log('Error during database close: $e');
+      } finally {
+        _dbInstance = nullptr; // Always reset to null pointer
       }
+    }
+  }
+
+  /// Enhanced method to verify connection validity and reinitialize if necessary
+  Future<bool> ensureConnectionValid() async {
+    // Check if the instance pointer is null
+    if (_dbInstance == null || _dbInstance == nullptr) {
+      log('Database connection invalid (null pointer), attempting to reinitialize...');
+      return await _attemptReinitialization();
+    }
+
+    // Check if the Rust instance is still valid
+    try {
+      if (!_isDatabaseValid(_dbInstance!)) {
+        log('Database connection invalid (Rust validation failed), attempting to reinitialize...');
+        await _closeCurrentConnection();
+        return await _attemptReinitialization();
+      }
+    } catch (e) {
+      log('Error validating database connection: $e, attempting to reinitialize...');
+      await _closeCurrentConnection();
+      return await _attemptReinitialization();
     }
 
     return true;
+  }
+
+  /// Attempts to reinitialize the database connection
+  Future<bool> _attemptReinitialization() async {
+    if (_lastDatabaseName != null) {
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        await _init('${appDir.path}/$_lastDatabaseName');
+        log('Database reinitialized successfully');
+        return true;
+      } catch (e) {
+        log('Failed to reinitialize database: $e');
+        return false;
+      }
+    } else {
+      log('Cannot reinitialize: no previous database name stored');
+      return false;
+    }
+  }
+
+  /// Manually closes the database - useful for hot restart scenarios
+  Future<void> closeDatabase() async {
+    await _closeCurrentConnection();
+    log('Database manually closed');
   }
 
   /// Functions registration
@@ -122,6 +166,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
   late final PointerStringFFICallBack _put;
   late final PointerBoolFFICallBack _delete;
   late final PointerBoolFFICallBackDirect _clearAllRecords;
+  late final Pointer<Utf8> Function(Pointer<AppDbState>) _closeDatabase;
+  late final void Function(Pointer<Utf8>) _freeCString;
+  late final bool Function(Pointer<AppDbState>) _isDatabaseValid;
 
   /// Bind functiopns for initialization
   void _bindFunctions() {
@@ -143,6 +190,12 @@ class LocalDbBridge extends LocalSbRequestImpl {
                 FFiFunctions.delete.cName);
         _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
             PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+        _closeDatabase = lib.lookupFunction<Pointer<Utf8> Function(Pointer<AppDbState>),
+            Pointer<Utf8> Function(Pointer<AppDbState>)>(FFiFunctions.closeDatabase.cName);
+        _freeCString = lib.lookupFunction<Void Function(Pointer<Utf8>),
+            void Function(Pointer<Utf8>)>(FFiFunctions.freeCString.cName);
+        _isDatabaseValid = lib.lookupFunction<Bool Function(Pointer<AppDbState>),
+            bool Function(Pointer<AppDbState>)>(FFiFunctions.isDatabaseValid.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -182,7 +235,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
 
-      calloc.free(resultPushPointer);
+      // Free C memory properly
+      _freeCString(resultPushPointer);
       calloc.free(jsonPointer);
 
       final Map<String,dynamic> response = jsonDecode(dataResult);
@@ -220,7 +274,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
-      malloc.free(resultFfi);
+      _freeCString(resultFfi);
 
       final Map<String, dynamic> response = jsonDecode(resultTransformed);
 
@@ -257,7 +311,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
         return Err(ErrorLocalDb.notFound("No model found"));
       }
 
-      malloc.free(resultFfi);
+      _freeCString(resultFfi);
 
       final Map<String, dynamic> response = jsonDecode(result);
 
@@ -282,7 +336,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
     try {
       final resultFfi = _clearAllRecords(_dbInstance!);
       final result = resultFfi != nullptr;
-      malloc.free(resultFfi);
+      // Note: _clearAllRecords returns Bool, not string, so no need to free
       return Ok(result);
     } catch (error, stackTrace) {
       log(error.toString());
@@ -334,8 +388,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
 
-      /// Because no need anymore and the reference is on [resultTransformed]
-      malloc.free(resultFfi);
+      /// Free the C string memory properly
+      _freeCString(resultFfi);
 
       final Map<String, dynamic> response = await jsonDecode(resultTransformed);
 

@@ -29,8 +29,17 @@ enum FFiFunctions {
   /// Rust function: `clear_all_records`
   clearAllRecords('clear_all_records'),
 
+  /// Closes the database connection and frees resources
+  /// Rust function: `close_database`
+  closeDatabase('close_database'),
 
-  closeDatabase('close_database');
+  /// Frees memory allocated for C string responses
+  /// Rust function: `free_c_string`
+  freeCString('free_c_string'),
+
+  /// Validates that a database pointer is still valid
+  /// Rust function: `is_database_valid`
+  isDatabaseValid('is_database_valid');
 
   /// The corresponding C function name in the Rust FFI layer
   /// This name must match exactly with the function exported in the Rust code

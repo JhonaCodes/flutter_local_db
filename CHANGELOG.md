@@ -1,5 +1,33 @@
 # Changelog
 
+### 0.4.2
+#### Added
+- **Hot Restart Support**: Complete solution for preventing crashes during Flutter hot restart
+- **Memory Management**: Proper FFI memory cleanup with `free_c_string()` function
+- **Connection Validation**: Enhanced connection state validation and automatic recovery
+- **Lifecycle Manager Widget**: `LocalDbLifecycleManager` for automatic hot restart handling
+- **Database Close Function**: Manual database closure capability with `LocalDB.CloseDatabase()`
+- **Connection State Check**: `LocalDB.IsConnectionValid()` for debugging connection issues
+- **Transaction Timeouts**: Built-in timeout handling for long-running database operations
+- **Reference Counting**: AppDbState instance tracking to prevent use-after-free errors
+
+#### Changed
+- **Enhanced Error Handling**: Better error recovery and automatic reconnection
+- **Improved FFI Safety**: All C string responses are now properly freed
+- **Transaction Safety**: Added timeout checks to prevent hanging transactions
+- **Connection Resilience**: Automatic cleanup and reconnection on connection failure
+
+#### Fixed
+- **Hot Restart Crashes**: Fixed critical crashes when performing hot restart in Android/iOS
+- **Memory Leaks**: Resolved FFI memory leaks in C string handling
+- **File Lock Issues**: Proper cleanup of ReDB file locks and resources
+- **Dangling Pointers**: Eliminated use of invalid database pointers after restart
+
+#### Performance
+- **Optimized Reconnection**: Faster automatic database reconnection
+- **Transaction Monitoring**: Performance logging for slow operations
+- **Resource Cleanup**: Efficient cleanup of native resources
+
 ### 0.4.1
 - Update description.
 - Improve database initialization.
