@@ -16,6 +16,7 @@ import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// opaque extension
 final class AppDbState extends Opaque {}
@@ -414,6 +415,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
 sealed class CurrentPlatform {
   static Future<LocalDbResult<DynamicLibrary, String>>
   loadRustNativeLib() async {
+    // Web platform doesn't use FFI, this should not be called on web
+    if (kIsWeb) {
+      return Err("FFI is not supported on web platform");
+    }
+
     if (Platform.isAndroid) {
       return Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
     }

@@ -10,9 +10,9 @@ A high-performance local database for Flutter that leverages Rust's RedB embedde
 🔄 **FFI Integration**: Seamless integration between Flutter and Rust  
 🎯 **Simple API**: Store and retrieve JSON data with minimal code, [FFI-DART](https://github.com/JhonaCodes/offline_first_core)  
 🛡️ **Result Types**: Rust-inspired Result types for better error handling  
-📱 **Cross-Platform**: Supports Android, iOS, and macOS  
+📱 **Cross-Platform**: Supports Android, iOS, macOS, and Web  
 ⚡ **Async Operations**: All database operations are asynchronous  
-🔍 **Smart Querying**: Efficient data retrieval through RedB's B-tree implementation
+🔍 **Smart Querying**: Efficient data retrieval (RedB on native, IndexedDB on web)
 
 ## Installation
 
@@ -20,7 +20,7 @@ Add to your pubspec.yaml:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.4.1
+  flutter_local_db: ^0.5.0
 ```
 
 ## Basic Usage
@@ -162,12 +162,12 @@ final result = await LocalDB.GetById('some-id');
 
 ### Platform Support
 
-- ✅ Android: `.so` shared library
-- ✅ iOS: `.a` static library
-- ✅ macOS: `.dylib` dynamic library
+- ✅ Android: `.so` shared library (FFI + RedB)
+- ✅ iOS: `.a` static library (FFI + RedB)
+- ✅ macOS: `.dylib` dynamic library (FFI + RedB)
+- ✅ Web: IndexedDB native implementation
 - 🚧 Windows: Coming soon
 - 🚧 Linux: Coming soon
-- 🚧 Web: Coming soon
 
 ## Limitations
 

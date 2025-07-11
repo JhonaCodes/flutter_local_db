@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_local_db/src/database/database_native.dart';
+import 'package:flutter_local_db/src/database/database_web.dart';
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 
-import 'bridge/local_db_bridge.dart';
+import 'database/database.dart';
 import 'model/local_db_request_model.dart';
 
 /// A comprehensive local database management utility.
@@ -14,24 +17,48 @@ import 'model/local_db_request_model.dart';
 ///
 /// Uses a bridge pattern to abstract database interactions and provides
 /// type-safe results using [LocalDbResult].
+/// 
+/// Automatically detects platform and uses:
+/// - FFI Rust implementation for mobile/desktop platforms
+/// - IndexedDB implementation for web platform
 class LocalDB {
+  static DatabaseInterface? _database;
+  
+  /// Gets the appropriate database implementation for the current platform
+  static DatabaseInterface get _platformDatabase {
+    if (_database != null) return _database!;
+    
+    if (kIsWeb) {
+      _database = DatabaseWeb.instance;
+    } else {
+      _database = DatabaseNative.instance;
+    }
+    
+    return _database!;
+  }
+
   /// Initializes the local database with a specified name.
   ///
   /// This method must be called before performing any database operations.
+  /// Automatically selects the appropriate implementation:
+  /// - IndexedDB for web platforms
+  /// - FFI Rust implementation for mobile/desktop platforms
   ///
   /// Parameters:
   /// - [localDbName]: A unique name for the local database instance
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    await LocalDbBridge.instance.initialize(localDbName);
+    await _platformDatabase.initialize(localDbName);
   }
 
   /// Avoid to use on production.
   ///
   static Future<void> initForTesting(
       {required String localDbName, required String binaryPath}) async {
-    await LocalDbBridge.instance.initForTesting(localDbName, binaryPath);
+    if (!kIsWeb) {
+      await (DatabaseNative.instance as DatabaseNative).initForTesting(localDbName, binaryPath);
+    }
   }
 
   /// Creates a new record in the database.
@@ -76,7 +103,7 @@ class LocalDB {
       data: data,
     );
 
-    return await LocalDbBridge.instance.post(model);
+    return await _platformDatabase.post(model);
   }
 
   /// Retrieves all records from the local database.
@@ -88,7 +115,7 @@ class LocalDB {
   static Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>>
       // ignore: non_constant_identifier_names
       GetAll() async{
-    return  await LocalDbBridge.instance.getAll();
+    return await _platformDatabase.getAll();
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -107,7 +134,7 @@ class LocalDB {
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
-    return await LocalDbBridge.instance.getById(id);
+    return await _platformDatabase.getById(id);
   }
 
   /// Updates an existing record in the database.
@@ -136,7 +163,7 @@ class LocalDB {
         data: data,
         hash: DateTime.now().millisecondsSinceEpoch.toString());
 
-    return await LocalDbBridge.instance.put(currentData);
+    return await _platformDatabase.put(currentData);
   }
 
   /// Deletes a record by its unique identifier.
@@ -154,7 +181,7 @@ class LocalDB {
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
-    return await LocalDbBridge.instance.delete(id);
+    return await _platformDatabase.delete(id);
   }
 
   /// Clear all data on the database.
@@ -164,29 +191,31 @@ class LocalDB {
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<bool, ErrorLocalDb>> ClearData() async {
-    return await LocalDbBridge.instance.cleanDatabase();
+    return await _platformDatabase.cleanDatabase();
   }
 
   /// Closes the database connection and frees all resources.
   /// This should be called during hot restart or app termination to prevent crashes.
+  /// Works on both mobile/desktop (FFI) and web (IndexedDB) platforms.
   ///
   /// Returns:
   /// - [Ok] with `true` if the database was successfully closed
   /// - [Err] with an error message if closing fails
   // ignore: non_constant_identifier_names
   static Future<void> CloseDatabase() async {
-    await LocalDbBridge.instance.closeDatabase();
+    await _platformDatabase.closeDatabase();
   }
 
   /// Validates if the current database connection is still valid.
   /// Useful for debugging connection issues.
+  /// Works on both mobile/desktop (FFI) and web (IndexedDB) platforms.
   ///
   /// Returns:
   /// - `true` if the connection is valid
   /// - `false` if the connection is invalid or null
   // ignore: non_constant_identifier_names
   static Future<bool> IsConnectionValid() async {
-    return await LocalDbBridge.instance.ensureConnectionValid();
+    return await _platformDatabase.ensureConnectionValid();
   }
 
   // ignore: non_constant_identifier_names

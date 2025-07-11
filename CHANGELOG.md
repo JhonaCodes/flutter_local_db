@@ -1,6 +1,6 @@
 # Changelog
 
-### 0.4.2
+### 0.5.0
 #### Added
 - **Hot Restart Support**: Complete solution for preventing crashes during Flutter hot restart
 - **Memory Management**: Proper FFI memory cleanup with `free_c_string()` function
