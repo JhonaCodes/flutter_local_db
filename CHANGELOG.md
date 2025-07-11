@@ -1,5 +1,34 @@
 # Changelog
 
+### 0.5.1
+#### Added
+- **Web Platform Support**: Full IndexedDB implementation for web platforms
+- **Cross-Platform API**: Unified API that works seamlessly across all platforms
+- **Smart Backend Selection**: Automatic platform detection (Rust+RedB for native, IndexedDB for web)
+- **Web-Optimized Performance**: Native IndexedDB integration without WASM overhead
+- **Platform Information**: Built-in platform detection and information display
+- **Enhanced Examples**: Updated example app demonstrating cross-platform capabilities
+
+#### Changed
+- **Architecture**: Multi-backend architecture with platform-optimized storage solutions
+- **Documentation**: Comprehensive documentation explaining technical decisions and platform differences
+- **API Exports**: Added missing exports for `LocalDbModel`, `ErrorLocalDb`, and `LocalDbResult` types
+- **Example App**: Enhanced UI showing current platform and storage backend information
+
+#### Fixed
+- **Web Compatibility**: Resolved all web platform compatibility issues
+- **Type Exports**: Fixed missing type exports in main library file
+- **Analysis Warnings**: Cleaned up all Dart analyzer warnings and lints
+- **IndexedDB Integration**: Proper JavaScript interop and data conversion
+- **Cross-Platform Initialization**: Seamless initialization across all supported platforms
+
+#### Technical Details
+- **Native Platforms**: Continue using Rust + RedB for optimal performance
+- **Web Platform**: Uses IndexedDB for browser-native performance and compatibility
+- **WASM Alternative**: Chose IndexedDB over WASM for better bundle size and performance
+- **API Consistency**: Same Dart API works identically on all platforms
+- **Error Handling**: Unified error handling across different backend implementations
+
 ### 0.5.0
 #### Added
 - **Hot Restart Support**: Complete solution for preventing crashes during Flutter hot restart

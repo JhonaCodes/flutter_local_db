@@ -61,7 +61,7 @@ Add to your pubspec.yaml:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.5.0
+  flutter_local_db: ^0.5.1
 ```
 
 ## Basic Usage
