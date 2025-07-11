@@ -17,23 +17,23 @@ import 'model/local_db_request_model.dart';
 ///
 /// Uses a bridge pattern to abstract database interactions and provides
 /// type-safe results using [LocalDbResult].
-/// 
+///
 /// Automatically detects platform and uses:
 /// - FFI Rust implementation for mobile/desktop platforms
 /// - IndexedDB implementation for web platform
 class LocalDB {
   static DatabaseInterface? _database;
-  
+
   /// Gets the appropriate database implementation for the current platform
   static DatabaseInterface get _platformDatabase {
     if (_database != null) return _database!;
-    
+
     if (kIsWeb) {
       _database = DatabaseWeb.instance;
     } else {
       _database = DatabaseNative.instance;
     }
-    
+
     return _database!;
   }
 
@@ -57,7 +57,7 @@ class LocalDB {
   static Future<void> initForTesting(
       {required String localDbName, required String binaryPath}) async {
     if (!kIsWeb) {
-      await (DatabaseNative.instance as DatabaseNative).initForTesting(localDbName, binaryPath);
+      await (DatabaseNative.instance).initForTesting(localDbName, binaryPath);
     }
   }
 
@@ -81,16 +81,18 @@ class LocalDB {
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Post(
       String key, Map<String, dynamic> data,
-      {String? lastUpdate})  async{
+      {String? lastUpdate}) async {
     if (!_isValidId(key)) {
-      return Err(ErrorLocalDb.serializationError( "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
+      return Err(ErrorLocalDb.serializationError(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
     }
 
     if (!_isValidMap(data)) {
-      return Err(ErrorLocalDb.serializationError('The provided format data is invalid.\n$data'));
+      return Err(ErrorLocalDb.serializationError(
+          'The provided format data is invalid.\n$data'));
     }
 
-    final verifyId =  await GetById(key);
+    final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
       return Err(ErrorLocalDb.databaseError(
@@ -114,7 +116,7 @@ class LocalDB {
   /// - [Err] with an error message if the operation fails
   static Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>>
       // ignore: non_constant_identifier_names
-      GetAll() async{
+      GetAll() async {
     return await _platformDatabase.getAll();
   }
 
@@ -128,7 +130,8 @@ class LocalDB {
   /// - [Ok] with `null` if no record matches the ID
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> GetById(String id) async{
+  static Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> GetById(
+      String id) async {
     if (!_isValidId(id)) {
       return Err(ErrorLocalDb.validationError(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
@@ -148,15 +151,14 @@ class LocalDB {
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Put(
-      String key, Map<String, dynamic> data) async{
-    final verifyId =  await GetById(key);
+      String key, Map<String, dynamic> data) async {
+    final verifyId = await GetById(key);
 
     if (verifyId.isErr) {
-      return Err(verifyId.errorOrNull ?? ErrorLocalDb.notFound(
-          "Record '$key' not found. Use POST method to create new records."));
+      return Err(verifyId.errorOrNull ??
+          ErrorLocalDb.notFound(
+              "Record '$key' not found. Use POST method to create new records."));
     }
-
-
 
     final currentData = LocalDbModel(
         id: key,
@@ -175,7 +177,7 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<bool, ErrorLocalDb>> Delete(String id) async{
+  static Future<LocalDbResult<bool, ErrorLocalDb>> Delete(String id) async {
     if (!_isValidId(id)) {
       return Err(ErrorLocalDb.serializationError(
           "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));

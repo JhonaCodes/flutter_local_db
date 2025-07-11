@@ -19,17 +19,17 @@ class LocalDbLifecycleManager extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<LocalDbLifecycleManager> createState() => _LocalDbLifecycleManagerState();
+  State<LocalDbLifecycleManager> createState() =>
+      _LocalDbLifecycleManagerState();
 }
 
 class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
     with WidgetsBindingObserver {
-  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // In debug mode, listen for hot restart
     if (kDebugMode) {
       _setupHotRestartListener();
@@ -51,13 +51,14 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
           try {
             final isValid = await LocalDB.IsConnectionValid();
             if (!isValid) {
-              debugPrint('LocalDB: Connection became invalid, likely due to hot restart');
+              debugPrint(
+                  'LocalDB: Connection became invalid, likely due to hot restart');
               widget.onHotRestart?.call();
             }
           } catch (e) {
             debugPrint('LocalDB: Error checking connection: $e');
           }
-          
+
           // Continue checking if still mounted
           if (mounted) {
             _setupHotRestartListener();
@@ -70,7 +71,7 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     switch (state) {
       case AppLifecycleState.paused:
         debugPrint('LocalDB: App paused, closing database connection');
@@ -79,19 +80,20 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
         });
         widget.onAppPaused?.call();
         break;
-        
+
       case AppLifecycleState.resumed:
-        debugPrint('LocalDB: App resumed, connection will be re-established on next operation');
+        debugPrint(
+            'LocalDB: App resumed, connection will be re-established on next operation');
         widget.onAppResumed?.call();
         break;
-        
+
       case AppLifecycleState.detached:
         debugPrint('LocalDB: App detached, closing database connection');
         LocalDB.CloseDatabase().catchError((e) {
           debugPrint('LocalDB: Error closing database on detach: $e');
         });
         break;
-        
+
       default:
         break;
     }

@@ -23,7 +23,8 @@ typedef PointerStringFFICallBack = Pointer<Utf8> Function(
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
 typedef PointerBoolFFICallBack = Pointer<Bool> Function(
     Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(Pointer<AppDbState>);
+typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(
+    Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 /// Native database implementation using FFI and Rust backend
@@ -63,7 +64,7 @@ class DatabaseNative implements DatabaseInterface {
     if (_lib == null) {
       _lib = Ok(DynamicLibrary.open(libPath));
     }
-    
+
     _bindFunctions();
     log('Functions bound successfully');
 
@@ -82,7 +83,7 @@ class DatabaseNative implements DatabaseInterface {
         _lib = await _loadRustNativeLib();
         log('Native library loaded: $_lib');
       }
-      
+
       _bindFunctions();
       log('Functions bound successfully');
 
@@ -91,7 +92,6 @@ class DatabaseNative implements DatabaseInterface {
 
       await _init('${appDir.path}/$databaseName');
       log('Native database initialized successfully');
-
     } catch (e, stack) {
       log('Error initializing native database: $e');
       log('Stack trace: $stack');
@@ -131,22 +131,28 @@ class DatabaseNative implements DatabaseInterface {
             PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
         _post = lib.lookupFunction<PointerStringFFICallBack,
             PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get = lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
-            FFiFunctions.getAll.cName);
+        _get =
+            lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+                FFiFunctions.getAll.cName);
         _getById = lib.lookupFunction<PointerStringFFICallBack,
             PointerStringFFICallBack>(FFiFunctions.getById.cName);
         _put = lib.lookupFunction<PointerStringFFICallBack,
             PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        _delete = lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
-            FFiFunctions.delete.cName);
+        _delete =
+            lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+                FFiFunctions.delete.cName);
         _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
             PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
-        _closeDatabase = lib.lookupFunction<Pointer<Utf8> Function(Pointer<AppDbState>),
-            Pointer<Utf8> Function(Pointer<AppDbState>)>(FFiFunctions.closeDatabase.cName);
+        _closeDatabase = lib.lookupFunction<
+            Pointer<Utf8> Function(Pointer<AppDbState>),
+            Pointer<Utf8> Function(
+                Pointer<AppDbState>)>(FFiFunctions.closeDatabase.cName);
         _freeCString = lib.lookupFunction<Void Function(Pointer<Utf8>),
             void Function(Pointer<Utf8>)>(FFiFunctions.freeCString.cName);
-        _isDatabaseValid = lib.lookupFunction<Bool Function(Pointer<AppDbState>),
-            bool Function(Pointer<AppDbState>)>(FFiFunctions.isDatabaseValid.cName);
+        _isDatabaseValid = lib.lookupFunction<
+            Bool Function(Pointer<AppDbState>),
+            bool Function(
+                Pointer<AppDbState>)>(FFiFunctions.isDatabaseValid.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -160,7 +166,8 @@ class DatabaseNative implements DatabaseInterface {
       _dbInstance = _createDatabase(dbNamePointer);
 
       if (_dbInstance == nullptr) {
-        throw Exception('Failed to create database instance. Returned null pointer.');
+        throw Exception(
+            'Failed to create database instance. Returned null pointer.');
       }
 
       calloc.free(dbNamePointer);
@@ -236,7 +243,8 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model) async {
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+      LocalDbModel model) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -316,7 +324,8 @@ class DatabaseNative implements DatabaseInterface {
 
       if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
-        return Err(ErrorLocalDb.notFound('Failed to retrieve data: null pointer returned'));
+        return Err(ErrorLocalDb.notFound(
+            'Failed to retrieve data: null pointer returned'));
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
@@ -344,7 +353,8 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model) async {
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+      LocalDbModel model) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }

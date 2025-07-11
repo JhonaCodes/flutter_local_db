@@ -1,4 +1,3 @@
-import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
 
@@ -39,12 +38,12 @@ void main() {
       expect(retrieved.isOk, true);
       expect(retrieved.data?.data['name'], 'test');
       expect(retrieved.data?.data['value'], 123);
-
     });
 
     test('Should update existing data', () async {
       await await LocalDB.Post('update-key', {'value': 'initial'});
-      final updateResult = await LocalDB.Put('update-key', {'value': 'updated'});
+      final updateResult =
+          await LocalDB.Put('update-key', {'value': 'updated'});
       expect(updateResult.isOk, true);
 
       final retrieved = await LocalDB.GetById('update-key');
@@ -77,9 +76,8 @@ void main() {
   group('LocalDB Concurrent Operations', () {
     test('Should handle multiple concurrent writes', () async {
       // Crear una lista de Futures para ejecutar operaciones concurrentes
-      final futures = List.generate(10, (index) =>
-          LocalDB.Post('concurrent-$index', {'value': index})
-      );
+      final futures = List.generate(
+          10, (index) => LocalDB.Post('concurrent-$index', {'value': index}));
 
       // Esperar a que todas las operaciones se completen y verificar sus resultados
       final results = await Future.wait(futures);
@@ -99,11 +97,10 @@ void main() {
       // Crear una lista de Futures para operaciones en lote
       final futures = List.generate(
           50,
-              (index) => LocalDB.Post('bulk-$index', {
-            'data': 'test-data-$index',
-            'timestamp': DateTime.now().toIso8601String(),
-          })
-      );
+          (index) => LocalDB.Post('bulk-$index', {
+                'data': 'test-data-$index',
+                'timestamp': DateTime.now().toIso8601String(),
+              }));
 
       // Esperar a que todas las operaciones se completen
       final results = await Future.wait(futures);
@@ -127,14 +124,17 @@ void main() {
     });
 
     test('Should handle non-existent keys for Put operation', () async {
-      final updateResult = await LocalDB.Put('non-existent-key', {'data': 'test'});
+      final updateResult =
+          await LocalDB.Put('non-existent-key', {'data': 'test'});
       print(" @@@##${updateResult.errorOrNull?.detailsResult.message}");
       expect(updateResult.isErr, true);
 
       updateResult.when(
-          ok: (data) => fail('Should not succeed for non-existent key') ,
-          err: (error) => expect(error.detailsResult.message, "Unknown",
-          ),
+        ok: (data) => fail('Should not succeed for non-existent key'),
+        err: (error) => expect(
+          error.detailsResult.message,
+          "Unknown",
+        ),
       );
     });
 
@@ -162,17 +162,24 @@ void main() {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(result.errorOrNull?.detailsResult.message.toString().contains('SerializationError'), true),
+          err: (error) => expect(
+              result.errorOrNull?.detailsResult.message
+                  .toString()
+                  .contains('SerializationError'),
+              true),
         );
       }
-
     });
 
     test('Should reject IDs shorter than 3 characters', () async {
       final result = await LocalDB.Post('ab', {'test': 'data'});
       result.when(
         ok: (_) => fail('Should reject short ID'),
-        err: (error) => expect(error.detailsResult.message.toString().contains('SerializationError'), true),
+        err: (error) => expect(
+            error.detailsResult.message
+                .toString()
+                .contains('SerializationError'),
+            true),
       );
     });
   });
@@ -213,8 +220,11 @@ void main() {
       final result = await LocalDB.Post('invalid-json', invalidData);
       result.when(
         ok: (_) => fail('Should reject non-serializable JSON data'),
-        err: (error) =>
-            expect(error.detailsResult.message.toString().contains('SerializationError'), true),
+        err: (error) => expect(
+            error.detailsResult.message
+                .toString()
+                .contains('SerializationError'),
+            true),
       );
 
       // Test with deeply nested structures
@@ -328,9 +338,8 @@ void main() {
       // Create 1000 records y esperar a que todos terminen
       final writeFutures = List.generate(
           1000,
-              (i) => LocalDB.Post('perf-test-$i',
-              {'data': List.generate(100, (j) => 'value-$j').join(',')})
-      );
+          (i) => LocalDB.Post('perf-test-$i',
+              {'data': List.generate(100, (j) => 'value-$j').join(',')}));
 
       // Esperar a que todas las escrituras se completen
       final writeResults = await Future.wait(writeFutures);
@@ -356,7 +365,8 @@ void main() {
 
       // Performance assertions - ajustar según sea necesario para tu entorno
       expect(writeTime / 1000 < 50, true,
-          reason: 'Average write time per record: ${writeTime/1000}ms exceeded 50ms limit');
+          reason:
+              'Average write time per record: ${writeTime / 1000}ms exceeded 50ms limit');
       expect(readTime < 1000, true,
           reason: 'Total read time: ${readTime}ms exceeded 1000ms limit');
     });
@@ -407,7 +417,11 @@ void main() {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(error.detailsResult.message.toString().contains('SerializationError'), true,
+          err: (error) => expect(
+              error.detailsResult.message
+                  .toString()
+                  .contains('SerializationError'),
+              true,
               reason: 'Should get invalid format error for ID: $id'),
         );
       }

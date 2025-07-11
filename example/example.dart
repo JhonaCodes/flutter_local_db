@@ -4,10 +4,11 @@ import 'package:flutter_local_db/flutter_local_db.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalDB.init(localDbName: 'example_local_db');
-  
+
   // Wrap with lifecycle manager to handle hot restart gracefully
   runApp(const ExampleApp().withLocalDbLifecycle(
-    onHotRestart: () => debugPrint('Hot restart detected - database connection reset'),
+    onHotRestart: () =>
+        debugPrint('Hot restart detected - database connection reset'),
   ));
 }
 
@@ -73,7 +74,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Local DB Example'),
@@ -82,8 +82,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         child: FutureBuilder(
           future: LocalDB.GetById(userID),
-          builder: (context, asyncSnapShot){
-
+          builder: (context, asyncSnapShot) {
             if (asyncSnapShot.hasError) {
               return Center(child: Text('Error: ${asyncSnapShot.error}'));
             }
@@ -92,23 +91,23 @@ class _HomePageState extends State<HomePage> {
               return const Center(child: Text('User not found'));
             }
 
-            if(asyncSnapShot.hasData && asyncSnapShot.data != null){
+            if (asyncSnapShot.hasData && asyncSnapShot.data != null) {
               return asyncSnapShot.data!.when(
                 ok: (userData) => userData == null
                     ? const Center(child: Text('No user found'))
                     : Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('ID: ${userData.id}'),
-                        Text('Data: ${userData.data}'),
-                      ],
-                    ),
-                  ),
-                ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('ID: ${userData.id}'),
+                              Text('Data: ${userData.data}'),
+                            ],
+                          ),
+                        ),
+                      ),
                 err: (error) => Center(
                   child: Text('Error: $error',
                       style: const TextStyle(color: Colors.red)),
@@ -116,9 +115,7 @@ class _HomePageState extends State<HomePage> {
               );
             }
 
-
             return const Center(child: CircularProgressIndicator());
-
           },
         ),
       ),

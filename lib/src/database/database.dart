@@ -1,9 +1,9 @@
 /// Conditional export for database implementations
-/// 
+///
 /// This file automatically selects the appropriate database implementation
 /// based on the platform:
 /// - Native implementation (FFI + Rust) for mobile and desktop
-/// - Web implementation (IndexedDB) for web platforms  
+/// - Web implementation (IndexedDB) for web platforms
 /// - Stub implementation for unsupported platforms
 ///
 /// The conditional exports ensure that:
