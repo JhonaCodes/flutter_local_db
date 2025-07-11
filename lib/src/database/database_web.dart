@@ -25,7 +25,8 @@ class DatabaseWeb implements DatabaseInterface {
   static const int _databaseVersion = 1;
 
   @override
-  bool get isSupported => true; // IndexedDB is always available in modern browsers
+  bool get isSupported =>
+      true; // IndexedDB is always available in modern browsers
 
   @override
   String get platformName => 'web';
