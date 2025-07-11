@@ -3,7 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_db/src/database/database_native.dart';
-import 'package:flutter_local_db/src/database/database_web.dart';
+import 'package:flutter_local_db/src/database/database_web_import.dart';
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 
