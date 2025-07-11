@@ -3,7 +3,9 @@
     "allow": [
       "WebFetch(domain:dart.dev)",
       "Bash(flutter analyze:*)",
-      "Bash(flutter pub:*)"
+      "Bash(flutter pub:*)",
+      "Bash(flutter test:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

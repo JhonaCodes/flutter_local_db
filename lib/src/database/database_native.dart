@@ -39,16 +39,16 @@ class DatabaseNative implements DatabaseInterface {
   String? _lastDatabaseName;
 
   /// Functions registration
-  late final Pointer<AppDbState> Function(Pointer<Utf8>) _createDatabase;
-  late final PointerStringFFICallBack _post;
-  late final PointerListFFICallBack _get;
-  late final PointerStringFFICallBack _getById;
-  late final PointerStringFFICallBack _put;
-  late final PointerBoolFFICallBack _delete;
-  late final PointerBoolFFICallBackDirect _clearAllRecords;
-  late final Pointer<Utf8> Function(Pointer<AppDbState>) _closeDatabase;
-  late final void Function(Pointer<Utf8>) _freeCString;
-  late final bool Function(Pointer<AppDbState>) _isDatabaseValid;
+  Pointer<AppDbState> Function(Pointer<Utf8>)? _createDatabase;
+  PointerStringFFICallBack? _post;
+  PointerListFFICallBack? _get;
+  PointerStringFFICallBack? _getById;
+  PointerStringFFICallBack? _put;
+  PointerBoolFFICallBack? _delete;
+  PointerBoolFFICallBackDirect? _clearAllRecords;
+  Pointer<Utf8> Function(Pointer<AppDbState>)? _closeDatabase;
+  void Function(Pointer<Utf8>)? _freeCString;
+  bool Function(Pointer<AppDbState>)? _isDatabaseValid;
 
   @override
   bool get isSupported => !Platform.isLinux && !Platform.isWindows;
@@ -60,6 +60,10 @@ class DatabaseNative implements DatabaseInterface {
     if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';
     }
+    
+    // Reset function pointers for hot restart safety  
+    _resetFunctionPointers();
+    
     _lastDatabaseName = databaseName;
     if (_lib == null) {
       _lib = Ok(DynamicLibrary.open(libPath));
@@ -72,10 +76,29 @@ class DatabaseNative implements DatabaseInterface {
     log('Native database initialized successfully for testing');
   }
 
+  void _resetFunctionPointers() {
+    _createDatabase = null;
+    _post = null;
+    _get = null;
+    _getById = null;
+    _put = null;
+    _delete = null;
+    _clearAllRecords = null;
+    _closeDatabase = null;
+    _freeCString = null;
+    _isDatabaseValid = null;
+  }
+
   @override
   Future<void> initialize(String databaseName) async {
     try {
       log('Initializing native DB on platform: ${Platform.operatingSystem}');
+
+      // Close any existing connection first (hot restart safety)
+      await _closeCurrentConnection();
+      
+      // Reset function pointers for hot restart safety
+      _resetFunctionPointers();
 
       _lastDatabaseName = databaseName;
 
@@ -95,6 +118,10 @@ class DatabaseNative implements DatabaseInterface {
     } catch (e, stack) {
       log('Error initializing native database: $e');
       log('Stack trace: $stack');
+      
+      // Clean up state on failure
+      _dbInstance = null;
+      _resetFunctionPointers();
       rethrow;
     }
   }
@@ -162,8 +189,12 @@ class DatabaseNative implements DatabaseInterface {
 
   Future<void> _init(String dbName) async {
     try {
+      if (_createDatabase == null) {
+        throw Exception('Database functions not bound. Call _bindFunctions first.');
+      }
+      
       final dbNamePointer = dbName.toNativeUtf8();
-      _dbInstance = _createDatabase(dbNamePointer);
+      _dbInstance = _createDatabase!(dbNamePointer);
 
       if (_dbInstance == nullptr) {
         throw Exception(
@@ -186,7 +217,7 @@ class DatabaseNative implements DatabaseInterface {
     }
 
     try {
-      if (!_isDatabaseValid(_dbInstance!)) {
+      if (_isDatabaseValid != null && !_isDatabaseValid!(_dbInstance!)) {
         log('Database connection invalid (Rust validation failed), attempting to reinitialize...');
         await _closeCurrentConnection();
         return await _attemptReinitialization();
@@ -203,27 +234,48 @@ class DatabaseNative implements DatabaseInterface {
   Future<void> _closeCurrentConnection() async {
     if (_dbInstance != null && _dbInstance != nullptr) {
       try {
-        if (_isDatabaseValid(_dbInstance!)) {
-          final closeResult = _closeDatabase(_dbInstance!);
-          if (closeResult != nullptr) {
-            final resultStr = closeResult.cast<Utf8>().toDartString();
-            log('Database close result: $resultStr');
-            _freeCString(closeResult);
+        // Check if we have the function bound and the instance is valid
+        if (_lib != null && _lib!.isOk && _isDatabaseValid != null && _closeDatabase != null && _freeCString != null) {
+          try {
+            if (_isDatabaseValid!(_dbInstance!)) {
+              final closeResult = _closeDatabase!(_dbInstance!);
+              if (closeResult != nullptr) {
+                final resultStr = closeResult.cast<Utf8>().toDartString();
+                log('Database close result: $resultStr');
+                _freeCString!(closeResult);
+              }
+            }
+          } catch (e) {
+            log('Error validating or closing database: $e');
           }
         }
       } catch (e) {
         log('Error during database close: $e');
       } finally {
-        _dbInstance = nullptr;
+        _dbInstance = null; // Always reset to null, not nullptr
       }
+    } else if (_dbInstance != null) {
+      // If _dbInstance is not null but is nullptr, just reset it
+      _dbInstance = null;
     }
   }
 
   Future<bool> _attemptReinitialization() async {
     if (_lastDatabaseName != null) {
       try {
-        final appDir = await getApplicationDocumentsDirectory();
-        await _init('${appDir.path}/$_lastDatabaseName');
+        // Reset function pointers and rebind them
+        _resetFunctionPointers();
+        _bindFunctions();
+        
+        // Check if this is a testing scenario (database name contains full path)
+        if (_lastDatabaseName!.contains('/') || _lastDatabaseName!.contains('\\')) {
+          // For testing, use the full path as is
+          await _init(_lastDatabaseName!);
+        } else {
+          // For normal usage, prepend the app directory
+          final appDir = await getApplicationDocumentsDirectory();
+          await _init('${appDir.path}/$_lastDatabaseName');
+        }
         log('Database reinitialized successfully');
         return true;
       } catch (e) {
@@ -253,10 +305,14 @@ class DatabaseNative implements DatabaseInterface {
     final jsonPointer = jsonString.toNativeUtf8();
 
     try {
-      final resultPushPointer = _post(_dbInstance!, jsonPointer);
+      if (_post == null || _freeCString == null) {
+        return Err(ErrorLocalDb.databaseError('Database functions not bound'));
+      }
+      
+      final resultPushPointer = _post!(_dbInstance!, jsonPointer);
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
 
-      _freeCString(resultPushPointer);
+      _freeCString!(resultPushPointer);
       calloc.free(jsonPointer);
 
       final Map<String, dynamic> response = jsonDecode(dataResult);
@@ -284,8 +340,12 @@ class DatabaseNative implements DatabaseInterface {
     }
 
     try {
+      if (_getById == null || _freeCString == null) {
+        return Err(ErrorLocalDb.databaseError('Database functions not bound'));
+      }
+      
       final idPtr = id.toNativeUtf8();
-      final resultFfi = _getById(_dbInstance!, idPtr);
+      final resultFfi = _getById!(_dbInstance!, idPtr);
 
       calloc.free(idPtr);
 
@@ -294,7 +354,7 @@ class DatabaseNative implements DatabaseInterface {
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
-      _freeCString(resultFfi);
+      _freeCString!(resultFfi);
 
       final Map<String, dynamic> response = jsonDecode(resultTransformed);
 
@@ -320,7 +380,11 @@ class DatabaseNative implements DatabaseInterface {
     }
 
     try {
-      final resultFfi = _get(_dbInstance!);
+      if (_get == null || _freeCString == null) {
+        return Err(ErrorLocalDb.databaseError('Database functions not bound'));
+      }
+      
+      final resultFfi = _get!(_dbInstance!);
 
       if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
@@ -329,7 +393,7 @@ class DatabaseNative implements DatabaseInterface {
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
-      _freeCString(resultFfi);
+      _freeCString!(resultFfi);
 
       final Map<String, dynamic> response = jsonDecode(resultTransformed);
 
@@ -360,9 +424,13 @@ class DatabaseNative implements DatabaseInterface {
     }
 
     try {
+      if (_put == null || _freeCString == null) {
+        return Err(ErrorLocalDb.databaseError('Database functions not bound'));
+      }
+      
       final jsonString = jsonEncode(model.toJson());
       final jsonPointer = jsonString.toNativeUtf8();
-      final resultFfi = _put(_dbInstance!, jsonPointer);
+      final resultFfi = _put!(_dbInstance!, jsonPointer);
       final result = resultFfi.cast<Utf8>().toDartString();
 
       calloc.free(jsonPointer);
@@ -371,7 +439,7 @@ class DatabaseNative implements DatabaseInterface {
         return Err(ErrorLocalDb.notFound("No model found"));
       }
 
-      _freeCString(resultFfi);
+      _freeCString!(resultFfi);
 
       final Map<String, dynamic> response = jsonDecode(result);
 
@@ -395,8 +463,12 @@ class DatabaseNative implements DatabaseInterface {
     }
 
     try {
+      if (_delete == null) {
+        return Err(ErrorLocalDb.databaseError('Database functions not bound'));
+      }
+      
       final idPtr = id.toNativeUtf8();
-      final deleteResult = _delete(_dbInstance!, idPtr);
+      final deleteResult = _delete!(_dbInstance!, idPtr);
       final result = deleteResult.cast<Utf8>().toDartString();
       calloc.free(idPtr);
 
@@ -422,7 +494,11 @@ class DatabaseNative implements DatabaseInterface {
     }
 
     try {
-      final resultFfi = _clearAllRecords(_dbInstance!);
+      if (_clearAllRecords == null) {
+        return Err(ErrorLocalDb.databaseError('Database functions not bound'));
+      }
+      
+      final resultFfi = _clearAllRecords!(_dbInstance!);
       final result = resultFfi != nullptr;
       return Ok(result);
     } catch (error, stackTrace) {

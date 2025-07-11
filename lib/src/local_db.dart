@@ -37,6 +37,11 @@ class LocalDB {
     return _database!;
   }
 
+  /// Reset the database instance (useful for hot restart)
+  static void _resetDatabaseInstance() {
+    _database = null;
+  }
+
   /// Initializes the local database with a specified name.
   ///
   /// This method must be called before performing any database operations.
@@ -49,7 +54,30 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    await _platformDatabase.initialize(localDbName);
+    try {
+      // Close any existing connections before reinitializing (hot restart safety)
+      if (_database != null) {
+        try {
+          await _database!.closeDatabase();
+        } catch (e) {
+          log('Warning: Error closing existing database during init: $e');
+        }
+      }
+      
+      // Reset the database instance to ensure clean state
+      _resetDatabaseInstance();
+      
+      // Initialize with fresh instance
+      await _platformDatabase.initialize(localDbName);
+      log('LocalDB initialized successfully for platform: ${_platformDatabase.platformName}');
+    } catch (e, stackTrace) {
+      log('Error initializing LocalDB: $e');
+      log('Stack trace: $stackTrace');
+      
+      // Reset state on failure
+      _resetDatabaseInstance();
+      rethrow;
+    }
   }
 
   /// Avoid to use on production.
