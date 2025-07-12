@@ -59,61 +59,30 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    // Add retry mechanism for hot restart scenarios
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        Log.i('LocalDB initialization attempt $attempt');
+    try {
+      Log.i('LocalDB initialization started');
 
-        // Close any existing connections before reinitializing (hot restart safety)
-        if (_database != null) {
-          try {
-            await _database!.closeDatabase();
-          } catch (e) {
-            Log.w('Warning: Error closing existing database during init: $e');
-          }
-        }
-
-        // Reset the database instance to ensure clean state
-        _resetDatabaseInstance();
-
-        // For hot restart scenarios, modify database name slightly on retry
-        String actualDbName = localDbName;
-        if (attempt > 1 && !kIsWeb) {
-          // Only modify for native platforms, not web
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final extension = localDbName.endsWith('.db') ? '.db' : '';
-          final baseName = extension.isEmpty
-              ? localDbName
-              : localDbName.substring(0, localDbName.length - 3);
-          actualDbName = '${baseName}_hr${timestamp}$extension';
-          Log.i(
-            'Hot restart retry $attempt using database name: $actualDbName',
-          );
-        }
-
-        // Initialize with fresh instance
-        await _platformDatabase.initialize(actualDbName);
-        Log.i(
-          'LocalDB initialized successfully for platform: ${_platformDatabase.platformName}',
-        );
-        return; // Success!
-      } catch (e, stackTrace) {
-        Log.e('Error initializing LocalDB attempt $attempt: $e', error: e);
-
-        if (attempt == 3) {
-          // Final attempt failed
-          Log.e(
-            'All initialization attempts failed',
-            error: 'All attempts failed',
-            stackTrace: stackTrace,
-          );
-          _resetDatabaseInstance();
-          rethrow;
-        } else {
-          // Wait before retry
-          await Future.delayed(Duration(milliseconds: 200 * attempt));
+      // Close any existing connections before reinitializing (hot restart safety)
+      if (_database != null) {
+        try {
+          await _database!.closeDatabase();
+        } catch (e) {
+          Log.w('Warning: Error closing existing database during init: $e');
         }
       }
+
+      // Reset the database instance to ensure clean state
+      _resetDatabaseInstance();
+
+      // Initialize with the provided database name (no modifications)
+      await _platformDatabase.initialize(localDbName);
+      Log.i(
+        'LocalDB initialized successfully for platform: ${_platformDatabase.platformName}',
+      );
+    } catch (e, stackTrace) {
+      Log.e('Error initializing LocalDB: $e', error: e);
+      _resetDatabaseInstance();
+      rethrow;
     }
   }
 

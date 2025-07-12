@@ -4,13 +4,17 @@ import '../core/log.dart';
 import '../local_db.dart';
 import '../utils/system_utils.dart';
 
-/// A widget that automatically manages LocalDB lifecycle during hot restart
+/// A widget that manages LocalDB lifecycle during hot restart
 /// and app lifecycle changes. This helps prevent crashes during development.
+/// 
+/// Set [enableHotReloadManagement] to false to disable automatic management
+/// for better performance during development.
 class LocalDbLifecycleManager extends StatefulWidget {
   final Widget child;
   final VoidCallback? onHotRestart;
   final VoidCallback? onAppPaused;
   final VoidCallback? onAppResumed;
+  final bool enableHotReloadManagement;
 
   const LocalDbLifecycleManager({
     Key? key,
@@ -18,6 +22,7 @@ class LocalDbLifecycleManager extends StatefulWidget {
     this.onHotRestart,
     this.onAppPaused,
     this.onAppResumed,
+    this.enableHotReloadManagement = true,
   }) : super(key: key);
 
   @override
@@ -33,7 +38,8 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
     WidgetsBinding.instance.addObserver(this);
 
     // In debug mode, listen for hot restart (but not during tests)
-    if (kDebugMode && !SystemUtils.isTest) {
+    // Only if hot reload management is enabled
+    if (kDebugMode && !SystemUtils.isTest && widget.enableHotReloadManagement) {
       _setupHotRestartListener();
     }
   }
@@ -45,110 +51,39 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
   }
 
   void _setupHotRestartListener() {
-    // Enhanced hot restart detection with multiple strategies
+    // Simplified hot restart detection - only on actual errors, not constant polling
     if (kDebugMode) {
-      Future.delayed(const Duration(milliseconds: 500), () async {
+      // Only check once on widget initialization, not continuously
+      Future.delayed(const Duration(milliseconds: 100), () async {
         if (mounted) {
-          bool recoveryNeeded = false;
-          String? recoveryReason;
-
           try {
-            // Strategy 1: Check basic connection validity
+            // Single, lightweight connection check - no aggressive health checks
             final isValid = await LocalDB.IsConnectionValid();
             if (!isValid) {
-              recoveryNeeded = true;
-              recoveryReason = 'Basic connection validation failed';
-            }
-
-            // Strategy 2: Try a simple ping operation to detect stale connections
-            if (!recoveryNeeded) {
-              try {
-                final testResult = await LocalDB.GetById('__health_check__');
-                // Even if the record doesn't exist, the operation should complete without FFI errors
-                if (testResult.isErr) {
-                  final error = testResult.errorOrNull;
-                  if (error != null &&
-                      error.toString().contains('Invalid or stale')) {
-                    recoveryNeeded = true;
-                    recoveryReason = 'Health check detected stale connection';
-                  }
-                }
-              } catch (e) {
-                // FFI errors often indicate hot restart issues
-                if (e.toString().contains('pointer') ||
-                    e.toString().contains('invalid') ||
-                    e.toString().contains('null')) {
-                  recoveryNeeded = true;
-                  recoveryReason = 'Health check FFI error detected';
-                }
-              }
-            }
-
-            if (recoveryNeeded) {
-              Log.w('LocalDB: Hot restart detected - $recoveryReason');
+              Log.w('LocalDB: Initial connection invalid, attempting single recovery');
               widget.onHotRestart?.call();
-
-              await _performIntelligentRecovery();
+              await _performSimpleRecovery();
             }
           } catch (e) {
-            Log.e('LocalDB: Error during hot restart detection', error: e);
-            // If there's an error in detection itself, attempt recovery
-            await _performIntelligentRecovery();
-          }
-
-          // Continue checking if still mounted
-          // Use adaptive intervals: shorter after recovery, longer during stable periods
-          if (mounted) {
-            final delay = recoveryNeeded
-                ? const Duration(seconds: 1)
-                : // Quick recheck after recovery
-                  const Duration(seconds: 3); // Normal interval
-            Future.delayed(delay, _setupHotRestartListener);
+            Log.e('LocalDB: Error during initial connection check', error: e);
+            // Only attempt recovery on genuine errors
+            await _performSimpleRecovery();
           }
         }
       });
     }
   }
 
-  Future<void> _performIntelligentRecovery() async {
+  Future<void> _performSimpleRecovery() async {
     try {
-      // Strategy 1: Try to recover with the same database name
-      Log.i('LocalDB: Attempting intelligent recovery...');
-
-      // First, try a gentle recovery (same DB name)
-      try {
-        await LocalDB.init(localDbName: 'app_database.db');
-        Log.i('LocalDB: Successfully recovered with original database');
-        return;
-      } catch (e) {
-        Log.w('LocalDB: Original database recovery failed, trying fallback');
-      }
-
-      // Strategy 2: Try with a hot restart specific name
-      try {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        await LocalDB.init(localDbName: 'hot_restart_recovery_$timestamp.db');
-        Log.i('LocalDB: Successfully recovered with timestamped database');
-        return;
-      } catch (e) {
-        Log.w(
-          'LocalDB: Timestamped database recovery failed, trying minimal fallback',
-        );
-      }
-
-      // Strategy 3: Last resort - minimal fallback
-      try {
-        await LocalDB.init(localDbName: 'fallback.db');
-        Log.i('LocalDB: Successfully recovered with fallback database');
-        return;
-      } catch (e) {
-        Log.e('LocalDB: All recovery strategies failed', error: e);
-        if (mounted) {
-          _showHotRestartError(e);
-        }
-      }
+      Log.i('LocalDB: Attempting simple recovery...');
+      
+      // Single recovery attempt without multiple strategies
+      // Let LocalDB.init handle its own retry logic if needed
+      await LocalDB.init(localDbName: 'app_database.db');
+      Log.i('LocalDB: Successfully recovered database connection');
     } catch (e) {
-      Log.e('LocalDB: Critical error during recovery', error: e);
+      Log.e('LocalDB: Simple recovery failed', error: e);
       if (mounted) {
         _showHotRestartError(e);
       }
@@ -206,21 +141,18 @@ ERROR DETAILS: $error
 
     switch (state) {
       case AppLifecycleState.paused:
-        Log.i('LocalDB: App paused, closing database connection');
-        LocalDB.CloseDatabase().catchError((e) {
-          Log.e('LocalDB: Error closing database on pause', error: e);
-        });
+        // Don't close database on pause - keep connection stable during development
+        Log.i('LocalDB: App paused, maintaining connection');
         widget.onAppPaused?.call();
         break;
 
       case AppLifecycleState.resumed:
-        Log.i(
-          'LocalDB: App resumed, connection will be re-established on next operation',
-        );
+        Log.i('LocalDB: App resumed, connection maintained');
         widget.onAppResumed?.call();
         break;
 
       case AppLifecycleState.detached:
+        // Only close on actual app termination
         Log.i('LocalDB: App detached, closing database connection');
         LocalDB.CloseDatabase().catchError((e) {
           Log.e('LocalDB: Error closing database on detach', error: e);
@@ -241,15 +173,20 @@ ERROR DETAILS: $error
 /// Extension to make it easier to wrap apps with LocalDB lifecycle management
 extension LocalDbLifecycleManagerExtension on Widget {
   /// Wraps this widget with LocalDB lifecycle management
+  /// 
+  /// Set [enableHotReloadManagement] to false for better performance
+  /// during development if you don't need automatic hot reload handling
   Widget withLocalDbLifecycle({
     VoidCallback? onHotRestart,
     VoidCallback? onAppPaused,
     VoidCallback? onAppResumed,
+    bool enableHotReloadManagement = true,
   }) {
     return LocalDbLifecycleManager(
       onHotRestart: onHotRestart,
       onAppPaused: onAppPaused,
       onAppResumed: onAppResumed,
+      enableHotReloadManagement: enableHotReloadManagement,
       child: this,
     );
   }
