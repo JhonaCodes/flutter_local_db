@@ -35,7 +35,8 @@ class DatabaseConnection {
   }
 
   bool get isStale {
-    return DateTime.now().difference(lastUsed).inMinutes > 5;
+    // Increase staleness threshold for more persistent connections
+    return DateTime.now().difference(lastUsed).inMinutes > 30;
   }
 }
 
@@ -439,23 +440,21 @@ class DatabaseNative implements DatabaseInterface {
       if (poolConnection != null && poolConnection.pointer == _dbInstance) {
         // Connection exists in pool and matches current instance
         try {
-          // Validate with Rust using generation
+          // Validate with Rust using generation (less aggressive)
           if (_validateInstanceGeneration != null) {
             final isValidGeneration = _validateInstanceGeneration!(
               _dbInstance!,
               poolConnection.generation,
             );
             if (!isValidGeneration) {
-              Log.w(
-                'Database connection has invalid generation, attempting to reinitialize...',
+              Log.d(
+                'Database connection has different generation, but connection may still be valid',
               );
-              ConnectionPool.invalidateConnection(_lastDatabaseName!);
-              await _closeCurrentConnection();
-              return await _attemptReinitialization();
+              // Don't immediately reinitialize - try ping first
             }
           }
 
-          // Ping database to ensure it's responsive
+          // Ping database to ensure it's responsive (primary validation)
           if (_pingDatabase != null) {
             try {
               final pingResult = _pingDatabase!(_dbInstance!);
@@ -465,18 +464,14 @@ class DatabaseNative implements DatabaseInterface {
                 poolConnection.updateLastUsed();
                 return true;
               } else {
-                Log.w(
-                  'Database ping returned null, attempting to reinitialize...',
-                );
+                Log.w('Database ping returned null - connection may be stale');
+                // Only reinitialize if ping actually fails
                 ConnectionPool.invalidateConnection(_lastDatabaseName!);
                 await _closeCurrentConnection();
                 return await _attemptReinitialization();
               }
             } catch (e) {
-              Log.e(
-                'Database ping failed, attempting to reinitialize',
-                error: e,
-              );
+              Log.w('Database ping failed - will attempt reinitialization: $e');
               ConnectionPool.invalidateConnection(_lastDatabaseName!);
               await _closeCurrentConnection();
               return await _attemptReinitialization();
@@ -494,28 +489,16 @@ class DatabaseNative implements DatabaseInterface {
       }
     }
 
-    // Fallback to legacy validation
+    // Fallback to legacy validation (less aggressive)
     try {
       if (_isDatabaseValid != null && !_isDatabaseValid!(_dbInstance!)) {
-        Log.w(
-          'Database connection invalid (legacy validation failed), attempting to reinitialize...',
-        );
-        if (_lastDatabaseName != null) {
-          ConnectionPool.invalidateConnection(_lastDatabaseName!);
-        }
-        await _closeCurrentConnection();
-        return await _attemptReinitialization();
+        Log.d('Legacy validation indicates connection issues - this may be normal');
+        // Don't immediately reinitialize - just log and continue
+        // The actual operations will fail if there's a real problem
       }
     } catch (e) {
-      Log.e(
-        'Error validating database connection, attempting to reinitialize',
-        error: e,
-      );
-      if (_lastDatabaseName != null) {
-        ConnectionPool.invalidateConnection(_lastDatabaseName!);
-      }
-      await _closeCurrentConnection();
-      return await _attemptReinitialization();
+      Log.d('Legacy validation threw exception - may not be critical: $e');
+      // Don't reinitialize unless it's absolutely necessary
     }
 
     return true;

@@ -40,7 +40,7 @@ class DatabaseManager {
     return DatabaseNative();
   }
   
-  /// Execute a database operation with automatic connection management
+  /// Execute a database operation with persistent connection management
   static Future<Result<T, ErrorLocalDb>> execute<T>(
     String databaseName,
     Future<Result<T, ErrorLocalDb>> Function(DatabaseInterface db) operation,
@@ -50,7 +50,7 @@ class DatabaseManager {
     return connectionResult.when(
       ok: (db) async {
         final operationResult = await operation(db);
-        await db.closeDatabase();
+        // Let RedB manage connections internally - no forced closing
         return operationResult;
       },
       err: (error) => Err(error),
