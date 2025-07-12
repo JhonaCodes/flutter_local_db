@@ -12,9 +12,6 @@ import 'package:result_controller/result_controller.dart';
 /// This implementation provides the same interface as the FFI bridge
 /// but uses browser's IndexedDB for storage
 class WebLocalDbBridge extends LocalSbRequestImpl {
-  WebLocalDbBridge._();
-
-  static final WebLocalDbBridge instance = WebLocalDbBridge._();
 
   web.IDBDatabase? _database;
   String? _databaseName;

@@ -33,9 +33,6 @@ typedef PointerBoolFFICallBackDirect =
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 class LocalDbBridge extends LocalSbRequestImpl {
-  LocalDbBridge._();
-
-  static final LocalDbBridge instance = LocalDbBridge._();
 
   Result<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable

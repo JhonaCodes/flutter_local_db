@@ -6,9 +6,6 @@ import 'database_interface.dart';
 /// Stub implementation for non-web platforms
 /// This prevents web code from being compiled on mobile/desktop
 class DatabaseWeb implements DatabaseInterface {
-  DatabaseWeb._();
-
-  static final DatabaseWeb instance = DatabaseWeb._();
 
   @override
   bool get isSupported => false;

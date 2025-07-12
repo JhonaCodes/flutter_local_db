@@ -34,7 +34,7 @@ class DatabaseManager {
     }
     
     if (kIsWeb) {
-      return DatabaseWeb.instance;
+      return DatabaseWeb();
     }
     
     return DatabaseNative();

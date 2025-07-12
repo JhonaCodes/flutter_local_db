@@ -7,9 +7,6 @@ import 'database_interface.dart';
 /// This implementation throws appropriate errors for platforms
 /// that don't have native or web database support
 class DatabaseStub implements DatabaseInterface {
-  DatabaseStub._();
-
-  static final DatabaseStub instance = DatabaseStub._();
 
   @override
   bool get isSupported => false;
