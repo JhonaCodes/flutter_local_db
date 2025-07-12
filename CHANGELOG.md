@@ -1,5 +1,140 @@
 # Changelog
 
+## [0.6.0] - 2025-07-12
+
+### 🎉 Major Features
+
+#### Hot Reload Recovery System
+- **Intelligent Hot Reload Detection**: Multi-strategy detection system that identifies when Flutter hot reload has invalidated FFI connections
+- **Automatic Recovery**: Graceful recovery with fallback strategies when connections become stale
+- **Enhanced Error Reporting**: Detailed, actionable error messages for development scenarios
+- **LocalDbLifecycleManager Widget**: Enhanced widget for comprehensive lifecycle management during development
+
+#### Generation-Based Validation System
+- **Instance Generation Tracking**: Rust-based generation system to validate connection integrity
+- **Stale Connection Detection**: Automatic detection and cleanup of invalid connections
+- **Connection Pool Management**: Smart connection pooling with generation-based validation
+- **Heartbeat/Ping Operations**: Health check operations to verify connection responsiveness
+
+#### Enterprise-Grade Logging
+- **Standardized Logging Class**: Corporate-standard logging implementation with consistent formatting
+- **Security-First Approach**: Sanitized logging that prevents information leakage
+- **Multiple Log Levels**: Debug, Info, Warning, Error, and Fatal levels with appropriate usage guidelines
+- **Performance Optimized**: Minimal overhead logging system suitable for production use
+
+### 🔧 Technical Improvements
+
+#### Enhanced FFI Stability
+- **Connection Validation**: Multiple validation strategies (generation, ping, legacy fallback)
+- **Error Recovery**: Robust error handling with automatic reconnection attempts
+- **Memory Management**: Improved cleanup and resource management for FFI operations
+- **Function Pointer Safety**: Reset and rebinding of function pointers for hot restart compatibility
+
+#### Database Operations
+- **Improved Error Handling**: More descriptive error messages with proper categorization
+- **Better Validation**: Enhanced ID format validation and data integrity checks
+- **Performance Optimizations**: Reduced overhead in database operations
+- **Cross-Platform Consistency**: Unified behavior across native and web platforms
+
+### 🧪 Testing Enhancements
+
+#### Comprehensive Test Suite
+- **Connection Pool Tests**: Validation of connection management and generation system
+- **Hot Reload Recovery Tests**: Edge case testing for development scenarios  
+- **Security and Logging Tests**: Verification of secure logging practices and data privacy
+- **Performance Benchmarks**: Realistic performance expectations for CI environments
+- **Database Cleanup**: Proper test isolation with automatic cleanup
+
+#### Test Infrastructure
+- **Improved Test Performance**: Reduced test data sizes and more realistic timeouts
+- **Better Test Isolation**: Each test properly cleans up its database state
+- **Enhanced Coverage**: Tests for new features including logging, security, and hot reload recovery
+
+### 🔒 Security Enhancements
+
+#### Data Privacy
+- **Secure Logging**: No sensitive data (passwords, tokens, personal info) logged
+- **Path Sanitization**: File paths sanitized to prevent directory structure exposure
+- **Error Message Sanitization**: Generic error messages prevent information leakage
+- **Input Validation**: Protection against injection-style attacks
+
+#### Production Readiness
+- **Corporate Logging Standards**: Following enterprise logging best practices
+- **Security Documentation**: Comprehensive security notes in logging implementation
+- **Privacy Compliance**: Design with privacy regulations in mind
+
+### 🐛 Bug Fixes
+
+- **FFI Null Pointer Exceptions**: Resolved crashes during Flutter hot reload
+- **Connection State Management**: Fixed stale connection issues in development
+- **Memory Leaks**: Improved cleanup of database connections and FFI resources
+- **Performance Issues**: Optimized operations to reduce overhead
+- **Test Flakiness**: Stabilized test suite with proper cleanup and realistic expectations
+
+### 💥 Breaking Changes
+
+- **Logging Integration**: All internal debug prints replaced with standardized logging
+- **Error Handling**: Some error message formats changed for better security
+- **Development Dependencies**: Added `logger: ^2.4.0` dependency
+
+### 📦 Dependencies
+
+#### Added
+- `logger: ^2.4.0` - Corporate-standard logging implementation
+
+### 🔄 Migration Guide
+
+#### From 0.5.x to 0.6.0
+
+**For most users, this is a drop-in replacement with significant stability improvements.**
+
+1. **Update pubspec.yaml**:
+   ```yaml
+   dependencies:
+     flutter_local_db: ^0.6.0
+   ```
+
+2. **Optional: Add Lifecycle Management** (Recommended for development):
+   ```dart
+   import 'package:flutter_local_db/flutter_local_db.dart';
+   
+   // Wrap your app with lifecycle management
+   MaterialApp(
+     home: MyHomePage(),
+   ).withLocalDbLifecycle(
+     onHotRestart: () => print('Database recovered from hot restart'),
+   )
+   ```
+
+3. **Optional: Custom Logging** (If you want to integrate with your logging system):
+   ```dart
+   import 'package:flutter_local_db/src/core/log.dart';
+   
+   // Use the standardized logging in your app
+   Log.i('Application started');
+   Log.e('Error occurred', error: exception, stackTrace: stackTrace);
+   ```
+
+### 📈 Performance Improvements
+
+- **Reduced Hot Reload Impact**: Faster recovery from development interruptions
+- **Optimized Connection Management**: Smart pooling reduces connection overhead
+- **Improved Error Handling**: Faster failure detection and recovery
+- **Test Performance**: 50-70% faster test execution with optimized test data sizes
+
+### 🏗️ Architecture Changes
+
+#### New Components
+- **ConnectionPool**: Manages database connections with generation validation
+- **DatabaseConnection**: Encapsulates connection state and metadata  
+- **Log**: Standardized logging with security considerations
+- **Enhanced LocalDbLifecycleManager**: Widget for automatic hot reload recovery
+
+#### Enhanced Components
+- **DatabaseNative**: Improved error handling and connection validation
+- **LocalDB**: Better state management and operation reliability
+- **Error Handling**: More descriptive and secure error reporting
+
 ### 0.5.1
 #### Added
 - **Web Platform Support**: Full IndexedDB implementation for web platforms

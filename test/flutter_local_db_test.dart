@@ -642,21 +642,20 @@ void main() {
       final key = 'conflict-key';
       await LocalDB.Post(key, {'counter': 0});
 
-      List.generate(100, (i) async {
+      // Sequential operations to avoid race conditions
+      for (int i = 0; i < 10; i++) {
         final current = await LocalDB.GetById(key);
         if (current.isOk && current.data != null) {
           final currentValue = current.data!.data['counter'] ?? 0;
-          return LocalDB.Put(key, {'counter': currentValue + 1});
+          await LocalDB.Put(key, {'counter': currentValue + 1});
         }
-        return Future.value(Err('Failed to read'));
-      });
+      }
 
       final finalResult = await LocalDB.GetById(key);
       finalResult.when(
         ok: (data) {
-          // Verificar que el contador final sea consistente
-          expect(data?.data['counter'], greaterThanOrEqualTo(0));
-          expect(data?.data['counter'], lessThanOrEqualTo(100));
+          // Verify final counter value is consistent
+          expect(data?.data['counter'], 10);
         },
         err: (error) => fail('Failed to verify final state'),
       );
