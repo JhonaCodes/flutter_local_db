@@ -7,7 +7,7 @@ void main() {
     late DatabaseMock db;
 
     setUp(() {
-      db = DatabaseMock.instance;
+      db = DatabaseMock();
       db.resetMock();
     });
 

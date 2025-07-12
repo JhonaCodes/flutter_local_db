@@ -21,9 +21,6 @@ import 'database_interface.dart';
 /// - Data validation and sanitization
 /// - Thread-safe operations
 class DatabaseMock implements DatabaseInterface {
-  DatabaseMock._();
-
-  static final DatabaseMock instance = DatabaseMock._();
 
   // In-memory storage
   final Map<String, LocalDbModel> _storage = {};

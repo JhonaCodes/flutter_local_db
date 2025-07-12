@@ -43,6 +43,8 @@ class DatabaseConnection {
 class ConnectionPool {
   static final Map<String, DatabaseConnection> _connections = {};
   static int _currentGeneration = 1;
+  // Persist the last used database name across hot restarts
+  static String? _lastUsedDatabaseName;
 
   static DatabaseConnection? getConnection(String dbName) {
     final connection = _connections[dbName];
@@ -55,6 +57,7 @@ class ConnectionPool {
 
   static void storeConnection(String dbName, DatabaseConnection connection) {
     _connections[dbName] = connection;
+    _lastUsedDatabaseName = dbName; // Remember the last used database name
   }
 
   static void invalidateConnection(String dbName) {
@@ -78,6 +81,9 @@ class ConnectionPool {
   static void incrementGeneration() => _currentGeneration++;
 
   static int get connectionCount => _connections.length;
+  
+  // Getter for last used database name (survives hot restart)
+  static String? get lastUsedDatabaseName => _lastUsedDatabaseName;
 }
 
 /// Typedef for the rust functions
@@ -93,9 +99,6 @@ typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 /// Native database implementation using FFI and Rust backend
 /// This implementation is used for mobile and desktop platforms
 class DatabaseNative implements DatabaseInterface {
-  DatabaseNative._();
-
-  static final DatabaseNative instance = DatabaseNative._();
 
   Result<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance;
@@ -411,11 +414,23 @@ class DatabaseNative implements DatabaseInterface {
       }
     }
 
-    if (_dbInstance == null || _dbInstance == nullptr) {
-      Log.w(
-        'Database connection invalid (null pointer), attempting to reinitialize...',
-      );
+    // Check if we have a database name stored (indicates previous initialization)
+    final dbNameToRestore = _lastDatabaseName ?? ConnectionPool.lastUsedDatabaseName;
+    if (dbNameToRestore != null && (_dbInstance == null || _dbInstance == nullptr)) {
+      Log.i('🔄 Hot restart detected - attempting to reconnect to existing database: $dbNameToRestore');
+      
+      // Restore the database name for the instance
+      if (_lastDatabaseName == null) {
+        _lastDatabaseName = dbNameToRestore;
+        Log.i('🔄 Restored database name from connection pool: $dbNameToRestore');
+      }
+      
       return await _attemptReinitialization();
+    }
+
+    if (_dbInstance == null || _dbInstance == nullptr) {
+      Log.w('Database connection invalid (null pointer), no previous database name stored');
+      return false;
     }
 
     // Check connection pool first

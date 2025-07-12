@@ -1,66 +1,36 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_local_db/src/database/database_native.dart';
-import 'package:flutter_local_db/src/database/database_web_import.dart';
-import 'package:flutter_local_db/src/model/local_db_error_model.dart';
-
-
 import 'core/log.dart';
-import 'database/database.dart';
-import 'database/database_mock.dart';
+import 'database/database_interface.dart';
+import 'database/database_manager.dart';
+import 'database/database_native.dart';
+import 'model/local_db_error_model.dart';
 import 'model/local_db_request_model.dart';
-import 'utils/system_utils.dart';
 import 'package:result_controller/result_controller.dart';
 /// A comprehensive local database management utility.
 ///
 /// Provides static methods for performing CRUD (Create, Read, Update, Delete)
 /// operations on a local database with robust validation and error handling.
 ///
-/// Uses a bridge pattern to abstract database interactions and provides
-/// type-safe results using [Result].
+/// Uses on-demand connections without singleton complexity for better
+/// hot restart resilience and cleaner architecture.
 ///
 /// Automatically detects platform and uses:
 /// - FFI Rust implementation for mobile/desktop platforms
 /// - IndexedDB implementation for web platform
 class LocalDB {
-  static DatabaseInterface? _database;
+  static String? _databaseName;
 
-  /// Gets the appropriate database implementation for the current platform
-  static DatabaseInterface get _platformDatabase {
-    if (_database != null) return _database!;
+  /// Get the current database name
+  static String? get currentDatabaseName => DatabaseManager.currentDatabaseName;
 
-    // Use mock database in test environment to avoid FFI issues
-    if (SystemUtils.isTest) {
-      _database = DatabaseMock.instance;
-    } else if (kIsWeb) {
-      _database = DatabaseWeb.instance;
-    } else {
-      _database = DatabaseNative.instance;
-    }
-
-    return _database!;
-  }
-
-  /// Reset the database instance (useful for hot restart)
-  static void _resetDatabaseInstance() {
-    _database = null;
-  }
-
-  /// Get the current database name from the active database instance
-  static String? _getCurrentDatabaseName() {
-    if (_database == null) return null;
-    return _database!.currentDatabaseName;
-  }
-
-  /// Normalize database name for comparison (handle .db extension and paths)
-  static String? _normalizeDatabaseName(String? dbName) {
-    if (dbName == null) return null;
-    
+  /// Normalize database name for validation (handle .db extension and paths)
+  static String _normalizeDatabaseName(String dbName) {
     // Extract just the filename if it's a path
     String normalized = dbName.split('/').last.split('\\').last;
     
-    // Remove .db extension for comparison
+    // Remove .db extension for validation
     if (normalized.endsWith('.db')) {
       normalized = normalized.substring(0, normalized.length - 3);
     }
@@ -68,60 +38,67 @@ class LocalDB {
     return normalized.toLowerCase();
   }
 
+  /// Ensure database is configured and execute operation with Result types
+  static Future<Result<T, ErrorLocalDb>> _ensureDatabaseAndExecute<T>(
+    Future<Result<T, ErrorLocalDb>> Function(DatabaseInterface db) operation,
+  ) async {
+    if (_databaseName == null) {
+      return Err(ErrorLocalDb.databaseError(
+        'Database not initialized. Call LocalDB.init() first.',
+      ));
+    }
+
+    return await DatabaseManager.execute(_databaseName!, operation);
+  }
+
+  /// Validate input parameters for database operations
+  static Result<LocalDbModel, ErrorLocalDb>? _validateInput(
+    String key, 
+    Map<String, dynamic>? data,
+  ) {
+    if (!_isValidId(key)) {
+      return Err(ErrorLocalDb.serializationError(
+        "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+      ));
+    }
+
+    if (data != null && !_isValidMap(data)) {
+      return Err(ErrorLocalDb.serializationError(
+        'The provided format data is invalid.\n$data',
+      ));
+    }
+
+    return null; // No validation errors
+  }
+
   /// Initializes the local database with a specified name.
   ///
-  /// This method must be called before performing any database operations.
-  /// Automatically selects the appropriate implementation:
-  /// - IndexedDB for web platforms
-  /// - FFI Rust implementation for mobile/desktop platforms
+  /// This method sets the database name for subsequent operations.
+  /// The actual connection is established on-demand for each operation.
   ///
   /// Parameters:
   /// - [localDbName]: A unique name for the local database instance
-  ///
-  /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    try {
-      Log.i('LocalDB initialization started');
-
-      // Check if we already have a valid database connection with the same name
-      if (_database != null) {
-        try {
-          final isValid = await _database!.ensureConnectionValid();
-          final currentDbName = _getCurrentDatabaseName();
-          
-          // Normalize names for comparison (handle .db extension)
-          final normalizedCurrent = _normalizeDatabaseName(currentDbName);
-          final normalizedRequested = _normalizeDatabaseName(localDbName);
-          
-          if (isValid && _database!.platformName.isNotEmpty && normalizedCurrent == normalizedRequested) {
-            Log.i('Reusing existing valid database connection for: $localDbName');
-            return; // Use existing connection, don't reinitialize
-          } else if (normalizedCurrent != normalizedRequested) {
-            Log.i('Database name changed from $currentDbName to $localDbName, reinitializing');
-          }
-        } catch (e) {
-          Log.w('Warning: Error checking existing database connection: $e');
-        }
-        
-        // Only close if connection is invalid
-        try {
-          await _database!.closeDatabase();
-        } catch (e) {
-          Log.w('Warning: Error closing invalid database during init: $e');
-        }
-        _resetDatabaseInstance();
-      }
-
-      // Initialize with the provided database name (no modifications)
-      await _platformDatabase.initialize(localDbName);
-      Log.i(
-        'LocalDB initialized successfully for platform: ${_platformDatabase.platformName}',
+    if (!_isValidId(_normalizeDatabaseName(localDbName))) {
+      throw ArgumentError(
+        'Invalid database name format. Name must be at least 3 characters long '
+        'and can only contain letters, numbers, hyphens (-) and underscores (_).',
       );
-    } catch (e) {
-      Log.e('Error initializing LocalDB: $e', error: e);
-      _resetDatabaseInstance();
-      rethrow;
     }
+
+    _databaseName = localDbName;
+    Log.i('✅ LocalDB configured for database: $localDbName');
+    
+    // Test connection to verify database can be accessed
+    final result = await DatabaseManager.execute(_databaseName!, (db) async {
+      Log.i('🔍 Verified database connectivity on platform: ${db.platformName}');
+      return Ok(true);
+    });
+    
+    result.when(
+      ok: (_) => Log.i('Database initialization completed successfully'),
+      err: (error) => throw Exception('Failed to initialize database: $error'),
+    );
   }
 
   /// Avoid to use on production.
@@ -131,66 +108,56 @@ class LocalDB {
     required String binaryPath,
   }) async {
     if (!kIsWeb) {
-      await (DatabaseNative.instance).initForTesting(localDbName, binaryPath);
+      final db = DatabaseNative();
+      await db.initForTesting(localDbName, binaryPath);
     }
   }
 
   /// Creates a new record in the database.
   ///
   /// Validates the key and data before attempting to create the record.
+  /// Uses on-demand connection for better hot restart resilience.
   ///
   /// Parameters:
   /// - [key]: A unique identifier for the record
-  ///   - Must be at least 3 characters long
-  ///   - Can only contain letters, numbers, hyphens, and underscores
   /// - [data]: A map containing the data to be stored
   /// - [lastUpdate]: Optional timestamp for the record (not used in this implementation)
   ///
   /// Returns:
   /// - [Ok] with the created [LocalDbModel] if successful
-  /// - [Err] with an error message if:
-  ///   - The key is invalid
-  ///   - The data cannot be serialized
-  ///   - A record with the same key already exists
+  /// - [Err] with an error message if validation or creation fails
   // ignore: non_constant_identifier_names
   static Future<Result<LocalDbModel, ErrorLocalDb>> Post(
     String key,
     Map<String, dynamic> data, {
     String? lastUpdate,
   }) async {
-    if (!_isValidId(key)) {
-      return Err(
-        ErrorLocalDb.serializationError(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
-        ),
-      );
-    }
-
-    if (!_isValidMap(data)) {
-      return Err(
-        ErrorLocalDb.serializationError(
-          'The provided format data is invalid.\n$data',
-        ),
-      );
-    }
-
-    final verifyId = await GetById(key);
-
-    if (verifyId.isOk) {
-      return Err(
-        ErrorLocalDb.databaseError(
+    // Early validation without database connection
+    final validationError = _validateInput(key, data);
+    if (validationError != null) return validationError;
+    
+    return await _ensureDatabaseAndExecute((db) async {
+      // Check if record already exists
+      final existingRecord = await db.getById(key);
+      if (existingRecord.isErr) {
+        return Err(existingRecord.errorOrNull!);
+      }
+      
+      if (existingRecord.data != null) {
+        return Err(ErrorLocalDb.databaseError(
           "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
-        ),
+        ));
+      }
+      
+      // Create new record
+      final model = LocalDbModel(
+        id: key,
+        hash: DateTime.now().millisecondsSinceEpoch.toString(),
+        data: data,
       );
-    }
 
-    final model = LocalDbModel(
-      id: key,
-      hash: DateTime.now().millisecondsSinceEpoch.toString(),
-      data: data,
-    );
-
-    return await _platformDatabase.post(model);
+      return await db.post(model);
+    });
   }
 
   /// Retrieves all records from the local database.
@@ -202,7 +169,9 @@ class LocalDB {
   static Future<Result<List<LocalDbModel>, ErrorLocalDb>>
   // ignore: non_constant_identifier_names
   GetAll() async {
-    return await _platformDatabase.getAll();
+    return await _ensureDatabaseAndExecute((db) async {
+      return await db.getAll();
+    });
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -218,15 +187,14 @@ class LocalDB {
   static Future<Result<LocalDbModel?, ErrorLocalDb>> GetById(
     String id,
   ) async {
-    if (!_isValidId(id)) {
-      return Err(
-        ErrorLocalDb.validationError(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
-        ),
-      );
+    final validationError = _validateInput(id, null);
+    if (validationError != null) {
+      return Err(validationError.errorOrNull!);
     }
 
-    return await _platformDatabase.getById(id);
+    return await _ensureDatabaseAndExecute((db) async {
+      return await db.getById(id);
+    });
   }
 
   /// Updates an existing record in the database.
@@ -243,24 +211,31 @@ class LocalDB {
     String key,
     Map<String, dynamic> data,
   ) async {
-    final verifyId = await GetById(key);
+    final validationError = _validateInput(key, data);
+    if (validationError != null) return validationError;
 
-    if (verifyId.isErr) {
-      return Err(
-        verifyId.errorOrNull ??
-            ErrorLocalDb.notFound(
-              "Record '$key' not found. Use POST method to create new records.",
-            ),
+    return await _ensureDatabaseAndExecute((db) async {
+      // Check if record exists first
+      final existingRecord = await db.getById(key);
+      if (existingRecord.isErr) {
+        return Err(existingRecord.errorOrNull!);
+      }
+      
+      if (existingRecord.data == null) {
+        return Err(ErrorLocalDb.notFound(
+          "Record '$key' not found. Use POST method to create new records.",
+        ));
+      }
+
+      // Update the record
+      final model = LocalDbModel(
+        id: key,
+        data: data,
+        hash: DateTime.now().millisecondsSinceEpoch.toString(),
       );
-    }
 
-    final currentData = LocalDbModel(
-      id: key,
-      data: data,
-      hash: DateTime.now().millisecondsSinceEpoch.toString(),
-    );
-
-    return await _platformDatabase.put(currentData);
+      return await db.put(model);
+    });
   }
 
   /// Deletes a record by its unique identifier.
@@ -273,37 +248,46 @@ class LocalDB {
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
   static Future<Result<bool, ErrorLocalDb>> Delete(String id) async {
-    if (!_isValidId(id)) {
-      return Err(
-        ErrorLocalDb.serializationError(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
-        ),
-      );
+    final validationError = _validateInput(id, null);
+    if (validationError != null) {
+      return Err(validationError.errorOrNull!);
     }
 
-    return await _platformDatabase.delete(id);
+    return await _ensureDatabaseAndExecute((db) async {
+      return await db.delete(id);
+    });
   }
 
   /// Clear all data on the database.
   ///
   /// Returns:
-  /// - [Ok] with `true` if the record was successfully deleted
-  /// - [Err] with an error message if the key is invalid or deletion fails
+  /// - [Ok] with `true` if all data was successfully cleared
+  /// - [Err] with an error message if clearing fails
   // ignore: non_constant_identifier_names
   static Future<Result<bool, ErrorLocalDb>> ClearData() async {
-    return await _platformDatabase.cleanDatabase();
+    return await _ensureDatabaseAndExecute((db) async {
+      return await db.cleanDatabase();
+    });
   }
 
   /// Closes the database connection and frees all resources.
   /// This should be called during hot restart or app termination to prevent crashes.
   /// Works on both mobile/desktop (FFI) and web (IndexedDB) platforms.
   ///
-  /// Returns:
-  /// - [Ok] with `true` if the database was successfully closed
-  /// - [Err] with an error message if closing fails
+  /// Note: With the new on-demand connection model, this method is less critical
+  /// as connections are automatically closed after each operation.
   // ignore: non_constant_identifier_names
   static Future<void> CloseDatabase() async {
-    await _platformDatabase.closeDatabase();
+    if (_databaseName != null) {
+      final result = await DatabaseManager.execute(_databaseName!, (db) async {
+        await db.closeDatabase();
+        return Ok(true);
+      });
+      result.when(
+        ok: (_) => Log.i('Database closed successfully'),
+        err: (error) => Log.e('Failed to close database: $error'),
+      );
+    }
   }
 
   /// Validates if the current database connection is still valid.
@@ -315,7 +299,19 @@ class LocalDB {
   /// - `false` if the connection is invalid or null
   // ignore: non_constant_identifier_names
   static Future<bool> IsConnectionValid() async {
-    return await _platformDatabase.ensureConnectionValid();
+    if (_databaseName == null) return false;
+    
+    final result = await DatabaseManager.execute(_databaseName!, (db) async {
+      return Ok(await db.ensureConnectionValid());
+    });
+    
+    return result.when(
+      ok: (isValid) => isValid,
+      err: (error) {
+        Log.e('Connection validation failed: $error');
+        return false;
+      },
+    );
   }
 
   // ignore: non_constant_identifier_names
