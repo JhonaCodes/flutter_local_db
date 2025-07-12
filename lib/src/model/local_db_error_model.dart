@@ -242,4 +242,12 @@ class DetailsModel {
     };
     return DetailsModel(newJson['type'], newJson['message']);
   }
+
+  @override
+  String toString() => message;
+
+  Map<String, dynamic> toJson() => {
+    'type': type,
+    'message': message,
+  };
 }

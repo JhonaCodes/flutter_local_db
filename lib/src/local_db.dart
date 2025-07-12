@@ -56,18 +56,23 @@ class LocalDB {
     String key, 
     Map<String, dynamic>? data,
   ) {
+    Log.d('LocalDB._validateInput: Validating key: "$key", data keys: ${data?.keys.toList()}');
+    
     if (!_isValidId(key)) {
+      Log.e('LocalDB._validateInput: Invalid key format: "$key"');
       return Err(ErrorLocalDb.serializationError(
         "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
       ));
     }
 
     if (data != null && !_isValidMap(data)) {
+      Log.e('LocalDB._validateInput: Invalid data format, failed JSON serialization');
       return Err(ErrorLocalDb.serializationError(
         'The provided format data is invalid.\n$data',
       ));
     }
 
+    Log.d('LocalDB._validateInput: Validation successful');
     return null; // No validation errors
   }
 
@@ -132,18 +137,29 @@ class LocalDB {
     Map<String, dynamic> data, {
     String? lastUpdate,
   }) async {
+    Log.d('LocalDB.Post: Starting POST operation for key: $key');
+    
     // Early validation without database connection
     final validationError = _validateInput(key, data);
-    if (validationError != null) return validationError;
+    if (validationError != null) {
+      Log.e('LocalDB.Post: Validation failed for key $key: $validationError');
+      return validationError;
+    }
+    
+    Log.d('LocalDB.Post: Validation passed, data size: ${data.keys.length} fields');
     
     return await _ensureDatabaseAndExecute((db) async {
+      Log.d('LocalDB.Post: Checking if record already exists for key: $key');
+      
       // Check if record already exists
       final existingRecord = await db.getById(key);
       if (existingRecord.isErr) {
+        Log.e('LocalDB.Post: Error checking existing record for key $key: ${existingRecord.errorOrNull}');
         return Err(existingRecord.errorOrNull!);
       }
       
       if (existingRecord.data != null) {
+        Log.w('LocalDB.Post: Record with key $key already exists');
         return Err(ErrorLocalDb.databaseError(
           "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
         ));
@@ -156,7 +172,16 @@ class LocalDB {
         data: data,
       );
 
-      return await db.post(model);
+      Log.d('LocalDB.Post: Creating new record with model: ${model.id}');
+      final result = await db.post(model);
+      
+      if (result.isErr) {
+        Log.e('LocalDB.Post: Failed to create record for key $key: ${result.errorOrNull}');
+      } else {
+        Log.i('LocalDB.Post: Successfully created record for key $key');
+      }
+      
+      return result;
     });
   }
 
@@ -328,15 +353,18 @@ class LocalDB {
   /// `true` if the map can be successfully serialized, `false` otherwise
   static bool _isValidMap(dynamic map) {
     try {
+      Log.d('LocalDB._isValidMap: Attempting to serialize map with ${map is Map ? map.keys.length : 0} entries');
       String jsonString = jsonEncode(map);
       jsonDecode(jsonString);
+      Log.d('LocalDB._isValidMap: JSON serialization successful, length: ${jsonString.length}');
       return true;
     } catch (error, stackTrace) {
       Log.e(
-        'JSON validation error in _isValidMap',
+        'LocalDB._isValidMap: JSON validation failed - $error',
         error: error,
         stackTrace: stackTrace,
       );
+      Log.e('LocalDB._isValidMap: Problematic data: $map');
       return false;
     }
   }
