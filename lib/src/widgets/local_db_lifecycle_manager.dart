@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../core/log.dart';
 import '../local_db.dart';
+import '../utils/system_utils.dart';
 
 /// A widget that automatically manages LocalDB lifecycle during hot restart
 /// and app lifecycle changes. This helps prevent crashes during development.
@@ -31,8 +32,8 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // In debug mode, listen for hot restart
-    if (kDebugMode) {
+    // In debug mode, listen for hot restart (but not during tests)
+    if (kDebugMode && !SystemUtils.isTest) {
       _setupHotRestartListener();
     }
   }

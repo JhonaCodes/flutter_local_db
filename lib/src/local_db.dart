@@ -8,7 +8,9 @@ import 'package:flutter_local_db/src/service/local_db_result.dart';
 
 import 'core/log.dart';
 import 'database/database.dart';
+import 'database/database_mock.dart';
 import 'model/local_db_request_model.dart';
+import 'utils/system_utils.dart';
 
 /// A comprehensive local database management utility.
 ///
@@ -28,7 +30,10 @@ class LocalDB {
   static DatabaseInterface get _platformDatabase {
     if (_database != null) return _database!;
 
-    if (kIsWeb) {
+    // Use mock database in test environment to avoid FFI issues
+    if (SystemUtils.isTest) {
+      _database = DatabaseMock.instance;
+    } else if (kIsWeb) {
       _database = DatabaseWeb.instance;
     } else {
       _database = DatabaseNative.instance;
