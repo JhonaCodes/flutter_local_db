@@ -15,11 +15,19 @@ import 'database_interface.dart';
 /// Web database implementation using IndexedDB with dart:js_interop
 /// This implementation is used for web platforms
 class DatabaseWeb implements DatabaseInterface {
-
+  static DatabaseWeb? _instance;
+  
   web.IDBDatabase? _database;
   String? _databaseName;
   static const String _storeName = 'local_db_records';
   static const int _databaseVersion = 1;
+
+  DatabaseWeb._();
+
+  static DatabaseWeb get instance {
+    _instance ??= DatabaseWeb._();
+    return _instance!;
+  }
 
   @override
   bool get isSupported => true; // IndexedDB is always available in modern browsers

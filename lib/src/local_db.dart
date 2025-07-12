@@ -113,7 +113,7 @@ class LocalDB {
     required String binaryPath,
   }) async {
     if (!kIsWeb) {
-      final db = DatabaseNative();
+      final db = DatabaseNative.instance;
       await db.initForTesting(localDbName, binaryPath);
     }
   }

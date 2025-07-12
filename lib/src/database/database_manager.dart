@@ -37,7 +37,7 @@ class DatabaseManager {
       return DatabaseWeb();
     }
     
-    return DatabaseNative();
+    return DatabaseNative.instance;
   }
   
   /// Execute a database operation with persistent connection management
@@ -69,7 +69,7 @@ class DatabaseManager {
     
     try {
       // For native platforms, check if database file exists
-      final db = DatabaseNative();
+      final db = DatabaseNative.instance;
       return await db.ensureConnectionValid();
     } catch (e) {
       return false;

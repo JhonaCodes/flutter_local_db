@@ -100,25 +100,33 @@ typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 /// Native database implementation using FFI and Rust backend
 /// This implementation is used for mobile and desktop platforms
 class DatabaseNative implements DatabaseInterface {
-
+  static DatabaseNative? _instance;
+  
   Result<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance;
   String? _lastDatabaseName;
 
-  /// Functions registration (static to be shared across instances)
-  static Pointer<AppDbState> Function(Pointer<Utf8>)? _createDatabase;
-  static PointerStringFFICallBack? _post;
-  static PointerListFFICallBack? _get;
-  static PointerStringFFICallBack? _getById;
-  static PointerStringFFICallBack? _put;
-  static PointerBoolFFICallBack? _delete;
-  static PointerBoolFFICallBackDirect? _clearAllRecords;
-  static Pointer<Utf8> Function(Pointer<AppDbState>)? _closeDatabase;
-  static void Function(Pointer<Utf8>)? _freeCString;
-  static bool Function(Pointer<AppDbState>)? _isDatabaseValid;
-  static bool Function(Pointer<AppDbState>, int)? _validateInstanceGeneration;
-  static Pointer<Utf8> Function(Pointer<AppDbState>)? _pingDatabase;
-  static int Function()? _getCurrentGeneration;
+  DatabaseNative._();
+
+  static DatabaseNative get instance {
+    _instance ??= DatabaseNative._();
+    return _instance!;
+  }
+
+  /// Functions registration
+  Pointer<AppDbState> Function(Pointer<Utf8>)? _createDatabase;
+  PointerStringFFICallBack? _post;
+  PointerListFFICallBack? _get;
+  PointerStringFFICallBack? _getById;
+  PointerStringFFICallBack? _put;
+  PointerBoolFFICallBack? _delete;
+  PointerBoolFFICallBackDirect? _clearAllRecords;
+  Pointer<Utf8> Function(Pointer<AppDbState>)? _closeDatabase;
+  void Function(Pointer<Utf8>)? _freeCString;
+  bool Function(Pointer<AppDbState>)? _isDatabaseValid;
+  bool Function(Pointer<AppDbState>, int)? _validateInstanceGeneration;
+  Pointer<Utf8> Function(Pointer<AppDbState>)? _pingDatabase;
+  int Function()? _getCurrentGeneration;
 
   @override
   bool get isSupported => !Platform.isLinux && !Platform.isWindows;
@@ -151,7 +159,7 @@ class DatabaseNative implements DatabaseInterface {
     Log.i('Native database initialized successfully for testing');
   }
 
-  static void _resetFunctionPointers() {
+  void _resetFunctionPointers() {
     _createDatabase = null;
     _post = null;
     _get = null;
@@ -230,7 +238,7 @@ class DatabaseNative implements DatabaseInterface {
     return Err("Unsupported platform: ${Platform.operatingSystem}");
   }
 
-  static void _bindFunctions(DynamicLibrary lib) {
+  void _bindFunctions(DynamicLibrary lib) {
         _createDatabase = lib
             .lookupFunction<
               PointerAppDbStateCallBAck,
