@@ -11,7 +11,7 @@ import '../enum/ffi_functions.dart';
 import '../enum/ffi_native_lib_location.dart';
 import '../model/local_db_error_model.dart';
 import '../model/local_db_request_model.dart';
-import '../service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import 'database_interface.dart';
 
 /// opaque extension
@@ -97,7 +97,7 @@ class DatabaseNative implements DatabaseInterface {
 
   static final DatabaseNative instance = DatabaseNative._();
 
-  LocalDbResult<DynamicLibrary, String>? _lib;
+  Result<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance;
   String? _lastDatabaseName;
 
@@ -194,7 +194,7 @@ class DatabaseNative implements DatabaseInterface {
     }
   }
 
-  Future<LocalDbResult<DynamicLibrary, String>> _loadRustNativeLib() async {
+  Future<Result<DynamicLibrary, String>> _loadRustNativeLib() async {
     if (Platform.isAndroid) {
       return Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
     }
@@ -583,7 +583,7 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     LocalDbModel model,
   ) async {
     if (!await ensureConnectionValid()) {
@@ -628,7 +628,7 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -672,7 +672,7 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -722,7 +722,7 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     LocalDbModel model,
   ) async {
     if (!await ensureConnectionValid()) {
@@ -767,7 +767,7 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -802,7 +802,7 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }

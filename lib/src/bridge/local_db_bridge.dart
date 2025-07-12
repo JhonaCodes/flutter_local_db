@@ -12,11 +12,12 @@ import 'package:flutter_local_db/src/enum/ffi_native_lib_location.dart';
 import 'package:flutter_local_db/src/interface/local_db_request_impl.dart';
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/model/local_db_request_model.dart';
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+
 import 'package:path_provider/path_provider.dart';
 
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:result_controller/result_controller.dart';
 
 /// opaque extension
 final class AppDbState extends Opaque {}
@@ -36,7 +37,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   static final LocalDbBridge instance = LocalDbBridge._();
 
-  LocalDbResult<DynamicLibrary, String>? _lib;
+  Result<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
   String?
   _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
@@ -257,7 +258,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     LocalDbModel model,
   ) async {
     if (!(await ensureConnectionValid())) {
@@ -302,7 +303,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel, ErrorLocalDb>> getById(String id) async {
     if (!(await ensureConnectionValid())) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -344,7 +345,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     LocalDbModel model,
   ) async {
     if (!(await ensureConnectionValid())) {
@@ -386,7 +387,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     if (!(await ensureConnectionValid())) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -410,7 +411,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     if (!(await ensureConnectionValid())) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -442,7 +443,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     // Verificar la conexión antes de proceder
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
@@ -493,7 +494,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
 }
 
 sealed class CurrentPlatform {
-  static Future<LocalDbResult<DynamicLibrary, String>>
+  static Future<Result<DynamicLibrary, String>>
   loadRustNativeLib() async {
     // Web platform doesn't use FFI, this should not be called on web
     if (kIsWeb) {

@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
+
 
 void main() {
-  group('LocalDbResult System Tests - 100% Pure Dart', () {
+  group('Result System Tests - 100% Pure Dart', () {
     group('Ok Construction and Basic Properties', () {
       test('Should create Ok result with data', () {
         final result = Ok<String, Exception>('success');
@@ -418,14 +419,14 @@ class User {
   String toString() => 'User($name, $age)';
 }
 
-LocalDbResult<String, String> validateUser(String email) {
+Result<String, String> validateUser(String email) {
   if (email.contains('@') && email.contains('.')) {
     return Ok(email);
   }
   return Err('Invalid email');
 }
 
-LocalDbResult<String, String> fetchUserData(String email) {
+Result<String, String> fetchUserData(String email) {
   // Simular fetch de datos del usuario
   if (email == 'john@email.com') {
     return Ok(email);

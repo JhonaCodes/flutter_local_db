@@ -17,6 +17,3 @@ export 'src/model/local_db_request_model.dart';
 
 /// Exports the error model
 export 'src/model/local_db_error_model.dart';
-
-/// Exports the result type for handling operations
-export 'src/service/local_db_result.dart';

@@ -1,6 +1,6 @@
 import '../model/local_db_error_model.dart';
 import '../model/local_db_request_model.dart';
-import '../service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import 'database_interface.dart';
 
 /// Stub implementation for non-web platforms
@@ -28,7 +28,7 @@ class DatabaseWeb implements DatabaseInterface {
   Future<void> closeDatabase() async {}
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     LocalDbModel model,
   ) async {
     return Err(
@@ -37,21 +37,21 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
     return Err(
       ErrorLocalDb.databaseError('Web database not supported on this platform'),
     );
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     return Err(
       ErrorLocalDb.databaseError('Web database not supported on this platform'),
     );
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     LocalDbModel model,
   ) async {
     return Err(
@@ -60,14 +60,14 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     return Err(
       ErrorLocalDb.databaseError('Web database not supported on this platform'),
     );
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     return Err(
       ErrorLocalDb.databaseError('Web database not supported on this platform'),
     );

@@ -4,21 +4,21 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_db/src/database/database_native.dart';
 import 'package:flutter_local_db/src/database/database_web_import.dart';
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+
 
 import 'core/log.dart';
 import 'database/database.dart';
 import 'database/database_mock.dart';
 import 'model/local_db_request_model.dart';
 import 'utils/system_utils.dart';
-
+import 'package:result_controller/result_controller.dart';
 /// A comprehensive local database management utility.
 ///
 /// Provides static methods for performing CRUD (Create, Read, Update, Delete)
 /// operations on a local database with robust validation and error handling.
 ///
 /// Uses a bridge pattern to abstract database interactions and provides
-/// type-safe results using [LocalDbResult].
+/// type-safe results using [Result].
 ///
 /// Automatically detects platform and uses:
 /// - FFI Rust implementation for mobile/desktop platforms
@@ -115,7 +115,7 @@ class LocalDB {
   ///   - The data cannot be serialized
   ///   - A record with the same key already exists
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Post(
+  static Future<Result<LocalDbModel, ErrorLocalDb>> Post(
     String key,
     Map<String, dynamic> data, {
     String? lastUpdate,
@@ -161,7 +161,7 @@ class LocalDB {
   /// - [Ok] with a list of [LocalDbModel]
   ///   - Returns an empty list if no records are found
   /// - [Err] with an error message if the operation fails
-  static Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>>
+  static Future<Result<List<LocalDbModel>, ErrorLocalDb>>
   // ignore: non_constant_identifier_names
   GetAll() async {
     return await _platformDatabase.getAll();
@@ -177,7 +177,7 @@ class LocalDB {
   /// - [Ok] with `null` if no record matches the ID
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> GetById(
+  static Future<Result<LocalDbModel?, ErrorLocalDb>> GetById(
     String id,
   ) async {
     if (!_isValidId(id)) {
@@ -201,7 +201,7 @@ class LocalDB {
   /// - [Ok] with the updated [LocalDbModel] if successful
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Put(
+  static Future<Result<LocalDbModel, ErrorLocalDb>> Put(
     String key,
     Map<String, dynamic> data,
   ) async {
@@ -234,7 +234,7 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<bool, ErrorLocalDb>> Delete(String id) async {
+  static Future<Result<bool, ErrorLocalDb>> Delete(String id) async {
     if (!_isValidId(id)) {
       return Err(
         ErrorLocalDb.serializationError(
@@ -252,7 +252,7 @@ class LocalDB {
   /// - [Ok] with `true` if the record was successfully deleted
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
-  static Future<LocalDbResult<bool, ErrorLocalDb>> ClearData() async {
+  static Future<Result<bool, ErrorLocalDb>> ClearData() async {
     return await _platformDatabase.cleanDatabase();
   }
 
@@ -281,7 +281,7 @@ class LocalDB {
   }
 
   // ignore: non_constant_identifier_names
-  // static Future<LocalDbResult<bool, String>> ResetDatabase() async {
+  // static Future<Result<bool, String>> ResetDatabase() async {
   //   return await LocalDbBridge.instance.clear();
   // }
 

@@ -4,7 +4,7 @@ import 'dart:convert';
 import '../core/log.dart';
 import '../model/local_db_error_model.dart';
 import '../model/local_db_request_model.dart';
-import '../service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import 'database_interface.dart';
 
 /// Mock database implementation for testing purposes.
@@ -103,7 +103,7 @@ class DatabaseMock implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     LocalDbModel model,
   ) async {
     Log.d('Mock POST operation for ID: ${model.id}');
@@ -149,7 +149,7 @@ class DatabaseMock implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
     Log.d('Mock GET operation for ID: $id');
 
     await _simulateDelay();
@@ -182,7 +182,7 @@ class DatabaseMock implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     Log.d('Mock GET ALL operation');
 
     await _simulateDelay();
@@ -204,7 +204,7 @@ class DatabaseMock implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     LocalDbModel model,
   ) async {
     Log.d('Mock PUT operation for ID: ${model.id}');
@@ -248,7 +248,7 @@ class DatabaseMock implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     Log.d('Mock DELETE operation for ID: $id');
 
     await _simulateDelay();
@@ -280,7 +280,7 @@ class DatabaseMock implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     Log.d('Mock CLEAN DATABASE operation');
 
     await _simulateDelay();
@@ -357,7 +357,7 @@ class DatabaseMock implements DatabaseInterface {
     return random < (_errorRate * 100);
   }
 
-  LocalDbResult<T, ErrorLocalDb> _createError<T>(String message) {
+  Result<T, ErrorLocalDb> _createError<T>(String message) {
     Log.e('Mock database error: $message');
 
     final error = ErrorLocalDb(

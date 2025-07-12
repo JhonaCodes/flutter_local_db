@@ -6,7 +6,7 @@ import 'package:web/web.dart' as web;
 import 'package:flutter_local_db/src/interface/local_db_request_impl.dart';
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/model/local_db_request_model.dart';
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 
 /// Web implementation of LocalDB using native IndexedDB APIs
 /// This implementation provides the same interface as the FFI bridge
@@ -109,7 +109,7 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     LocalDbModel model,
   ) async {
     if (!await ensureConnectionValid()) {
@@ -158,7 +158,7 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -197,7 +197,7 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -236,7 +236,7 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     LocalDbModel model,
   ) async {
     if (!await ensureConnectionValid()) {
@@ -285,7 +285,7 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -322,7 +322,7 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }

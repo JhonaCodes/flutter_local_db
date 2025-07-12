@@ -7,7 +7,7 @@ import 'package:web/web.dart' as web;
 import '../core/log.dart';
 import '../model/local_db_error_model.dart';
 import '../model/local_db_request_model.dart';
-import '../service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import 'database_interface.dart';
 
 /// JavaScript interop types for IndexedDB using web package types
@@ -91,7 +91,7 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     LocalDbModel model,
   ) async {
     if (!await ensureConnectionValid()) {
@@ -134,7 +134,7 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -165,7 +165,7 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -200,7 +200,7 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     LocalDbModel model,
   ) async {
     if (!await ensureConnectionValid()) {
@@ -243,7 +243,7 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -279,7 +279,7 @@ class DatabaseWeb implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }

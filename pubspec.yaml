@@ -1,6 +1,6 @@
 name: flutter_local_db
 description: "A high-performance cross-platform local database for Flutter with unified API. Uses Rust+RedB for native platforms and IndexedDB for web."
-version: 0.6.0
+version: 0.7.1
 homepage: https://github.com/JhonaCodes/flutter_local_db
 repository: https://github.com/JhonaCodes/flutter_local_db.git
 
@@ -22,6 +22,7 @@ dependencies:
   ffi: ^2.1.3
   web: ^1.1.0
   logger: ^2.4.0
+  result_controller: ^1.2.0
 
 dev_dependencies:
   flutter_test:

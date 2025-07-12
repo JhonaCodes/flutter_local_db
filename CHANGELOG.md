@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.6.0] - 2025-07-12
+## [0.7.1]
+- Update binary
+
+## [0.7.0]
+- Improve hot reload
+
+## [0.6.0]
 
 ### 🎉 Major Features
 
@@ -147,7 +153,7 @@
 #### Changed
 - **Architecture**: Multi-backend architecture with platform-optimized storage solutions
 - **Documentation**: Comprehensive documentation explaining technical decisions and platform differences
-- **API Exports**: Added missing exports for `LocalDbModel`, `ErrorLocalDb`, and `LocalDbResult` types
+- **API Exports**: Added missing exports for `LocalDbModel`, `ErrorLocalDb`, and `Result` types
 - **Example App**: Enhanced UI showing current platform and storage backend information
 
 #### Fixed
