@@ -19,5 +19,5 @@ enum RequestMethod {
 
   /// Special case of GET to retrieve a resource by ID
   /// Example: Get specific user by ID
-  geById
+  geById,
 }

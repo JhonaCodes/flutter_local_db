@@ -50,7 +50,7 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
         if (mounted) {
           bool recoveryNeeded = false;
           String? recoveryReason;
-          
+
           try {
             // Strategy 1: Check basic connection validity
             final isValid = await LocalDB.IsConnectionValid();
@@ -58,7 +58,7 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
               recoveryNeeded = true;
               recoveryReason = 'Basic connection validation failed';
             }
-            
+
             // Strategy 2: Try a simple ping operation to detect stale connections
             if (!recoveryNeeded) {
               try {
@@ -66,14 +66,15 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
                 // Even if the record doesn't exist, the operation should complete without FFI errors
                 if (testResult.isErr) {
                   final error = testResult.errorOrNull;
-                  if (error != null && error.toString().contains('Invalid or stale')) {
+                  if (error != null &&
+                      error.toString().contains('Invalid or stale')) {
                     recoveryNeeded = true;
                     recoveryReason = 'Health check detected stale connection';
                   }
                 }
               } catch (e) {
                 // FFI errors often indicate hot restart issues
-                if (e.toString().contains('pointer') || 
+                if (e.toString().contains('pointer') ||
                     e.toString().contains('invalid') ||
                     e.toString().contains('null')) {
                   recoveryNeeded = true;
@@ -81,11 +82,11 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
                 }
               }
             }
-            
+
             if (recoveryNeeded) {
               Log.w('LocalDB: Hot restart detected - $recoveryReason');
               widget.onHotRestart?.call();
-              
+
               await _performIntelligentRecovery();
             }
           } catch (e) {
@@ -97,21 +98,22 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
           // Continue checking if still mounted
           // Use adaptive intervals: shorter after recovery, longer during stable periods
           if (mounted) {
-            final delay = recoveryNeeded ? 
-                const Duration(seconds: 1) :   // Quick recheck after recovery
-                const Duration(seconds: 3);    // Normal interval
+            final delay = recoveryNeeded
+                ? const Duration(seconds: 1)
+                : // Quick recheck after recovery
+                  const Duration(seconds: 3); // Normal interval
             Future.delayed(delay, _setupHotRestartListener);
           }
         }
       });
     }
   }
-  
+
   Future<void> _performIntelligentRecovery() async {
     try {
       // Strategy 1: Try to recover with the same database name
       Log.i('LocalDB: Attempting intelligent recovery...');
-      
+
       // First, try a gentle recovery (same DB name)
       try {
         await LocalDB.init(localDbName: 'app_database.db');
@@ -120,7 +122,7 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
       } catch (e) {
         Log.w('LocalDB: Original database recovery failed, trying fallback');
       }
-      
+
       // Strategy 2: Try with a hot restart specific name
       try {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -128,9 +130,11 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
         Log.i('LocalDB: Successfully recovered with timestamped database');
         return;
       } catch (e) {
-        Log.w('LocalDB: Timestamped database recovery failed, trying minimal fallback');
+        Log.w(
+          'LocalDB: Timestamped database recovery failed, trying minimal fallback',
+        );
       }
-      
+
       // Strategy 3: Last resort - minimal fallback
       try {
         await LocalDB.init(localDbName: 'fallback.db');
@@ -186,10 +190,12 @@ ERROR DETAILS: $error
 === End Hot Restart Error Report ===
     
     ''');
-    
+
     // Also provide a more concise warning for production scenarios
     if (!kDebugMode) {
-      Log.w('LocalDB: Database connection lost. App restart may be required for full functionality.');
+      Log.w(
+        'LocalDB: Database connection lost. App restart may be required for full functionality.',
+      );
     }
   }
 
@@ -207,7 +213,9 @@ ERROR DETAILS: $error
         break;
 
       case AppLifecycleState.resumed:
-        Log.i('LocalDB: App resumed, connection will be re-established on next operation');
+        Log.i(
+          'LocalDB: App resumed, connection will be re-established on next operation',
+        );
         widget.onAppResumed?.call();
         break;
 

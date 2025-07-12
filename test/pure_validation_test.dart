@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_local_db/src/local_db.dart';
 
 // Para acceder a métodos privados, vamos a crear versiones públicas equivalentes para testing
 class ValidationHelper {
@@ -26,7 +25,8 @@ class ValidationHelper {
     try {
       final jsonString = jsonEncode(data);
       // Check if the JSON string is reasonable size (not too large)
-      if (jsonString.length > 10 * 1024 * 1024) { // 10MB limit
+      if (jsonString.length > 10 * 1024 * 1024) {
+        // 10MB limit
         return false;
       }
       // Verify it can be decoded back
@@ -49,13 +49,13 @@ class ValidationHelper {
 
   static void _checkCircularReferences(dynamic obj, Set<Object> visited) {
     if (obj == null) return;
-    
+
     if (obj is Map || obj is List) {
       if (visited.contains(obj)) {
         throw Exception('Circular reference detected');
       }
       visited.add(obj);
-      
+
       if (obj is Map) {
         for (var value in obj.values) {
           _checkCircularReferences(value, visited);
@@ -65,7 +65,7 @@ class ValidationHelper {
           _checkCircularReferences(item, visited);
         }
       }
-      
+
       visited.remove(obj);
     }
   }
@@ -73,7 +73,7 @@ class ValidationHelper {
   /// Sanitizes input data for safe storage
   static Map<String, dynamic> sanitizeData(Map<String, dynamic> data) {
     final sanitized = <String, dynamic>{};
-    
+
     for (final entry in data.entries) {
       final key = _sanitizeKey(entry.key);
       final value = _sanitizeValue(entry.value);
@@ -81,7 +81,7 @@ class ValidationHelper {
         sanitized[key] = value;
       }
     }
-    
+
     return sanitized;
   }
 
@@ -124,8 +124,11 @@ void main() {
         ];
 
         for (final id in validIds) {
-          expect(ValidationHelper.isValidId(id), true, 
-              reason: 'ID "$id" should be valid');
+          expect(
+            ValidationHelper.isValidId(id),
+            true,
+            reason: 'ID "$id" should be valid',
+          );
         }
       });
 
@@ -160,8 +163,11 @@ void main() {
         ];
 
         for (final id in invalidIds) {
-          expect(ValidationHelper.isValidId(id), false, 
-              reason: 'ID "$id" should be invalid');
+          expect(
+            ValidationHelper.isValidId(id),
+            false,
+            reason: 'ID "$id" should be invalid',
+          );
         }
       });
 
@@ -174,8 +180,11 @@ void main() {
         ];
 
         for (final id in unicodeIds) {
-          expect(ValidationHelper.isValidId(id), false, 
-              reason: 'Unicode ID "$id" should be invalid (ASCII only)');
+          expect(
+            ValidationHelper.isValidId(id),
+            false,
+            reason: 'Unicode ID "$id" should be invalid (ASCII only)',
+          );
         }
       });
 
@@ -198,8 +207,11 @@ void main() {
         ];
 
         for (final map in validMaps) {
-          expect(ValidationHelper.isValidMap(map), true, 
-              reason: 'Map $map should be valid');
+          expect(
+            ValidationHelper.isValidMap(map),
+            true,
+            reason: 'Map $map should be valid',
+          );
         }
       });
 
@@ -209,21 +221,18 @@ void main() {
             'profile': {
               'name': 'John Doe',
               'age': 30,
-              'settings': {
-                'theme': 'dark',
-                'notifications': true
-              }
+              'settings': {'theme': 'dark', 'notifications': true},
             },
             'contacts': [
               {'type': 'email', 'value': 'john@example.com'},
-              {'type': 'phone', 'value': '+1234567890'}
-            ]
+              {'type': 'phone', 'value': '+1234567890'},
+            ],
           },
           'metadata': {
             'created': '2024-01-01T00:00:00Z',
             'version': 1.0,
-            'tags': ['user', 'active', 'verified']
-          }
+            'tags': ['user', 'active', 'verified'],
+          },
         };
 
         expect(ValidationHelper.isValidMap(complexMap), true);
@@ -237,7 +246,7 @@ void main() {
           'nested_arrays': [
             [1, 2, 3],
             ['a', 'b', 'c'],
-            [true, false]
+            [true, false],
           ],
           'empty_array': <dynamic>[],
         };
@@ -347,15 +356,17 @@ void main() {
             'name': 'John',
             'friends': [
               {'name': 'Alice'},
-              {'name': 'Bob'}
-            ]
+              {'name': 'Bob'},
+            ],
           },
           'posts': [
             {
               'title': 'First Post',
-              'author': {'name': 'John'} // Same structure but different instance
-            }
-          ]
+              'author': {
+                'name': 'John',
+              }, // Same structure but different instance
+            },
+          ],
         };
 
         expect(ValidationHelper.hasNoCircularReferences(validStructure), true);
@@ -378,7 +389,10 @@ void main() {
         expect(sanitized['with_null'], 'textwith null');
         expect(sanitized['with_control'], 'textcontrol chars');
         expect(sanitized['with_tabs'], 'text\twith\ttabs'); // Tabs preserved
-        expect(sanitized['with_newlines'], 'line1\nline2\rline3'); // Newlines preserved
+        expect(
+          sanitized['with_newlines'],
+          'line1\nline2\rline3',
+        ); // Newlines preserved
       });
 
       test('Should sanitize keys with control characters', () {
@@ -406,10 +420,10 @@ void main() {
               'bio': 'Hello\x01World',
               'settings': [
                 {'key\x02': 'value\x03'},
-                'clean_string'
-              ]
-            }
-          }
+                'clean_string',
+              ],
+            },
+          },
         };
 
         final sanitized = ValidationHelper.sanitizeData(nestedDirtyData);
@@ -448,8 +462,11 @@ void main() {
         };
 
         for (final entry in edgeCases.entries) {
-          expect(ValidationHelper.isValidMap({entry.key: entry.value}), true,
-              reason: 'Should handle string case: ${entry.key}');
+          expect(
+            ValidationHelper.isValidMap({entry.key: entry.value}),
+            true,
+            reason: 'Should handle string case: ${entry.key}',
+          );
         }
       });
 
@@ -491,7 +508,7 @@ void main() {
     group('Performance and Stress Tests', () {
       test('Should validate large valid structures efficiently', () {
         final startTime = DateTime.now();
-        
+
         // Create a large but valid structure
         final largeData = <String, dynamic>{};
         for (int i = 0; i < 1000; i++) {
@@ -504,40 +521,46 @@ void main() {
               'settings': {
                 'theme': i % 2 == 0 ? 'dark' : 'light',
                 'notifications': i % 3 == 0,
-              }
-            }
+              },
+            },
           };
         }
-        
+
         final isValid = ValidationHelper.isValidMap(largeData);
         final endTime = DateTime.now();
         final duration = endTime.difference(startTime);
-        
+
         expect(isValid, true);
-        expect(duration.inMilliseconds, lessThan(5000), // Should complete in under 5 seconds
-            reason: 'Validation took too long: ${duration.inMilliseconds}ms');
+        expect(
+          duration.inMilliseconds,
+          lessThan(5000), // Should complete in under 5 seconds
+          reason: 'Validation took too long: ${duration.inMilliseconds}ms',
+        );
       });
 
       test('Should handle repeated validation calls efficiently', () {
         final testData = {
           'repeated_test': 'value',
           'nested': {
-            'data': [1, 2, 3, 4, 5]
-          }
+            'data': [1, 2, 3, 4, 5],
+          },
         };
-        
+
         final startTime = DateTime.now();
-        
+
         // Validate the same data 1000 times
         for (int i = 0; i < 1000; i++) {
           expect(ValidationHelper.isValidMap(testData), true);
         }
-        
+
         final endTime = DateTime.now();
         final duration = endTime.difference(startTime);
-        
-        expect(duration.inMilliseconds, lessThan(1000), // Should complete in under 1 second
-            reason: 'Repeated validation too slow: ${duration.inMilliseconds}ms');
+
+        expect(
+          duration.inMilliseconds,
+          lessThan(1000), // Should complete in under 1 second
+          reason: 'Repeated validation too slow: ${duration.inMilliseconds}ms',
+        );
       });
     });
   });

@@ -58,7 +58,7 @@ class LocalDB {
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         Log.i('LocalDB initialization attempt $attempt');
-        
+
         // Close any existing connections before reinitializing (hot restart safety)
         if (_database != null) {
           try {
@@ -67,32 +67,41 @@ class LocalDB {
             Log.w('Warning: Error closing existing database during init: $e');
           }
         }
-        
+
         // Reset the database instance to ensure clean state
         _resetDatabaseInstance();
-        
+
         // For hot restart scenarios, modify database name slightly on retry
         String actualDbName = localDbName;
         if (attempt > 1 && !kIsWeb) {
           // Only modify for native platforms, not web
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           final extension = localDbName.endsWith('.db') ? '.db' : '';
-          final baseName = extension.isEmpty ? localDbName : localDbName.substring(0, localDbName.length - 3);
+          final baseName = extension.isEmpty
+              ? localDbName
+              : localDbName.substring(0, localDbName.length - 3);
           actualDbName = '${baseName}_hr${timestamp}$extension';
-          Log.i('Hot restart retry $attempt using database name: $actualDbName');
+          Log.i(
+            'Hot restart retry $attempt using database name: $actualDbName',
+          );
         }
-        
+
         // Initialize with fresh instance
         await _platformDatabase.initialize(actualDbName);
-        Log.i('LocalDB initialized successfully for platform: ${_platformDatabase.platformName}');
+        Log.i(
+          'LocalDB initialized successfully for platform: ${_platformDatabase.platformName}',
+        );
         return; // Success!
-        
       } catch (e, stackTrace) {
         Log.e('Error initializing LocalDB attempt $attempt: $e', error: e);
-        
+
         if (attempt == 3) {
           // Final attempt failed
-          Log.e('All initialization attempts failed', error: 'All attempts failed', stackTrace: stackTrace);
+          Log.e(
+            'All initialization attempts failed',
+            error: 'All attempts failed',
+            stackTrace: stackTrace,
+          );
           _resetDatabaseInstance();
           rethrow;
         } else {
@@ -105,8 +114,10 @@ class LocalDB {
 
   /// Avoid to use on production.
   ///
-  static Future<void> initForTesting(
-      {required String localDbName, required String binaryPath}) async {
+  static Future<void> initForTesting({
+    required String localDbName,
+    required String binaryPath,
+  }) async {
     if (!kIsWeb) {
       await (DatabaseNative.instance).initForTesting(localDbName, binaryPath);
     }
@@ -131,23 +142,34 @@ class LocalDB {
   ///   - A record with the same key already exists
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Post(
-      String key, Map<String, dynamic> data,
-      {String? lastUpdate}) async {
+    String key,
+    Map<String, dynamic> data, {
+    String? lastUpdate,
+  }) async {
     if (!_isValidId(key)) {
-      return Err(ErrorLocalDb.serializationError(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
+      return Err(
+        ErrorLocalDb.serializationError(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+        ),
+      );
     }
 
     if (!_isValidMap(data)) {
-      return Err(ErrorLocalDb.serializationError(
-          'The provided format data is invalid.\n$data'));
+      return Err(
+        ErrorLocalDb.serializationError(
+          'The provided format data is invalid.\n$data',
+        ),
+      );
     }
 
     final verifyId = await GetById(key);
 
     if (verifyId.isOk) {
-      return Err(ErrorLocalDb.databaseError(
-          "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records."));
+      return Err(
+        ErrorLocalDb.databaseError(
+          "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
+        ),
+      );
     }
 
     final model = LocalDbModel(
@@ -166,8 +188,8 @@ class LocalDB {
   ///   - Returns an empty list if no records are found
   /// - [Err] with an error message if the operation fails
   static Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>>
-      // ignore: non_constant_identifier_names
-      GetAll() async {
+  // ignore: non_constant_identifier_names
+  GetAll() async {
     return await _platformDatabase.getAll();
   }
 
@@ -182,10 +204,14 @@ class LocalDB {
   /// - [Err] with an error message if the key is invalid
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> GetById(
-      String id) async {
+    String id,
+  ) async {
     if (!_isValidId(id)) {
-      return Err(ErrorLocalDb.validationError(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
+      return Err(
+        ErrorLocalDb.validationError(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+        ),
+      );
     }
 
     return await _platformDatabase.getById(id);
@@ -202,19 +228,25 @@ class LocalDB {
   /// - [Err] with an error message if the record does not exist
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> Put(
-      String key, Map<String, dynamic> data) async {
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     final verifyId = await GetById(key);
 
     if (verifyId.isErr) {
-      return Err(verifyId.errorOrNull ??
-          ErrorLocalDb.notFound(
-              "Record '$key' not found. Use POST method to create new records."));
+      return Err(
+        verifyId.errorOrNull ??
+            ErrorLocalDb.notFound(
+              "Record '$key' not found. Use POST method to create new records.",
+            ),
+      );
     }
 
     final currentData = LocalDbModel(
-        id: key,
-        data: data,
-        hash: DateTime.now().millisecondsSinceEpoch.toString());
+      id: key,
+      data: data,
+      hash: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
 
     return await _platformDatabase.put(currentData);
   }
@@ -230,8 +262,11 @@ class LocalDB {
   // ignore: non_constant_identifier_names
   static Future<LocalDbResult<bool, ErrorLocalDb>> Delete(String id) async {
     if (!_isValidId(id)) {
-      return Err(ErrorLocalDb.serializationError(
-          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_)."));
+      return Err(
+        ErrorLocalDb.serializationError(
+          "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+        ),
+      );
     }
 
     return await _platformDatabase.delete(id);
@@ -289,7 +324,11 @@ class LocalDB {
       jsonDecode(jsonString);
       return true;
     } catch (error, stackTrace) {
-      Log.e('JSON validation error in _isValidMap', error: error, stackTrace: stackTrace);
+      Log.e(
+        'JSON validation error in _isValidMap',
+        error: error,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }

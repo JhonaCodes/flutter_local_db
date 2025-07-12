@@ -25,8 +25,7 @@ class DatabaseWeb implements DatabaseInterface {
   static const int _databaseVersion = 1;
 
   @override
-  bool get isSupported =>
-      true; // IndexedDB is always available in modern browsers
+  bool get isSupported => true; // IndexedDB is always available in modern browsers
 
   @override
   String get platformName => 'web';
@@ -93,7 +92,8 @@ class DatabaseWeb implements DatabaseInterface {
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -107,8 +107,11 @@ class DatabaseWeb implements DatabaseInterface {
       final existing = await _completeRequest(existingRequest);
 
       if (existing != null) {
-        return Err(ErrorLocalDb.databaseError(
-            "Cannot create new record: ID '${model.id}' already exists. Use PUT method to update existing records."));
+        return Err(
+          ErrorLocalDb.databaseError(
+            "Cannot create new record: ID '${model.id}' already exists. Use PUT method to update existing records.",
+          ),
+        );
       }
 
       // Create the record
@@ -120,8 +123,13 @@ class DatabaseWeb implements DatabaseInterface {
       return Ok(model);
     } catch (e, stackTrace) {
       Log.e('Error in post operation', error: e, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -146,8 +154,13 @@ class DatabaseWeb implements DatabaseInterface {
       return Ok(model);
     } catch (e, stackTrace) {
       Log.e('Error in getById operation', error: e, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -176,14 +189,20 @@ class DatabaseWeb implements DatabaseInterface {
       return Ok(models);
     } catch (e, stackTrace) {
       Log.e('Error in getAll operation', error: e, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -197,8 +216,11 @@ class DatabaseWeb implements DatabaseInterface {
       final existing = await _completeRequest(existingRequest);
 
       if (existing == null) {
-        return Err(ErrorLocalDb.notFound(
-            "Record '${model.id}' not found. Use POST method to create new records."));
+        return Err(
+          ErrorLocalDb.notFound(
+            "Record '${model.id}' not found. Use POST method to create new records.",
+          ),
+        );
       }
 
       // Update the record
@@ -210,8 +232,13 @@ class DatabaseWeb implements DatabaseInterface {
       return Ok(model);
     } catch (e, stackTrace) {
       Log.e('Error in put operation', error: e, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -241,8 +268,13 @@ class DatabaseWeb implements DatabaseInterface {
       return Ok(true);
     } catch (e, stackTrace) {
       Log.e('Error in delete operation', error: e, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -262,9 +294,18 @@ class DatabaseWeb implements DatabaseInterface {
       Log.i('Database cleared successfully');
       return Ok(true);
     } catch (e, stackTrace) {
-      Log.e('Error in cleanDatabase operation', error: e, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      Log.e(
+        'Error in cleanDatabase operation',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -278,8 +319,9 @@ class DatabaseWeb implements DatabaseInterface {
 
     request.onerror = ((JSObject event) {
       final error = request.error;
-      completer
-          .completeError(Exception('IndexedDB request failed: ${error?.name}'));
+      completer.completeError(
+        Exception('IndexedDB request failed: ${error?.name}'),
+      );
     }).toJS;
 
     return completer.future;
@@ -295,7 +337,8 @@ class DatabaseWeb implements DatabaseInterface {
 
     request.onerror = ((JSObject event) {
       completer.completeError(
-          Exception('Cursor request failed: ${request.error?.name}'));
+        Exception('Cursor request failed: ${request.error?.name}'),
+      );
     }).toJS;
 
     web.IDBCursor? cursor = await completer.future;
@@ -335,10 +378,6 @@ class DatabaseWeb implements DatabaseInterface {
     final dataJson = obj['data'] as String;
     final data = Map<String, dynamic>.from(jsonDecode(dataJson));
 
-    return LocalDbModel(
-      id: id,
-      hash: hash,
-      data: data,
-    );
+    return LocalDbModel(id: id, hash: hash, data: data);
   }
 }

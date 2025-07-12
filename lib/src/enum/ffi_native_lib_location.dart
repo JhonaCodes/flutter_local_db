@@ -33,7 +33,9 @@ enum FFiNativeLibLocation {
   Future<String> toMacosArchPath() async {
     final result = await Process.run('uname', ['-m']);
     result.stdout.toString().trim();
-    return lib.replaceAll('liboffline_first_core',
-        'liboffline_first_core_${result.stdout.toString().trim()}');
+    return lib.replaceAll(
+      'liboffline_first_core',
+      'liboffline_first_core_${result.stdout.toString().trim()}',
+    );
   }
 }

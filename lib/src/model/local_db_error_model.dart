@@ -10,7 +10,7 @@ enum ErrorType {
   notFound,
   validationError,
   badRequest,
-  unknown
+  unknown,
 }
 
 /// Modelo para representar errores de la aplicación.
@@ -40,8 +40,11 @@ class ErrorLocalDb {
   });
 
   /// Crea un error de tipo DatabaseError
-  factory ErrorLocalDb.databaseError(String message,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.databaseError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.databaseError,
       detailsResult: DetailsModel.fromJson(message, 'DatabaseError'),
@@ -51,8 +54,11 @@ class ErrorLocalDb {
   }
 
   /// Crea un error de tipo SerializationError
-  factory ErrorLocalDb.serializationError(String message,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.serializationError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.serializationError,
       detailsResult: DetailsModel.fromJson(message, 'SerializationError'),
@@ -62,8 +68,11 @@ class ErrorLocalDb {
   }
 
   /// Crea un error de tipo NotFound
-  factory ErrorLocalDb.notFound(String message,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.notFound(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.notFound,
       detailsResult: DetailsModel.fromJson(message, 'NotFound'),
@@ -73,8 +82,11 @@ class ErrorLocalDb {
   }
 
   /// Crea un error de tipo ValidationError
-  factory ErrorLocalDb.validationError(String message,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.validationError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.validationError,
       detailsResult: DetailsModel.fromJson(message, 'ValidationError'),
@@ -84,8 +96,11 @@ class ErrorLocalDb {
   }
 
   /// Crea un error de tipo BadRequest
-  factory ErrorLocalDb.badRequest(String message,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.badRequest(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.badRequest,
       detailsResult: DetailsModel.fromJson(message, 'BadRequest'),
@@ -95,8 +110,11 @@ class ErrorLocalDb {
   }
 
   /// Crea un error de tipo desconocido
-  factory ErrorLocalDb.unknown(String message,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.unknown(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.unknown,
       detailsResult: DetailsModel.fromJson(message, 'Unknown'),
@@ -107,8 +125,11 @@ class ErrorLocalDb {
 
   /// Crea un modelo de error desde una cadena con formato de error Rust
   /// Por ejemplo: "NotFound: No model found with id: current-fasting-plan"
-  factory ErrorLocalDb.fromRustError(String rustErrorString,
-      {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.fromRustError(
+    String rustErrorString, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     // Intentar parsear el mensaje de error
     final colonIndex = rustErrorString.indexOf(':');
     if (colonIndex == -1) {
@@ -124,20 +145,35 @@ class ErrorLocalDb {
 
     switch (errorType) {
       case 'DatabaseError':
-        return ErrorLocalDb.databaseError(errorMessage,
-            originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.databaseError(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'SerializationError':
-        return ErrorLocalDb.serializationError(errorMessage,
-            originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.serializationError(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'NotFound':
-        return ErrorLocalDb.notFound(errorMessage,
-            originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.notFound(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'ValidationError':
-        return ErrorLocalDb.validationError(errorMessage,
-            originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.validationError(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'BadRequest':
-        return ErrorLocalDb.badRequest(errorMessage,
-            originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.badRequest(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       default:
         return ErrorLocalDb.unknown(
           rustErrorString,
@@ -149,11 +185,11 @@ class ErrorLocalDb {
 
   /// Convierte el modelo de error a un mapa JSON.
   Map<String, dynamic> toJson() => {
-        'type': type.toString().split('.').last,
-        'message': detailsResult,
-        'originalError': originalError?.toString(),
-        'stackTrace': stackTrace?.toString(),
-      };
+    'type': type.toString().split('.').last,
+    'message': detailsResult,
+    'originalError': originalError?.toString(),
+    'stackTrace': stackTrace?.toString(),
+  };
 
   /// Proporciona una representación en cadena del modelo de error.
   @override
@@ -194,7 +230,7 @@ class DetailsModel {
     if (isString) {
       response = {
         'type': type ?? 'Unknown',
-        'message': jsonDecode(jsonEncode(jsonString))
+        'message': jsonDecode(jsonEncode(jsonString)),
       };
     } else {
       response = jsonDecode(jsonString);
@@ -202,7 +238,7 @@ class DetailsModel {
 
     Map<String, dynamic> newJson = {
       "type": response.keys.first,
-      "message": response.values.first
+      "message": response.values.first,
     };
     return DetailsModel(newJson['type'], newJson['message']);
   }

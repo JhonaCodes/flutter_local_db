@@ -23,17 +23,17 @@ class DatabaseConnection {
   final int generation;
   DateTime lastUsed;
   bool isValid;
-  
+
   DatabaseConnection({
     required this.pointer,
     required this.generation,
     required this.isValid,
   }) : lastUsed = DateTime.now();
-  
+
   void updateLastUsed() {
     lastUsed = DateTime.now();
   }
-  
+
   bool get isStale {
     return DateTime.now().difference(lastUsed).inMinutes > 5;
   }
@@ -43,7 +43,7 @@ class DatabaseConnection {
 class ConnectionPool {
   static final Map<String, DatabaseConnection> _connections = {};
   static int _currentGeneration = 1;
-  
+
   static DatabaseConnection? getConnection(String dbName) {
     final connection = _connections[dbName];
     if (connection != null && connection.isValid && !connection.isStale) {
@@ -52,40 +52,42 @@ class ConnectionPool {
     }
     return null;
   }
-  
+
   static void storeConnection(String dbName, DatabaseConnection connection) {
     _connections[dbName] = connection;
   }
-  
+
   static void invalidateConnection(String dbName) {
     final connection = _connections[dbName];
     if (connection != null) {
       connection.isValid = false;
     }
   }
-  
+
   static void removeConnection(String dbName) {
     _connections.remove(dbName);
   }
-  
+
   static void cleanupStaleConnections() {
-    _connections.removeWhere((key, connection) => !connection.isValid || connection.isStale);
+    _connections.removeWhere(
+      (key, connection) => !connection.isValid || connection.isStale,
+    );
   }
-  
+
   static int get currentGeneration => _currentGeneration;
   static void incrementGeneration() => _currentGeneration++;
-  
+
   static int get connectionCount => _connections.length;
 }
 
 /// Typedef for the rust functions
-typedef PointerStringFFICallBack = Pointer<Utf8> Function(
-    Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerStringFFICallBack =
+    Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
-typedef PointerBoolFFICallBack = Pointer<Bool> Function(
-    Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(
-    Pointer<AppDbState>);
+typedef PointerBoolFFICallBack =
+    Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerBoolFFICallBackDirect =
+    Pointer<Bool> Function(Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 /// Native database implementation using FFI and Rust backend
@@ -112,9 +114,7 @@ class DatabaseNative implements DatabaseInterface {
   bool Function(Pointer<AppDbState>)? _isDatabaseValid;
   bool Function(Pointer<AppDbState>, int)? _validateInstanceGeneration;
   Pointer<Utf8> Function(Pointer<AppDbState>)? _pingDatabase;
-  Pointer<Utf8> Function()? _cleanupStaleInstances;
   int Function()? _getCurrentGeneration;
-  bool Function(Pointer<AppDbState>)? _invalidateInstance;
 
   @override
   bool get isSupported => !Platform.isLinux && !Platform.isWindows;
@@ -126,10 +126,10 @@ class DatabaseNative implements DatabaseInterface {
     if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';
     }
-    
-    // Reset function pointers for hot restart safety  
+
+    // Reset function pointers for hot restart safety
     _resetFunctionPointers();
-    
+
     _lastDatabaseName = databaseName;
     if (_lib == null) {
       _lib = Ok(DynamicLibrary.open(libPath));
@@ -155,9 +155,7 @@ class DatabaseNative implements DatabaseInterface {
     _isDatabaseValid = null;
     _validateInstanceGeneration = null;
     _pingDatabase = null;
-    _cleanupStaleInstances = null;
     _getCurrentGeneration = null;
-    _invalidateInstance = null;
   }
 
   @override
@@ -167,7 +165,7 @@ class DatabaseNative implements DatabaseInterface {
 
       // Close any existing connection first (hot restart safety)
       await _closeCurrentConnection();
-      
+
       // Reset function pointers for hot restart safety
       _resetFunctionPointers();
 
@@ -188,7 +186,7 @@ class DatabaseNative implements DatabaseInterface {
       Log.i('Native database initialized successfully');
     } catch (e, stack) {
       Log.e('Error initializing native database', error: e, stackTrace: stack);
-      
+
       // Clean up state on failure
       _dbInstance = null;
       _resetFunctionPointers();
@@ -224,50 +222,65 @@ class DatabaseNative implements DatabaseInterface {
   void _bindFunctions() {
     switch (_lib) {
       case Ok(data: DynamicLibrary lib):
-        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck,
-            PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
-        _post = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get =
-            lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
-                FFiFunctions.getAll.cName);
-        _getById = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.getById.cName);
-        _put = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        _delete =
-            lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
-                FFiFunctions.delete.cName);
-        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
-            PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
-        _closeDatabase = lib.lookupFunction<
-            Pointer<Utf8> Function(Pointer<AppDbState>),
-            Pointer<Utf8> Function(
-                Pointer<AppDbState>)>(FFiFunctions.closeDatabase.cName);
-        _freeCString = lib.lookupFunction<Void Function(Pointer<Utf8>),
-            void Function(Pointer<Utf8>)>(FFiFunctions.freeCString.cName);
-        _isDatabaseValid = lib.lookupFunction<
-            Bool Function(Pointer<AppDbState>),
-            bool Function(
-                Pointer<AppDbState>)>(FFiFunctions.isDatabaseValid.cName);
-        _validateInstanceGeneration = lib.lookupFunction<
-            Bool Function(Pointer<AppDbState>, Uint64),
-            bool Function(
-                Pointer<AppDbState>, int)>(FFiFunctions.validateInstanceGeneration.cName);
-        _pingDatabase = lib.lookupFunction<
-            Pointer<Utf8> Function(Pointer<AppDbState>),
-            Pointer<Utf8> Function(
-                Pointer<AppDbState>)>(FFiFunctions.pingDatabase.cName);
-        _cleanupStaleInstances = lib.lookupFunction<
-            Pointer<Utf8> Function(),
-            Pointer<Utf8> Function()>(FFiFunctions.cleanupStaleInstances.cName);
-        _getCurrentGeneration = lib.lookupFunction<
-            Uint64 Function(),
-            int Function()>(FFiFunctions.getCurrentGeneration.cName);
-        _invalidateInstance = lib.lookupFunction<
-            Bool Function(Pointer<AppDbState>),
-            bool Function(
-                Pointer<AppDbState>)>(FFiFunctions.invalidateInstance.cName);
+        _createDatabase = lib
+            .lookupFunction<
+              PointerAppDbStateCallBAck,
+              PointerAppDbStateCallBAck
+            >(FFiFunctions.createDb.cName);
+        _post = lib
+            .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+              FFiFunctions.pushData.cName,
+            );
+        _get = lib
+            .lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+              FFiFunctions.getAll.cName,
+            );
+        _getById = lib
+            .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+              FFiFunctions.getById.cName,
+            );
+        _put = lib
+            .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+              FFiFunctions.updateData.cName,
+            );
+        _delete = lib
+            .lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+              FFiFunctions.delete.cName,
+            );
+        _clearAllRecords = lib
+            .lookupFunction<
+              PointerBoolFFICallBackDirect,
+              PointerBoolFFICallBackDirect
+            >(FFiFunctions.clearAllRecords.cName);
+        _closeDatabase = lib
+            .lookupFunction<
+              Pointer<Utf8> Function(Pointer<AppDbState>),
+              Pointer<Utf8> Function(Pointer<AppDbState>)
+            >(FFiFunctions.closeDatabase.cName);
+        _freeCString = lib
+            .lookupFunction<
+              Void Function(Pointer<Utf8>),
+              void Function(Pointer<Utf8>)
+            >(FFiFunctions.freeCString.cName);
+        _isDatabaseValid = lib
+            .lookupFunction<
+              Bool Function(Pointer<AppDbState>),
+              bool Function(Pointer<AppDbState>)
+            >(FFiFunctions.isDatabaseValid.cName);
+        _validateInstanceGeneration = lib
+            .lookupFunction<
+              Bool Function(Pointer<AppDbState>, Uint64),
+              bool Function(Pointer<AppDbState>, int)
+            >(FFiFunctions.validateInstanceGeneration.cName);
+        _pingDatabase = lib
+            .lookupFunction<
+              Pointer<Utf8> Function(Pointer<AppDbState>),
+              Pointer<Utf8> Function(Pointer<AppDbState>)
+            >(FFiFunctions.pingDatabase.cName);
+        _getCurrentGeneration = lib
+            .lookupFunction<Uint64 Function(), int Function()>(
+              FFiFunctions.getCurrentGeneration.cName,
+            );
         break;
       case Err(error: String error):
         Log.e('Library loading error', error: error);
@@ -282,69 +295,75 @@ class DatabaseNative implements DatabaseInterface {
         Log.w('FFI functions not bound during _init, binding now...');
         _bindFunctions();
       }
-      
+
       if (_createDatabase == null) {
-        throw Exception('Database functions not bound. Call _bindFunctions first.');
+        throw Exception(
+          'Database functions not bound. Call _bindFunctions first.',
+        );
       }
-      
+
       // Try multiple times with different strategies for hot restart compatibility
       for (int attempt = 1; attempt <= 3; attempt++) {
         try {
           Log.i('Database creation attempt $attempt');
-          
+
           // For hot restart, try with a slightly different path each time
           String actualDbName = dbName;
           if (attempt > 1) {
             // Add a timestamp to make path unique for retry attempts
             final timestamp = DateTime.now().millisecondsSinceEpoch;
             final extension = dbName.endsWith('.db') ? '.db' : '';
-            final baseName = extension.isEmpty ? dbName : dbName.substring(0, dbName.length - 3);
+            final baseName = extension.isEmpty
+                ? dbName
+                : dbName.substring(0, dbName.length - 3);
             actualDbName = '${baseName}_${timestamp}$extension';
             Log.i('Retry attempt $attempt with modified database name');
           }
-          
+
           final dbNamePointer = actualDbName.toNativeUtf8();
           _dbInstance = _createDatabase!(dbNamePointer);
           calloc.free(dbNamePointer);
 
           if (_dbInstance != nullptr) {
             Log.i('Database instance created successfully on attempt $attempt');
-            
+
             // Get current generation from Rust
             final generation = _getCurrentGeneration?.call() ?? 0;
-            
+
             // Store connection in pool
             final connection = DatabaseConnection(
               pointer: _dbInstance!,
               generation: generation,
               isValid: true,
             );
-            ConnectionPool.storeConnection(_lastDatabaseName ?? actualDbName, connection);
-            
+            ConnectionPool.storeConnection(
+              _lastDatabaseName ?? actualDbName,
+              connection,
+            );
+
             // Update the last database name to the successful one
             _lastDatabaseName = actualDbName.split('/').last;
-            
+
             Log.i('Stored connection in pool with generation: $generation');
             return;
           }
-          
+
           Log.w('Attempt $attempt failed - got null pointer');
-          
+
           // Wait a bit before retrying
           if (attempt < 3) {
             await Future.delayed(Duration(milliseconds: 100 * attempt));
           }
-          
         } catch (e) {
           Log.e('Attempt $attempt failed with error', error: e);
           if (attempt == 3) rethrow;
           await Future.delayed(Duration(milliseconds: 100 * attempt));
         }
       }
-      
+
       // If all attempts failed, try one last fallback strategy
       Log.w('All regular attempts failed, trying fallback strategy...');
-      
+
       // Try with a completely fresh name and in-memory fallback if needed
       try {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -352,7 +371,7 @@ class DatabaseNative implements DatabaseInterface {
         final dbNamePointer = fallbackName.toNativeUtf8();
         _dbInstance = _createDatabase!(dbNamePointer);
         calloc.free(dbNamePointer);
-        
+
         if (_dbInstance != nullptr) {
           Log.i('Fallback database created successfully');
           _lastDatabaseName = fallbackName;
@@ -361,11 +380,11 @@ class DatabaseNative implements DatabaseInterface {
       } catch (e) {
         Log.e('Fallback strategy also failed', error: e);
       }
-      
+
       // Final failure
       throw Exception(
-          'Failed to create database instance after all attempts including fallback. This is likely due to hot restart conflicts with the Rust binary. Please restart the application completely.');
-          
+        'Failed to create database instance after all attempts including fallback. This is likely due to hot restart conflicts with the Rust binary. Please restart the application completely.',
+      );
     } catch (error, stackTrace) {
       Log.e('Error in _init', error: error, stackTrace: stackTrace);
       rethrow;
@@ -376,7 +395,7 @@ class DatabaseNative implements DatabaseInterface {
   Future<bool> ensureConnectionValid() async {
     // Cleanup stale connections periodically
     ConnectionPool.cleanupStaleConnections();
-    
+
     // First, ensure FFI functions are bound
     if (_createDatabase == null || _post == null || _get == null) {
       Log.w('FFI functions not bound, attempting to rebind...');
@@ -388,9 +407,11 @@ class DatabaseNative implements DatabaseInterface {
         return false;
       }
     }
-    
+
     if (_dbInstance == null || _dbInstance == nullptr) {
-      Log.w('Database connection invalid (null pointer), attempting to reinitialize...');
+      Log.w(
+        'Database connection invalid (null pointer), attempting to reinitialize...',
+      );
       return await _attemptReinitialization();
     }
 
@@ -402,40 +423,52 @@ class DatabaseNative implements DatabaseInterface {
         try {
           // Validate with Rust using generation
           if (_validateInstanceGeneration != null) {
-            final isValidGeneration = _validateInstanceGeneration!(_dbInstance!, poolConnection.generation);
+            final isValidGeneration = _validateInstanceGeneration!(
+              _dbInstance!,
+              poolConnection.generation,
+            );
             if (!isValidGeneration) {
-              Log.w('Database connection has invalid generation, attempting to reinitialize...');
+              Log.w(
+                'Database connection has invalid generation, attempting to reinitialize...',
+              );
               ConnectionPool.invalidateConnection(_lastDatabaseName!);
               await _closeCurrentConnection();
               return await _attemptReinitialization();
             }
           }
-          
+
           // Ping database to ensure it's responsive
           if (_pingDatabase != null) {
             try {
               final pingResult = _pingDatabase!(_dbInstance!);
               if (pingResult != nullptr) {
-                final pingResponse = pingResult.cast<Utf8>().toDartString();
                 _freeCString?.call(pingResult);
                 Log.d('Database ping successful - connection healthy');
                 poolConnection.updateLastUsed();
                 return true;
               } else {
-                Log.w('Database ping returned null, attempting to reinitialize...');
+                Log.w(
+                  'Database ping returned null, attempting to reinitialize...',
+                );
                 ConnectionPool.invalidateConnection(_lastDatabaseName!);
                 await _closeCurrentConnection();
                 return await _attemptReinitialization();
               }
             } catch (e) {
-              Log.e('Database ping failed, attempting to reinitialize', error: e);
+              Log.e(
+                'Database ping failed, attempting to reinitialize',
+                error: e,
+              );
               ConnectionPool.invalidateConnection(_lastDatabaseName!);
               await _closeCurrentConnection();
               return await _attemptReinitialization();
             }
           }
         } catch (e) {
-          Log.e('Error during enhanced validation, attempting to reinitialize', error: e);
+          Log.e(
+            'Error during enhanced validation, attempting to reinitialize',
+            error: e,
+          );
           ConnectionPool.invalidateConnection(_lastDatabaseName!);
           await _closeCurrentConnection();
           return await _attemptReinitialization();
@@ -446,7 +479,9 @@ class DatabaseNative implements DatabaseInterface {
     // Fallback to legacy validation
     try {
       if (_isDatabaseValid != null && !_isDatabaseValid!(_dbInstance!)) {
-        Log.w('Database connection invalid (legacy validation failed), attempting to reinitialize...');
+        Log.w(
+          'Database connection invalid (legacy validation failed), attempting to reinitialize...',
+        );
         if (_lastDatabaseName != null) {
           ConnectionPool.invalidateConnection(_lastDatabaseName!);
         }
@@ -454,7 +489,10 @@ class DatabaseNative implements DatabaseInterface {
         return await _attemptReinitialization();
       }
     } catch (e) {
-      Log.e('Error validating database connection, attempting to reinitialize', error: e);
+      Log.e(
+        'Error validating database connection, attempting to reinitialize',
+        error: e,
+      );
       if (_lastDatabaseName != null) {
         ConnectionPool.invalidateConnection(_lastDatabaseName!);
       }
@@ -469,7 +507,11 @@ class DatabaseNative implements DatabaseInterface {
     if (_dbInstance != null && _dbInstance != nullptr) {
       try {
         // Check if we have the function bound and the instance is valid
-        if (_lib != null && _lib!.isOk && _isDatabaseValid != null && _closeDatabase != null && _freeCString != null) {
+        if (_lib != null &&
+            _lib!.isOk &&
+            _isDatabaseValid != null &&
+            _closeDatabase != null &&
+            _freeCString != null) {
           try {
             if (_isDatabaseValid!(_dbInstance!)) {
               final closeResult = _closeDatabase!(_dbInstance!);
@@ -504,16 +546,17 @@ class DatabaseNative implements DatabaseInterface {
 
   Future<bool> _attemptReinitialization() async {
     Log.d('Attempting database reinitialization...');
-    
+
     if (_lastDatabaseName != null) {
       try {
         // Reset function pointers and rebind them
         _resetFunctionPointers();
         _bindFunctions();
         Log.i('FFI functions rebound during reinitialization');
-        
+
         // Check if this is a testing scenario (database name contains full path)
-        if (_lastDatabaseName!.contains('/') || _lastDatabaseName!.contains('\\')) {
+        if (_lastDatabaseName!.contains('/') ||
+            _lastDatabaseName!.contains('\\')) {
           // For testing, use the full path as is
           await _init(_lastDatabaseName!);
         } else {
@@ -541,7 +584,8 @@ class DatabaseNative implements DatabaseInterface {
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -553,7 +597,7 @@ class DatabaseNative implements DatabaseInterface {
       if (_post == null || _freeCString == null) {
         return Err(ErrorLocalDb.databaseError('Database functions not bound'));
       }
-      
+
       final resultPushPointer = _post!(_dbInstance!, jsonPointer);
       final dataResult = resultPushPointer.cast<Utf8>().toDartString();
 
@@ -567,13 +611,19 @@ class DatabaseNative implements DatabaseInterface {
       }
 
       final modelData = LocalDbModel.fromJson(
-          Map<String, dynamic>.from(jsonDecode(response['Ok'])));
+        Map<String, dynamic>.from(jsonDecode(response['Ok'])),
+      );
 
       return Ok(modelData);
     } catch (error, stack) {
       Log.e('Error in post operation', error: error, stackTrace: stack);
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stack));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stack,
+        ),
+      );
     }
   }
 
@@ -587,7 +637,7 @@ class DatabaseNative implements DatabaseInterface {
       if (_getById == null || _freeCString == null) {
         return Err(ErrorLocalDb.databaseError('Database functions not bound'));
       }
-      
+
       final idPtr = id.toNativeUtf8();
       final resultFfi = _getById!(_dbInstance!, idPtr);
 
@@ -611,8 +661,13 @@ class DatabaseNative implements DatabaseInterface {
       return Ok(modelData);
     } catch (error, stackTrace) {
       Log.e('Error in getById operation', error: error, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -626,13 +681,16 @@ class DatabaseNative implements DatabaseInterface {
       if (_get == null || _freeCString == null) {
         return Err(ErrorLocalDb.databaseError('Database functions not bound'));
       }
-      
+
       final resultFfi = _get!(_dbInstance!);
 
       if (resultFfi == nullptr) {
         Log.e('NULL pointer returned from GetAll FFI call');
-        return Err(ErrorLocalDb.notFound(
-            'Failed to retrieve data: null pointer returned'));
+        return Err(
+          ErrorLocalDb.notFound(
+            'Failed to retrieve data: null pointer returned',
+          ),
+        );
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
@@ -653,14 +711,20 @@ class DatabaseNative implements DatabaseInterface {
       return Ok(dataList);
     } catch (error, stackTrace) {
       Log.e('Error in getAll operation', error: error, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -669,7 +733,7 @@ class DatabaseNative implements DatabaseInterface {
       if (_put == null || _freeCString == null) {
         return Err(ErrorLocalDb.databaseError('Database functions not bound'));
       }
-      
+
       final jsonString = jsonEncode(model.toJson());
       final jsonPointer = jsonString.toNativeUtf8();
       final resultFfi = _put!(_dbInstance!, jsonPointer);
@@ -692,8 +756,13 @@ class DatabaseNative implements DatabaseInterface {
       return Ok(LocalDbModel.fromJson(jsonDecode(response['Ok'])));
     } catch (error, stackTrace) {
       Log.e('Error in put operation', error: error, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -707,7 +776,7 @@ class DatabaseNative implements DatabaseInterface {
       if (_delete == null) {
         return Err(ErrorLocalDb.databaseError('Database functions not bound'));
       }
-      
+
       final idPtr = id.toNativeUtf8();
       final deleteResult = _delete!(_dbInstance!, idPtr);
       final result = deleteResult.cast<Utf8>().toDartString();
@@ -722,8 +791,13 @@ class DatabaseNative implements DatabaseInterface {
       return Ok(true);
     } catch (error, stackTrace) {
       Log.e('Error in delete operation', error: error, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -737,14 +811,23 @@ class DatabaseNative implements DatabaseInterface {
       if (_clearAllRecords == null) {
         return Err(ErrorLocalDb.databaseError('Database functions not bound'));
       }
-      
+
       final resultFfi = _clearAllRecords!(_dbInstance!);
       final result = resultFfi != nullptr;
       return Ok(result);
     } catch (error, stackTrace) {
-      Log.e('Error in cleanDatabase operation', error: error, stackTrace: stackTrace);
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      Log.e(
+        'Error in cleanDatabase operation',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 }

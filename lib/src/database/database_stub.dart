@@ -24,40 +24,48 @@ class DatabaseStub implements DatabaseInterface {
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
-      LocalDbModel model) async {
-    return Err(ErrorLocalDb.databaseError(
-        'Database is not supported on this platform'));
+    LocalDbModel model,
+  ) async {
+    return Err(
+      ErrorLocalDb.databaseError('Database is not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
-    return Err(ErrorLocalDb.databaseError(
-        'Database is not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Database is not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
-    return Err(ErrorLocalDb.databaseError(
-        'Database is not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Database is not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
-      LocalDbModel model) async {
-    return Err(ErrorLocalDb.databaseError(
-        'Database is not supported on this platform'));
+    LocalDbModel model,
+  ) async {
+    return Err(
+      ErrorLocalDb.databaseError('Database is not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
-    return Err(ErrorLocalDb.databaseError(
-        'Database is not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Database is not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
-    return Err(ErrorLocalDb.databaseError(
-        'Database is not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Database is not supported on this platform'),
+    );
   }
 
   @override

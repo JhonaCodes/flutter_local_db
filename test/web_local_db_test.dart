@@ -1,5 +1,4 @@
 @TestOn('browser')
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
 
@@ -38,8 +37,10 @@ void main() {
       await LocalDB.Post('update-web-key', {'value': 'initial'});
 
       // Update data
-      final updateResult = await LocalDB.Put(
-          'update-web-key', {'value': 'updated', 'platform': 'web'});
+      final updateResult = await LocalDB.Put('update-web-key', {
+        'value': 'updated',
+        'platform': 'web',
+      });
       expect(updateResult.isOk, true);
 
       // Verify update
@@ -68,21 +69,23 @@ void main() {
       final testRecords = [
         {
           'key': 'web-record-1',
-          'data': {'type': 'web', 'value': 1}
+          'data': {'type': 'web', 'value': 1},
         },
         {
           'key': 'web-record-2',
-          'data': {'type': 'web', 'value': 2}
+          'data': {'type': 'web', 'value': 2},
         },
         {
           'key': 'web-record-3',
-          'data': {'type': 'web', 'value': 3}
+          'data': {'type': 'web', 'value': 3},
         },
       ];
 
       for (final record in testRecords) {
         await LocalDB.Post(
-            record['key'] as String, record['data'] as Map<String, dynamic>);
+          record['key'] as String,
+          record['data'] as Map<String, dynamic>,
+        );
       }
 
       // Retrieve all records
@@ -91,8 +94,9 @@ void main() {
       expect(getAllResult.data.length, 3);
 
       // Verify all records are present
-      final retrievedKeys =
-          getAllResult.data.map((record) => record.id).toSet();
+      final retrievedKeys = getAllResult.data
+          .map((record) => record.id)
+          .toSet();
       expect(retrievedKeys.contains('web-record-1'), true);
       expect(retrievedKeys.contains('web-record-2'), true);
       expect(retrievedKeys.contains('web-record-3'), true);
@@ -123,8 +127,8 @@ void main() {
           'inner': {'deep': 'value'},
           'list': [
             {'item': 1},
-            {'item': 2}
-          ]
+            {'item': 2},
+          ],
         },
         'nullValue': null,
       };
@@ -165,13 +169,15 @@ void main() {
 
     test('Should prevent duplicate ID creation on web', () async {
       // Create initial record
-      final createResult1 =
-          await LocalDB.Post('duplicate-test', {'value': 'first'});
+      final createResult1 = await LocalDB.Post('duplicate-test', {
+        'value': 'first',
+      });
       expect(createResult1.isOk, true);
 
       // Try to create with same ID
-      final createResult2 =
-          await LocalDB.Post('duplicate-test', {'value': 'second'});
+      final createResult2 = await LocalDB.Post('duplicate-test', {
+        'value': 'second',
+      });
       expect(createResult2.isErr, true);
 
       // Verify original data is unchanged
@@ -183,9 +189,12 @@ void main() {
     test('Should handle concurrent operations on web', () async {
       // Create multiple concurrent operations
       final futures = List.generate(
-          10,
-          (index) => LocalDB.Post(
-              'concurrent-web-$index', {'value': index, 'platform': 'web'}));
+        10,
+        (index) => LocalDB.Post('concurrent-web-$index', {
+          'value': index,
+          'platform': 'web',
+        }),
+      );
 
       final results = await Future.wait(futures);
       expect(results.every((result) => result.isOk), true);

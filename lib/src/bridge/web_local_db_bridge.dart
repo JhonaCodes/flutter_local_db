@@ -39,34 +39,39 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
 
       // Handle database upgrade/creation
       openRequest.addEventListener(
-          'upgradeneeded',
-          (web.Event event) {
-            final db = openRequest.result as web.IDBDatabase;
-            if (!db.objectStoreNames.contains(_storeName)) {
-              db.createObjectStore(
-                  _storeName, web.IDBObjectStoreParameters(keyPath: 'id'.toJS));
-              log('Created object store: $_storeName');
-            }
-          }.toJS);
+        'upgradeneeded',
+        (web.Event event) {
+          final db = openRequest.result as web.IDBDatabase;
+          if (!db.objectStoreNames.contains(_storeName)) {
+            db.createObjectStore(
+              _storeName,
+              web.IDBObjectStoreParameters(keyPath: 'id'.toJS),
+            );
+            log('Created object store: $_storeName');
+          }
+        }.toJS,
+      );
 
       // Wait for database to open
       final completer = Completer<web.IDBDatabase>();
 
       openRequest.addEventListener(
-          'success',
-          (web.Event event) {
-            _database = openRequest.result as web.IDBDatabase;
-            log('IndexedDB database opened successfully');
-            completer.complete(_database!);
-          }.toJS);
+        'success',
+        (web.Event event) {
+          _database = openRequest.result as web.IDBDatabase;
+          log('IndexedDB database opened successfully');
+          completer.complete(_database!);
+        }.toJS,
+      );
 
       openRequest.addEventListener(
-          'error',
-          (web.Event event) {
-            final error = 'Failed to open IndexedDB: ${openRequest.error}';
-            log(error);
-            completer.completeError(Exception(error));
-          }.toJS);
+        'error',
+        (web.Event event) {
+          final error = 'Failed to open IndexedDB: ${openRequest.error}';
+          log(error);
+          completer.completeError(Exception(error));
+        }.toJS,
+      );
 
       await completer.future;
     } catch (e, stackTrace) {
@@ -105,7 +110,8 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -119,8 +125,11 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
       final existing = await _completeRequest(existingRequest);
 
       if (existing != null) {
-        return Err(ErrorLocalDb.databaseError(
-            "Cannot create new record: ID '${model.id}' already exists. Use PUT method to update existing records."));
+        return Err(
+          ErrorLocalDb.databaseError(
+            "Cannot create new record: ID '${model.id}' already exists. Use PUT method to update existing records.",
+          ),
+        );
       }
 
       // Create the record
@@ -138,8 +147,13 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     } catch (e, stackTrace) {
       log('Error in post operation: $e');
       log('Stack trace: $stackTrace');
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -172,8 +186,13 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     } catch (e, stackTrace) {
       log('Error in getById operation: $e');
       log('Stack trace: $stackTrace');
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -206,14 +225,20 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     } catch (e, stackTrace) {
       log('Error in getAll operation: $e');
       log('Stack trace: $stackTrace');
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!await ensureConnectionValid()) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -227,8 +252,11 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
       final existing = await _completeRequest(existingRequest);
 
       if (existing == null) {
-        return Err(ErrorLocalDb.notFound(
-            "Record '${model.id}' not found. Use POST method to create new records."));
+        return Err(
+          ErrorLocalDb.notFound(
+            "Record '${model.id}' not found. Use POST method to create new records.",
+          ),
+        );
       }
 
       // Update the record
@@ -246,8 +274,13 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     } catch (e, stackTrace) {
       log('Error in put operation: $e');
       log('Stack trace: $stackTrace');
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -278,8 +311,13 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     } catch (e, stackTrace) {
       log('Error in delete operation: $e');
       log('Stack trace: $stackTrace');
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -301,8 +339,13 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     } catch (e, stackTrace) {
       log('Error in cleanDatabase operation: $e');
       log('Stack trace: $stackTrace');
-      return Err(ErrorLocalDb.fromRustError(e.toString(),
-          originalError: e, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          e.toString(),
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -311,17 +354,20 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     final completer = Completer<dynamic>();
 
     request.addEventListener(
-        'success',
-        (web.Event event) {
-          completer.complete(request.result);
-        }.toJS);
+      'success',
+      (web.Event event) {
+        completer.complete(request.result);
+      }.toJS,
+    );
 
     request.addEventListener(
-        'error',
-        (web.Event event) {
-          completer.completeError(
-              Exception('IndexedDB request failed: ${request.error}'));
-        }.toJS);
+      'error',
+      (web.Event event) {
+        completer.completeError(
+          Exception('IndexedDB request failed: ${request.error}'),
+        );
+      }.toJS,
+    );
 
     return completer.future;
   }
@@ -332,23 +378,26 @@ class WebLocalDbBridge extends LocalSbRequestImpl {
     final results = <dynamic>[];
 
     request.addEventListener(
-        'success',
-        (web.Event event) {
-          final cursor = request.result as web.IDBCursorWithValue?;
-          if (cursor != null) {
-            results.add(cursor.value);
-            cursor.continue_();
-          } else {
-            completer.complete(results);
-          }
-        }.toJS);
+      'success',
+      (web.Event event) {
+        final cursor = request.result as web.IDBCursorWithValue?;
+        if (cursor != null) {
+          results.add(cursor.value);
+          cursor.continue_();
+        } else {
+          completer.complete(results);
+        }
+      }.toJS,
+    );
 
     request.addEventListener(
-        'error',
-        (web.Event event) {
-          completer.completeError(
-              Exception('Cursor request failed: ${request.error}'));
-        }.toJS);
+      'error',
+      (web.Event event) {
+        completer.completeError(
+          Exception('Cursor request failed: ${request.error}'),
+        );
+      }.toJS,
+    );
 
     return completer.future;
   }

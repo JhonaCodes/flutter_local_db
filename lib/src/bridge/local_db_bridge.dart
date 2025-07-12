@@ -22,13 +22,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 final class AppDbState extends Opaque {}
 
 /// Typedef for the rust functions
-typedef PointerStringFFICallBack = Pointer<Utf8> Function(
-    Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerStringFFICallBack =
+    Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
 typedef PointerAppDbStateCallBAck = Pointer<AppDbState> Function(Pointer<Utf8>);
-typedef PointerBoolFFICallBack = Pointer<Bool> Function(
-    Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect = Pointer<Bool> Function(
-    Pointer<AppDbState>);
+typedef PointerBoolFFICallBack =
+    Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef PointerBoolFFICallBackDirect =
+    Pointer<Bool> Function(Pointer<AppDbState>);
 typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 class LocalDbBridge extends LocalSbRequestImpl {
@@ -39,7 +39,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbResult<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
   String?
-      _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
+  _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
 
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
@@ -118,19 +118,25 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Future<bool> ensureConnectionValid() async {
     // Check if the instance pointer is null
     if (_dbInstance == null || _dbInstance == nullptr) {
-      log('Database connection invalid (null pointer), attempting to reinitialize...');
+      log(
+        'Database connection invalid (null pointer), attempting to reinitialize...',
+      );
       return await _attemptReinitialization();
     }
 
     // Check if the Rust instance is still valid
     try {
       if (!_isDatabaseValid(_dbInstance!)) {
-        log('Database connection invalid (Rust validation failed), attempting to reinitialize...');
+        log(
+          'Database connection invalid (Rust validation failed), attempting to reinitialize...',
+        );
         await _closeCurrentConnection();
         return await _attemptReinitialization();
       }
     } catch (e) {
-      log('Error validating database connection: $e, attempting to reinitialize...');
+      log(
+        'Error validating database connection: $e, attempting to reinitialize...',
+      );
       await _closeCurrentConnection();
       return await _attemptReinitialization();
     }
@@ -178,32 +184,51 @@ class LocalDbBridge extends LocalSbRequestImpl {
   void _bindFunctions() {
     switch (_lib) {
       case Ok(data: DynamicLibrary lib):
-        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck,
-            PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
-        _post = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get =
-            lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
-                FFiFunctions.getAll.cName);
-        _getById = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.getById.cName);
-        _put = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        _delete =
-            lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
-                FFiFunctions.delete.cName);
-        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
-            PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
-        _closeDatabase = lib.lookupFunction<
-            Pointer<Utf8> Function(Pointer<AppDbState>),
-            Pointer<Utf8> Function(
-                Pointer<AppDbState>)>(FFiFunctions.closeDatabase.cName);
-        _freeCString = lib.lookupFunction<Void Function(Pointer<Utf8>),
-            void Function(Pointer<Utf8>)>(FFiFunctions.freeCString.cName);
-        _isDatabaseValid = lib.lookupFunction<
-            Bool Function(Pointer<AppDbState>),
-            bool Function(
-                Pointer<AppDbState>)>(FFiFunctions.isDatabaseValid.cName);
+        _createDatabase = lib
+            .lookupFunction<
+              PointerAppDbStateCallBAck,
+              PointerAppDbStateCallBAck
+            >(FFiFunctions.createDb.cName);
+        _post = lib
+            .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+              FFiFunctions.pushData.cName,
+            );
+        _get = lib
+            .lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+              FFiFunctions.getAll.cName,
+            );
+        _getById = lib
+            .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+              FFiFunctions.getById.cName,
+            );
+        _put = lib
+            .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+              FFiFunctions.updateData.cName,
+            );
+        _delete = lib
+            .lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+              FFiFunctions.delete.cName,
+            );
+        _clearAllRecords = lib
+            .lookupFunction<
+              PointerBoolFFICallBackDirect,
+              PointerBoolFFICallBackDirect
+            >(FFiFunctions.clearAllRecords.cName);
+        _closeDatabase = lib
+            .lookupFunction<
+              Pointer<Utf8> Function(Pointer<AppDbState>),
+              Pointer<Utf8> Function(Pointer<AppDbState>)
+            >(FFiFunctions.closeDatabase.cName);
+        _freeCString = lib
+            .lookupFunction<
+              Void Function(Pointer<Utf8>),
+              void Function(Pointer<Utf8>)
+            >(FFiFunctions.freeCString.cName);
+        _isDatabaseValid = lib
+            .lookupFunction<
+              Bool Function(Pointer<AppDbState>),
+              bool Function(Pointer<AppDbState>)
+            >(FFiFunctions.isDatabaseValid.cName);
         break;
       case Err(error: String error):
         log(error);
@@ -220,7 +245,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       if (_dbInstance == nullptr) {
         throw Exception(
-            'Failed to create database instance. Returned null pointer.');
+          'Failed to create database instance. Returned null pointer.',
+        );
       }
 
       calloc.free(dbNamePointer);
@@ -232,7 +258,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!(await ensureConnectionValid())) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -256,15 +283,21 @@ class LocalDbBridge extends LocalSbRequestImpl {
       }
 
       final modelData = LocalDbModel.fromJson(
-          Map<String, dynamic>.from(jsonDecode(response['Ok'])));
+        Map<String, dynamic>.from(jsonDecode(response['Ok'])),
+      );
 
       return Ok(modelData);
     } catch (error, stack) {
       log(error.toString());
       log(stack.toString());
       print(stack.toString());
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stack));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stack,
+        ),
+      );
     }
   }
 
@@ -300,14 +333,20 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   @override
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
-      LocalDbModel model) async {
+    LocalDbModel model,
+  ) async {
     if (!(await ensureConnectionValid())) {
       return Err(ErrorLocalDb.databaseError('Database connection is invalid'));
     }
@@ -336,8 +375,13 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -355,8 +399,13 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -382,8 +431,13 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -399,8 +453,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       if (resultFfi == nullptr) {
         log('Error: NULL pointer returned from GetAll FFI call');
-        return Err(ErrorLocalDb.notFound(
-            'Failed to retrieve data: null pointer returned'));
+        return Err(
+          ErrorLocalDb.notFound(
+            'Failed to retrieve data: null pointer returned',
+          ),
+        );
       }
 
       final resultTransformed = resultFfi.cast<Utf8>().toDartString();
@@ -424,15 +481,20 @@ class LocalDbBridge extends LocalSbRequestImpl {
     } catch (error, stackTrace) {
       log(error.toString());
       log(stackTrace.toString());
-      return Err(ErrorLocalDb.fromRustError(error.toString(),
-          originalError: error, stackTrace: stackTrace));
+      return Err(
+        ErrorLocalDb.fromRustError(
+          error.toString(),
+          originalError: error,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 }
 
 sealed class CurrentPlatform {
   static Future<LocalDbResult<DynamicLibrary, String>>
-      loadRustNativeLib() async {
+  loadRustNativeLib() async {
     // Web platform doesn't use FFI, this should not be called on web
     if (kIsWeb) {
       return Err("FFI is not supported on web platform");

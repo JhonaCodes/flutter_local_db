@@ -6,11 +6,8 @@ void main() {
   group('LocalDbModel Serialization Tests - 100% Pure Dart', () {
     group('Model Construction', () {
       test('Should create model with required fields', () {
-        final model = LocalDbModel(
-          id: 'test-id',
-          data: {'key': 'value'},
-        );
-        
+        final model = LocalDbModel(id: 'test-id', data: {'key': 'value'});
+
         expect(model.id, 'test-id');
         expect(model.hash, null);
         expect(model.data, {'key': 'value'});
@@ -22,7 +19,7 @@ void main() {
           hash: 'abc123',
           data: {'key': 'value'},
         );
-        
+
         expect(model.id, 'test-id');
         expect(model.hash, 'abc123');
         expect(model.data, {'key': 'value'});
@@ -38,15 +35,12 @@ void main() {
           'list': [1, 2, 3, 'four'],
           'nested_map': {
             'inner_key': 'inner_value',
-            'inner_list': [true, false]
-          }
+            'inner_list': [true, false],
+          },
         };
-        
-        final model = LocalDbModel(
-          id: 'complex-test',
-          data: complexData,
-        );
-        
+
+        final model = LocalDbModel(id: 'complex-test', data: complexData);
+
         expect(model.data['string'], 'value');
         expect(model.data['number'], 42);
         expect(model.data['double'], 3.14);
@@ -65,9 +59,9 @@ void main() {
           hash: 'hash123',
           data: {'key': 'value', 'number': 42},
         );
-        
+
         final json = model.toJson();
-        
+
         expect(json, {
           'id': 'test-id',
           'hash': 'hash123',
@@ -76,13 +70,10 @@ void main() {
       });
 
       test('Should serialize model with null hash', () {
-        final model = LocalDbModel(
-          id: 'test-id',
-          data: {'key': 'value'},
-        );
-        
+        final model = LocalDbModel(id: 'test-id', data: {'key': 'value'});
+
         final json = model.toJson();
-        
+
         expect(json, {
           'id': 'test-id',
           'hash': null,
@@ -94,27 +85,21 @@ void main() {
         final complexData = {
           'users': [
             {'name': 'John', 'age': 30},
-            {'name': 'Jane', 'age': 25}
+            {'name': 'Jane', 'age': 25},
           ],
           'settings': {
             'theme': 'dark',
-            'notifications': {
-              'email': true,
-              'push': false
-            }
+            'notifications': {'email': true, 'push': false},
           },
           'metadata': {
             'created_at': '2024-01-01T00:00:00Z',
             'version': 1.0,
-            'tags': ['user', 'profile', 'active']
-          }
+            'tags': ['user', 'profile', 'active'],
+          },
         };
-        
-        final model = LocalDbModel(
-          id: 'complex-data',
-          data: complexData,
-        );
-        
+
+        final model = LocalDbModel(id: 'complex-data', data: complexData);
+
         final json = model.toJson();
         expect(json['data']['users'][0]['name'], 'John');
         expect(json['data']['settings']['theme'], 'dark');
@@ -129,14 +114,14 @@ void main() {
             'string': 'test',
             'number': 42,
             'list': [1, 2, 3],
-            'map': {'nested': 'value'}
+            'map': {'nested': 'value'},
           },
         );
-        
+
         // Should not throw exception
         final jsonString = jsonEncode(model.toJson());
         expect(jsonString, isA<String>());
-        
+
         // Should be valid JSON
         final decoded = jsonDecode(jsonString);
         expect(decoded['id'], 'encode-test');
@@ -152,9 +137,9 @@ void main() {
           'hash': 'hash123',
           'data': {'key': 'value', 'number': 42},
         };
-        
+
         final model = LocalDbModel.fromJson(json);
-        
+
         expect(model.id, 'test-id');
         expect(model.hash, 'hash123');
         expect(model.data, {'key': 'value', 'number': 42});
@@ -166,9 +151,9 @@ void main() {
           'hash': null,
           'data': {'key': 'value'},
         };
-        
+
         final model = LocalDbModel.fromJson(json);
-        
+
         expect(model.id, 'test-id');
         expect(model.hash, null);
         expect(model.data, {'key': 'value'});
@@ -182,28 +167,28 @@ void main() {
             'profile': {
               'user': {
                 'name': 'John Doe',
-                'preferences': {
-                  'language': 'en',
-                  'timezone': 'UTC'
-                }
+                'preferences': {'language': 'en', 'timezone': 'UTC'},
               },
               'contacts': [
                 {'type': 'email', 'value': 'john@example.com'},
-                {'type': 'phone', 'value': '+1234567890'}
-              ]
+                {'type': 'phone', 'value': '+1234567890'},
+              ],
             },
             'stats': {
               'login_count': 150,
-              'last_active': '2024-01-15T10:30:00Z'
-            }
-          }
+              'last_active': '2024-01-15T10:30:00Z',
+            },
+          },
         };
-        
+
         final model = LocalDbModel.fromJson(json);
-        
+
         expect(model.id, 'complex-deserialize');
         expect(model.data['profile']['user']['name'], 'John Doe');
-        expect(model.data['profile']['contacts'][0]['value'], 'john@example.com');
+        expect(
+          model.data['profile']['contacts'][0]['value'],
+          'john@example.com',
+        );
         expect(model.data['stats']['login_count'], 150);
       });
 
@@ -216,20 +201,18 @@ void main() {
             'numbers': [1, 2, 3, 4, 5],
             'nested': {
               'level1': {
-                'level2': {
-                  'value': 'deep value'
-                }
-              }
-            }
+                'level2': {'value': 'deep value'},
+              },
+            },
           },
         );
-        
+
         // Serialize to JSON
         final json = originalModel.toJson();
-        
+
         // Deserialize back to model
         final deserializedModel = LocalDbModel.fromJson(json);
-        
+
         // Should be identical
         expect(deserializedModel.id, originalModel.id);
         expect(deserializedModel.hash, originalModel.hash);
@@ -244,13 +227,13 @@ void main() {
           hash: 'hash123',
           data: {'key': 'value'},
         );
-        
+
         final copied = original.copyWith(id: 'new-id');
-        
+
         expect(copied.id, 'new-id');
         expect(copied.hash, 'hash123');
         expect(copied.data, {'key': 'value'});
-        
+
         // Original should remain unchanged
         expect(original.id, 'original-id');
       });
@@ -261,9 +244,9 @@ void main() {
           hash: 'old-hash',
           data: {'key': 'value'},
         );
-        
+
         final copied = original.copyWith(hash: 'new-hash');
-        
+
         expect(copied.id, 'test-id');
         expect(copied.hash, 'new-hash');
         expect(copied.data, {'key': 'value'});
@@ -275,14 +258,14 @@ void main() {
           hash: 'hash123',
           data: {'old': 'data'},
         );
-        
+
         final newData = {'new': 'data', 'more': 'fields'};
         final copied = original.copyWith(data: newData);
-        
+
         expect(copied.id, 'test-id');
         expect(copied.hash, 'hash123');
         expect(copied.data, newData);
-        
+
         // Original data should remain unchanged
         expect(original.data, {'old': 'data'});
       });
@@ -293,13 +276,13 @@ void main() {
           hash: 'old-hash',
           data: {'old': 'data'},
         );
-        
+
         final copied = original.copyWith(
           id: 'new-id',
           hash: 'new-hash',
           data: {'new': 'data'},
         );
-        
+
         expect(copied.id, 'new-id');
         expect(copied.hash, 'new-hash');
         expect(copied.data, {'new': 'data'});
@@ -311,9 +294,9 @@ void main() {
           hash: 'hash123',
           data: {'key': 'value'},
         );
-        
+
         final copied = original.copyWith();
-        
+
         expect(copied.id, original.id);
         expect(copied.hash, original.hash);
         expect(copied.data, original.data);
@@ -325,12 +308,12 @@ void main() {
           hash: 'existing-hash',
           data: {'key': 'value'},
         );
-        
+
         // Note: copyWith with explicit null doesn't override with null in this implementation
         // This is expected behavior - to set hash to null, create a new model
         final copiedWithNoHashChange = original.copyWith();
         expect(copiedWithNoHashChange.hash, 'existing-hash');
-        
+
         // To actually set hash to null, create new model
         final modelWithNullHash = LocalDbModel(
           id: original.id,
@@ -350,9 +333,9 @@ void main() {
           hash: 'hash123',
           data: {'key': 'value'},
         );
-        
+
         final str = model.toString();
-        
+
         expect(str, contains('LocalDbModel'));
         expect(str, contains('id: test-id'));
         expect(str, contains('hash: hash123'));
@@ -360,13 +343,10 @@ void main() {
       });
 
       test('Should handle null hash in toString', () {
-        final model = LocalDbModel(
-          id: 'test-id',
-          data: {'key': 'value'},
-        );
-        
+        final model = LocalDbModel(id: 'test-id', data: {'key': 'value'});
+
         final str = model.toString();
-        
+
         expect(str, contains('hash: null'));
       });
 
@@ -375,12 +355,12 @@ void main() {
           id: 'complex-id',
           data: {
             'list': [1, 2, 3],
-            'map': {'nested': 'value'}
+            'map': {'nested': 'value'},
           },
         );
-        
+
         final str = model.toString();
-        
+
         expect(str, isA<String>());
         expect(str, contains('complex-id'));
       });
@@ -388,16 +368,13 @@ void main() {
 
     group('Edge Cases and Error Handling', () {
       test('Should handle empty data map', () {
-        final model = LocalDbModel(
-          id: 'empty-data',
-          data: {},
-        );
-        
+        final model = LocalDbModel(id: 'empty-data', data: {});
+
         expect(model.data, isEmpty);
-        
+
         final json = model.toJson();
         expect(json['data'], isEmpty);
-        
+
         final deserialized = LocalDbModel.fromJson(json);
         expect(deserialized.data, isEmpty);
       });
@@ -407,9 +384,9 @@ void main() {
           id: 'test-id_with-special123',
           data: {'key': 'value'},
         );
-        
+
         expect(model.id, 'test-id_with-special123');
-        
+
         final json = model.toJson();
         final deserialized = LocalDbModel.fromJson(json);
         expect(deserialized.id, 'test-id_with-special123');
@@ -422,15 +399,15 @@ void main() {
             'chinese': '你好世界',
             'emoji': '🌍🚀💡',
             'arabic': 'مرحبا',
-            'russian': 'Привет'
+            'russian': 'Привет',
           },
         );
-        
+
         final json = model.toJson();
         final jsonString = jsonEncode(json);
         final decoded = jsonDecode(jsonString);
         final deserialized = LocalDbModel.fromJson(decoded);
-        
+
         expect(deserialized.data['chinese'], '你好世界');
         expect(deserialized.data['emoji'], '🌍🚀💡');
         expect(deserialized.data['arabic'], 'مرحبا');
@@ -447,17 +424,14 @@ void main() {
             'list': List.generate(10, (j) => 'item_${i}_$j'),
           };
         }
-        
-        final model = LocalDbModel(
-          id: 'large-data-test',
-          data: largeData,
-        );
-        
+
+        final model = LocalDbModel(id: 'large-data-test', data: largeData);
+
         // Should handle serialization without issues
         final json = model.toJson();
         expect(json['data']['key_0']['value'], 'data_0');
         expect(json['data']['key_999']['number'], 999);
-        
+
         // Should handle deserialization
         final deserialized = LocalDbModel.fromJson(json);
         expect(deserialized.data['key_500']['list'][5], 'item_500_5');
@@ -472,24 +446,24 @@ void main() {
           return {
             'level': depth,
             'nested': createNestedData(depth - 1),
-            'data': 'level_$depth'
+            'data': 'level_$depth',
           };
         }
-        
+
         final model = LocalDbModel(
           id: 'deep-nested',
           data: createNestedData(20), // 20 levels deep
         );
-        
+
         final json = model.toJson();
         final deserialized = LocalDbModel.fromJson(json);
-        
+
         // Navigate to the leaf
         dynamic current = deserialized.data;
         for (int i = 0; i < 20; i++) {
           current = current['nested'];
         }
-        
+
         expect(current['leaf'], 'value');
         expect(current['depth'], 0);
       });
@@ -512,12 +486,12 @@ void main() {
             'list_empty': <dynamic>[],
           },
         );
-        
+
         final json = model.toJson();
         final jsonString = jsonEncode(json);
         final decoded = jsonDecode(jsonString);
         final deserialized = LocalDbModel.fromJson(decoded);
-        
+
         expect(deserialized.data['string'], isA<String>());
         expect(deserialized.data['int'], isA<int>());
         expect(deserialized.data['double'], isA<double>());

@@ -6,10 +6,12 @@ void main() async {
   await LocalDB.init(localDbName: 'example_local_db');
 
   // Wrap with lifecycle manager to handle hot restart gracefully
-  runApp(const ExampleApp().withLocalDbLifecycle(
-    onHotRestart: () =>
-        debugPrint('Hot restart detected - database connection reset'),
-  ));
+  runApp(
+    const ExampleApp().withLocalDbLifecycle(
+      onHotRestart: () =>
+          debugPrint('Hot restart detected - database connection reset'),
+    ),
+  );
 }
 
 class ExampleApp extends StatelessWidget {
@@ -46,12 +48,12 @@ class _HomePageState extends State<HomePage> {
     });
 
     result.when(
-      ok: (data) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User created: ${data.id}')),
-      ),
-      err: (error) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
-      ),
+      ok: (data) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('User created: ${data.id}'))),
+      err: (error) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $error'))),
     );
 
     setState(() {});
@@ -64,9 +66,9 @@ class _HomePageState extends State<HomePage> {
       ok: (success) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(success ? 'User deleted' : 'Delete failed')),
       ),
-      err: (error) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
-      ),
+      err: (error) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $error'))),
     );
 
     setState(() {});
@@ -75,9 +77,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Local DB Example'),
-      ),
+      appBar: AppBar(title: const Text('Local DB Example')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FutureBuilder(
@@ -109,8 +109,10 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                 err: (error) => Center(
-                  child: Text('Error: $error',
-                      style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    'Error: $error',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
               );
             }

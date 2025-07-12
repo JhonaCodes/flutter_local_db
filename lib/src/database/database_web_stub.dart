@@ -7,7 +7,7 @@ import 'database_interface.dart';
 /// This prevents web code from being compiled on mobile/desktop
 class DatabaseWeb implements DatabaseInterface {
   DatabaseWeb._();
-  
+
   static final DatabaseWeb instance = DatabaseWeb._();
 
   @override
@@ -28,32 +28,48 @@ class DatabaseWeb implements DatabaseInterface {
   Future<void> closeDatabase() async {}
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model) async {
-    return Err(ErrorLocalDb.databaseError('Web database not supported on this platform'));
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+    LocalDbModel model,
+  ) async {
+    return Err(
+      ErrorLocalDb.databaseError('Web database not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
-    return Err(ErrorLocalDb.databaseError('Web database not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Web database not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
-    return Err(ErrorLocalDb.databaseError('Web database not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Web database not supported on this platform'),
+    );
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model) async {
-    return Err(ErrorLocalDb.databaseError('Web database not supported on this platform'));
+  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+    LocalDbModel model,
+  ) async {
+    return Err(
+      ErrorLocalDb.databaseError('Web database not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
-    return Err(ErrorLocalDb.databaseError('Web database not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Web database not supported on this platform'),
+    );
   }
 
   @override
   Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
-    return Err(ErrorLocalDb.databaseError('Web database not supported on this platform'));
+    return Err(
+      ErrorLocalDb.databaseError('Web database not supported on this platform'),
+    );
   }
 }
