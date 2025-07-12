@@ -1,6 +1,6 @@
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/model/local_db_request_model.dart';
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 
 /// Abstract interface for database implementations across all platforms.
 /// This interface ensures that both native (FFI) and web (IndexedDB) 
@@ -16,35 +16,35 @@ abstract class DatabaseInterface {
   /// 
   /// [model] - The model containing data to store
   /// Returns a Result with the created model or an error
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model);
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model);
 
   /// Retrieve a record by its unique identifier
   /// 
   /// [id] - The unique identifier of the record
   /// Returns a Result with the model (or null if not found) or an error
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id);
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id);
 
   /// Retrieve all records from the database
   /// 
   /// Returns a Result with a list of all models or an error
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll();
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll();
 
   /// Update an existing record in the database
   /// 
   /// [model] - The model with updated data
   /// Returns a Result with the updated model or an error
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model);
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model);
 
   /// Delete a record by its unique identifier
   /// 
   /// [id] - The unique identifier of the record to delete
   /// Returns a Result with success status or an error
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id);
+  Future<Result<bool, ErrorLocalDb>> delete(String id);
 
   /// Clear all records from the database
   /// 
   /// Returns a Result with success status or an error
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase();
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase();
 
   /// Close the database connection and free resources
   /// 

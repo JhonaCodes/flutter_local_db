@@ -1,15 +1,12 @@
+import 'package:result_controller/result_controller.dart';
 import '../model/local_db_error_model.dart';
 import '../model/local_db_request_model.dart';
-import '../service/local_db_result.dart';
 import 'database_interface.dart';
 
 /// Stub implementation for unsupported platforms
 /// This implementation throws appropriate errors for platforms
 /// that don't have native or web database support
 class DatabaseStub implements DatabaseInterface {
-  DatabaseStub._();
-
-  static final DatabaseStub instance = DatabaseStub._();
 
   @override
   bool get isSupported => false;
@@ -23,32 +20,32 @@ class DatabaseStub implements DatabaseInterface {
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model) async {
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(LocalDbModel model) async {
     return Err(ErrorLocalDb.databaseError('Database is not supported on this platform'));
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
+  Future<Result<LocalDbModel?, ErrorLocalDb>> getById(String id) async {
     return Err(ErrorLocalDb.databaseError('Database is not supported on this platform'));
   }
 
   @override
-  Future<LocalDbResult<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<Result<List<LocalDbModel>, ErrorLocalDb>> getAll() async {
     return Err(ErrorLocalDb.databaseError('Database is not supported on this platform'));
   }
 
   @override
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model) async {
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(LocalDbModel model) async {
     return Err(ErrorLocalDb.databaseError('Database is not supported on this platform'));
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> delete(String id) async {
+  Future<Result<bool, ErrorLocalDb>> delete(String id) async {
     return Err(ErrorLocalDb.databaseError('Database is not supported on this platform'));
   }
 
   @override
-  Future<LocalDbResult<bool, ErrorLocalDb>> cleanDatabase() async {
+  Future<Result<bool, ErrorLocalDb>> cleanDatabase() async {
     return Err(ErrorLocalDb.databaseError('Database is not supported on this platform'));
   }
 
@@ -62,3 +59,6 @@ class DatabaseStub implements DatabaseInterface {
     return false;
   }
 }
+
+/// Factory function for conditional imports
+DatabaseInterface createDatabase() => DatabaseStub();

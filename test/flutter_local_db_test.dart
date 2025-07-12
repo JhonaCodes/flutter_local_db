@@ -1,4 +1,4 @@
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
 

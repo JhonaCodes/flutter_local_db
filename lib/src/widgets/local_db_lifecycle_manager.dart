@@ -48,14 +48,10 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
     if (kDebugMode) {
       Future.delayed(const Duration(milliseconds: 100), () async {
         if (mounted) {
-          try {
-            final isValid = await LocalDB.IsConnectionValid();
-            if (!isValid) {
-              debugPrint('LocalDB: Connection became invalid, likely due to hot restart');
-              widget.onHotRestart?.call();
-            }
-          } catch (e) {
-            debugPrint('LocalDB: Error checking connection: $e');
+          final isValid = await LocalDB.IsConnectionValid();
+          if (!isValid) {
+            debugPrint('LocalDB: Connection became invalid, likely due to hot restart');
+            widget.onHotRestart?.call();
           }
           
           // Continue checking if still mounted
@@ -74,8 +70,11 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
     switch (state) {
       case AppLifecycleState.paused:
         debugPrint('LocalDB: App paused, closing database connection');
-        LocalDB.CloseDatabase().catchError((e) {
-          debugPrint('LocalDB: Error closing database on pause: $e');
+        LocalDB.CloseDatabase().then((result) {
+          result.when(
+            ok: (_) => debugPrint('LocalDB: Database closed successfully'),
+            err: (error) => debugPrint('LocalDB: Error closing database on pause: $error'),
+          );
         });
         widget.onAppPaused?.call();
         break;
@@ -87,8 +86,11 @@ class _LocalDbLifecycleManagerState extends State<LocalDbLifecycleManager>
         
       case AppLifecycleState.detached:
         debugPrint('LocalDB: App detached, closing database connection');
-        LocalDB.CloseDatabase().catchError((e) {
-          debugPrint('LocalDB: Error closing database on detach: $e');
+        LocalDB.CloseDatabase().then((result) {
+          result.when(
+            ok: (_) => debugPrint('LocalDB: Database closed successfully'),
+            err: (error) => debugPrint('LocalDB: Error closing database on detach: $error'),
+          );
         });
         break;
         
