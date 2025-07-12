@@ -137,51 +137,30 @@ class LocalDB {
     Map<String, dynamic> data, {
     String? lastUpdate,
   }) async {
-    Log.d('LocalDB.Post: Starting POST operation for key: $key');
-    
-    // Early validation without database connection
     final validationError = _validateInput(key, data);
-    if (validationError != null) {
-      Log.e('LocalDB.Post: Validation failed for key $key: $validationError');
-      return validationError;
-    }
-    
-    Log.d('LocalDB.Post: Validation passed, data size: ${data.keys.length} fields');
-    
-    return await _ensureDatabaseAndExecute((db) async {
-      Log.d('LocalDB.Post: Checking if record already exists for key: $key');
-      
-      // Check if record already exists
-      final existingRecord = await db.getById(key);
-      if (existingRecord.isErr) {
-        Log.e('LocalDB.Post: Error checking existing record for key $key: ${existingRecord.errorOrNull}');
-        return Err(existingRecord.errorOrNull!);
-      }
-      
-      if (existingRecord.data != null) {
-        Log.w('LocalDB.Post: Record with key $key already exists');
-        return Err(ErrorLocalDb.databaseError(
-          "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
-        ));
-      }
-      
-      // Create new record
-      final model = LocalDbModel(
-        id: key,
-        hash: DateTime.now().millisecondsSinceEpoch.toString(),
-        data: data,
-      );
+    if (validationError != null) return validationError;
 
-      Log.d('LocalDB.Post: Creating new record with model: ${model.id}');
-      final result = await db.post(model);
+    return await _ensureDatabaseAndExecute((db) async {
+      final verifyId = await db.getById(key);
       
-      if (result.isErr) {
-        Log.e('LocalDB.Post: Failed to create record for key $key: ${result.errorOrNull}');
-      } else {
-        Log.i('LocalDB.Post: Successfully created record for key $key');
-      }
-      
-      return result;
+      return verifyId.when(
+        ok: (existingModel) async {
+          if (existingModel != null) {
+            return Err(ErrorLocalDb.databaseError(
+              "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
+            ));
+          }
+
+          final model = LocalDbModel(
+            id: key,
+            hash: DateTime.now().millisecondsSinceEpoch.toString(),
+            data: data,
+          );
+
+          return await db.post(model);
+        },
+        err: (error) => Err(error),
+      );
     });
   }
 
@@ -195,7 +174,17 @@ class LocalDB {
   // ignore: non_constant_identifier_names
   GetAll() async {
     return await _ensureDatabaseAndExecute((db) async {
-      return await db.getAll();
+      final result = await db.getAll();
+      return result.when(
+        ok: (records) {
+          Log.i('LocalDB.GetAll: Retrieved ${records.length} records successfully');
+          return Ok(records);
+        },
+        err: (error) {
+          Log.e('LocalDB.GetAll: Failed to retrieve records: $error');
+          return Err(error);
+        },
+      );
     });
   }
 
@@ -218,7 +207,21 @@ class LocalDB {
     }
 
     return await _ensureDatabaseAndExecute((db) async {
-      return await db.getById(id);
+      final result = await db.getById(id);
+      return result.when(
+        ok: (record) {
+          if (record != null) {
+            Log.i('LocalDB.GetById: Record found for ID: $id');
+          } else {
+            Log.i('LocalDB.GetById: No record found for ID: $id');
+          }
+          return Ok(record);
+        },
+        err: (error) {
+          Log.e('LocalDB.GetById: Failed to retrieve record for ID $id: $error');
+          return Err(error);
+        },
+      );
     });
   }
 
@@ -240,26 +243,26 @@ class LocalDB {
     if (validationError != null) return validationError;
 
     return await _ensureDatabaseAndExecute((db) async {
-      // Check if record exists first
       final existingRecord = await db.getById(key);
-      if (existingRecord.isErr) {
-        return Err(existingRecord.errorOrNull!);
-      }
       
-      if (existingRecord.data == null) {
-        return Err(ErrorLocalDb.notFound(
-          "Record '$key' not found. Use POST method to create new records.",
-        ));
-      }
+      return existingRecord.when(
+        ok: (existingModel) async {
+          if (existingModel == null) {
+            return Err(ErrorLocalDb.notFound(
+              "Record '$key' not found. Use POST method to create new records.",
+            ));
+          }
 
-      // Update the record
-      final model = LocalDbModel(
-        id: key,
-        data: data,
-        hash: DateTime.now().millisecondsSinceEpoch.toString(),
+          final model = LocalDbModel(
+            id: key,
+            data: data,
+            hash: DateTime.now().millisecondsSinceEpoch.toString(),
+          );
+
+          return await db.put(model);
+        },
+        err: (error) => Err(error),
       );
-
-      return await db.put(model);
     });
   }
 
@@ -279,7 +282,17 @@ class LocalDB {
     }
 
     return await _ensureDatabaseAndExecute((db) async {
-      return await db.delete(id);
+      final result = await db.delete(id);
+      return result.when(
+        ok: (success) {
+          Log.i('LocalDB.Delete: Record deleted successfully for ID: $id');
+          return Ok(success);
+        },
+        err: (error) {
+          Log.e('LocalDB.Delete: Failed to delete record for ID $id: $error');
+          return Err(error);
+        },
+      );
     });
   }
 
@@ -291,7 +304,17 @@ class LocalDB {
   // ignore: non_constant_identifier_names
   static Future<Result<bool, ErrorLocalDb>> ClearData() async {
     return await _ensureDatabaseAndExecute((db) async {
-      return await db.cleanDatabase();
+      final result = await db.cleanDatabase();
+      return result.when(
+        ok: (success) {
+          Log.i('LocalDB.ClearData: Database cleared successfully');
+          return Ok(success);
+        },
+        err: (error) {
+          Log.e('LocalDB.ClearData: Failed to clear database: $error');
+          return Err(error);
+        },
+      );
     });
   }
 
