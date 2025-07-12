@@ -277,6 +277,12 @@ class DatabaseNative implements DatabaseInterface {
 
   Future<void> _init(String dbName) async {
     try {
+      // Ensure FFI functions are always bound before initialization
+      if (_createDatabase == null || _post == null || _get == null) {
+        Log.w('FFI functions not bound during _init, binding now...');
+        _bindFunctions();
+      }
+      
       if (_createDatabase == null) {
         throw Exception('Database functions not bound. Call _bindFunctions first.');
       }
@@ -370,6 +376,18 @@ class DatabaseNative implements DatabaseInterface {
   Future<bool> ensureConnectionValid() async {
     // Cleanup stale connections periodically
     ConnectionPool.cleanupStaleConnections();
+    
+    // First, ensure FFI functions are bound
+    if (_createDatabase == null || _post == null || _get == null) {
+      Log.w('FFI functions not bound, attempting to rebind...');
+      try {
+        _bindFunctions();
+        Log.i('FFI functions rebound successfully');
+      } catch (e) {
+        Log.e('Failed to rebind FFI functions', error: e);
+        return false;
+      }
+    }
     
     if (_dbInstance == null || _dbInstance == nullptr) {
       Log.w('Database connection invalid (null pointer), attempting to reinitialize...');
@@ -485,11 +503,14 @@ class DatabaseNative implements DatabaseInterface {
   }
 
   Future<bool> _attemptReinitialization() async {
+    Log.d('Attempting database reinitialization...');
+    
     if (_lastDatabaseName != null) {
       try {
         // Reset function pointers and rebind them
         _resetFunctionPointers();
         _bindFunctions();
+        Log.i('FFI functions rebound during reinitialization');
         
         // Check if this is a testing scenario (database name contains full path)
         if (_lastDatabaseName!.contains('/') || _lastDatabaseName!.contains('\\')) {
