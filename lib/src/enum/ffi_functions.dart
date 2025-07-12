@@ -39,7 +39,27 @@ enum FFiFunctions {
 
   /// Validates that a database pointer is still valid
   /// Rust function: `is_database_valid`
-  isDatabaseValid('is_database_valid');
+  isDatabaseValid('is_database_valid'),
+
+  /// Validates that a database instance is from the expected generation
+  /// Rust function: `validate_instance_generation`
+  validateInstanceGeneration('validate_instance_generation'),
+
+  /// Ping function for heartbeat monitoring
+  /// Rust function: `ping_database`
+  pingDatabase('ping_database'),
+
+  /// Cleanup function to remove stale instances
+  /// Rust function: `cleanup_stale_instances`
+  cleanupStaleInstances('cleanup_stale_instances'),
+
+  /// Get the current generation counter value
+  /// Rust function: `get_current_generation`
+  getCurrentGeneration('get_current_generation'),
+
+  /// Mark an instance as invalid (useful for hot reload scenarios)
+  /// Rust function: `invalidate_instance`
+  invalidateInstance('invalidate_instance');
 
   /// The corresponding C function name in the Rust FFI layer
   /// This name must match exactly with the function exported in the Rust code

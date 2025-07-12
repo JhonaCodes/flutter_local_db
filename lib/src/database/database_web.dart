@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
+import '../core/log.dart';
 import '../model/local_db_error_model.dart';
 import '../model/local_db_request_model.dart';
 import '../service/local_db_result.dart';
@@ -34,7 +34,7 @@ class DatabaseWeb implements DatabaseInterface {
   @override
   Future<void> initialize(String databaseName) async {
     try {
-      log('Initializing IndexedDB database: $databaseName');
+      Log.i('Initializing IndexedDB database: $databaseName');
 
       if (!databaseName.endsWith('.db')) {
         databaseName = '$databaseName.db';
@@ -56,15 +56,14 @@ class DatabaseWeb implements DatabaseInterface {
         final containsStore = storeNames.toString().contains(_storeName);
         if (!containsStore) {
           db.createObjectStore(_storeName);
-          log('Created object store: $_storeName');
+          Log.i('Created object store: $_storeName');
         }
       }).toJS;
 
       _database = await _completeRequest<web.IDBDatabase>(openRequest);
-      log('IndexedDB database opened successfully');
+      Log.i('IndexedDB database opened successfully');
     } catch (e, stackTrace) {
-      log('Error initializing IndexedDB: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error initializing IndexedDB', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -76,7 +75,7 @@ class DatabaseWeb implements DatabaseInterface {
         await initialize(_databaseName!);
         return true;
       } catch (e) {
-        log('Failed to reinitialize IndexedDB connection: $e');
+        Log.e('Failed to reinitialize IndexedDB connection', error: e);
         return false;
       }
     }
@@ -88,7 +87,7 @@ class DatabaseWeb implements DatabaseInterface {
     if (_database != null) {
       _database!.close();
       _database = null;
-      log('IndexedDB database closed');
+      Log.i('IndexedDB database closed');
     }
   }
 
@@ -117,11 +116,10 @@ class DatabaseWeb implements DatabaseInterface {
       final addRequest = store.put(recordData);
       await _completeRequest(addRequest);
 
-      log('Record created with ID: ${model.id}');
+      Log.i('Record created with ID: ${model.id}');
       return Ok(model);
     } catch (e, stackTrace) {
-      log('Error in post operation: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error in post operation', error: e, stackTrace: stackTrace);
       return Err(ErrorLocalDb.fromRustError(e.toString(),
           originalError: e, stackTrace: stackTrace));
     }
@@ -147,8 +145,7 @@ class DatabaseWeb implements DatabaseInterface {
       final model = _jsObjectToModel(result);
       return Ok(model);
     } catch (e, stackTrace) {
-      log('Error in getById operation: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error in getById operation', error: e, stackTrace: stackTrace);
       return Err(ErrorLocalDb.fromRustError(e.toString(),
           originalError: e, stackTrace: stackTrace));
     }
@@ -178,8 +175,7 @@ class DatabaseWeb implements DatabaseInterface {
 
       return Ok(models);
     } catch (e, stackTrace) {
-      log('Error in getAll operation: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error in getAll operation', error: e, stackTrace: stackTrace);
       return Err(ErrorLocalDb.fromRustError(e.toString(),
           originalError: e, stackTrace: stackTrace));
     }
@@ -210,11 +206,10 @@ class DatabaseWeb implements DatabaseInterface {
       final putRequest = store.put(recordData);
       await _completeRequest(putRequest);
 
-      log('Record updated with ID: ${model.id}');
+      Log.i('Record updated with ID: ${model.id}');
       return Ok(model);
     } catch (e, stackTrace) {
-      log('Error in put operation: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error in put operation', error: e, stackTrace: stackTrace);
       return Err(ErrorLocalDb.fromRustError(e.toString(),
           originalError: e, stackTrace: stackTrace));
     }
@@ -242,11 +237,10 @@ class DatabaseWeb implements DatabaseInterface {
       final deleteRequest = store.delete(id.toJS);
       await _completeRequest(deleteRequest);
 
-      log('Record deleted with ID: $id');
+      Log.i('Record deleted with ID: $id');
       return Ok(true);
     } catch (e, stackTrace) {
-      log('Error in delete operation: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error in delete operation', error: e, stackTrace: stackTrace);
       return Err(ErrorLocalDb.fromRustError(e.toString(),
           originalError: e, stackTrace: stackTrace));
     }
@@ -265,11 +259,10 @@ class DatabaseWeb implements DatabaseInterface {
       final clearRequest = store.clear();
       await _completeRequest(clearRequest);
 
-      log('Database cleared successfully');
+      Log.i('Database cleared successfully');
       return Ok(true);
     } catch (e, stackTrace) {
-      log('Error in cleanDatabase operation: $e');
-      log('Stack trace: $stackTrace');
+      Log.e('Error in cleanDatabase operation', error: e, stackTrace: stackTrace);
       return Err(ErrorLocalDb.fromRustError(e.toString(),
           originalError: e, stackTrace: stackTrace));
     }

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_db/src/database/database_native.dart';
@@ -7,6 +6,7 @@ import 'package:flutter_local_db/src/database/database_web_import.dart';
 import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 
+import 'core/log.dart';
 import 'database/database.dart';
 import 'model/local_db_request_model.dart';
 
@@ -54,29 +54,52 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    try {
-      // Close any existing connections before reinitializing (hot restart safety)
-      if (_database != null) {
-        try {
-          await _database!.closeDatabase();
-        } catch (e) {
-          log('Warning: Error closing existing database during init: $e');
+    // Add retry mechanism for hot restart scenarios
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        Log.i('LocalDB initialization attempt $attempt');
+        
+        // Close any existing connections before reinitializing (hot restart safety)
+        if (_database != null) {
+          try {
+            await _database!.closeDatabase();
+          } catch (e) {
+            Log.w('Warning: Error closing existing database during init: $e');
+          }
+        }
+        
+        // Reset the database instance to ensure clean state
+        _resetDatabaseInstance();
+        
+        // For hot restart scenarios, modify database name slightly on retry
+        String actualDbName = localDbName;
+        if (attempt > 1 && !kIsWeb) {
+          // Only modify for native platforms, not web
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final extension = localDbName.endsWith('.db') ? '.db' : '';
+          final baseName = extension.isEmpty ? localDbName : localDbName.substring(0, localDbName.length - 3);
+          actualDbName = '${baseName}_hr${timestamp}$extension';
+          Log.i('Hot restart retry $attempt using database name: $actualDbName');
+        }
+        
+        // Initialize with fresh instance
+        await _platformDatabase.initialize(actualDbName);
+        Log.i('LocalDB initialized successfully for platform: ${_platformDatabase.platformName}');
+        return; // Success!
+        
+      } catch (e, stackTrace) {
+        Log.e('Error initializing LocalDB attempt $attempt: $e', error: e);
+        
+        if (attempt == 3) {
+          // Final attempt failed
+          Log.e('All initialization attempts failed', error: 'All attempts failed', stackTrace: stackTrace);
+          _resetDatabaseInstance();
+          rethrow;
+        } else {
+          // Wait before retry
+          await Future.delayed(Duration(milliseconds: 200 * attempt));
         }
       }
-      
-      // Reset the database instance to ensure clean state
-      _resetDatabaseInstance();
-      
-      // Initialize with fresh instance
-      await _platformDatabase.initialize(localDbName);
-      log('LocalDB initialized successfully for platform: ${_platformDatabase.platformName}');
-    } catch (e, stackTrace) {
-      log('Error initializing LocalDB: $e');
-      log('Stack trace: $stackTrace');
-      
-      // Reset state on failure
-      _resetDatabaseInstance();
-      rethrow;
     }
   }
 
@@ -266,8 +289,7 @@ class LocalDB {
       jsonDecode(jsonString);
       return true;
     } catch (error, stackTrace) {
-      log(error.toString());
-      log(stackTrace.toString());
+      Log.e('JSON validation error in _isValidMap', error: error, stackTrace: stackTrace);
       return false;
     }
   }
