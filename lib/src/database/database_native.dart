@@ -122,6 +122,9 @@ class DatabaseNative implements DatabaseInterface {
   @override
   String get platformName => 'native';
 
+  @override
+  String? get currentDatabaseName => _lastDatabaseName;
+
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
       databaseName = '$databaseName.db';

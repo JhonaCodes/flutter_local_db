@@ -65,4 +65,9 @@ abstract class DatabaseInterface {
   ///
   /// Returns a string identifying the platform (e.g., 'native', 'web')
   String get platformName;
+
+  /// Get the current database name
+  ///
+  /// Returns the name of the currently connected database, or null if no database is connected
+  String? get currentDatabaseName;
 }

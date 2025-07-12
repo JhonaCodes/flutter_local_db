@@ -31,6 +31,9 @@ class DatabaseWeb implements DatabaseInterface {
   String get platformName => 'web';
 
   @override
+  String? get currentDatabaseName => _databaseName;
+
+  @override
   Future<void> initialize(String databaseName) async {
     try {
       Log.i('Initializing IndexedDB database: $databaseName');

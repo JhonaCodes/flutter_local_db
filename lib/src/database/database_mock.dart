@@ -46,6 +46,9 @@ class DatabaseMock implements DatabaseInterface {
   @override
   String get platformName => 'mock';
 
+  @override
+  String? get currentDatabaseName => _databaseName;
+
   /// Get current storage size
   int get storageSize => _storage.length;
 

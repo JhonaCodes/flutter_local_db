@@ -17,6 +17,9 @@ class DatabaseWeb implements DatabaseInterface {
   String get platformName => 'web-stub';
 
   @override
+  String? get currentDatabaseName => null;
+
+  @override
   Future<void> initialize(String databaseName) async {
     throw UnsupportedError('Web database is not supported on this platform');
   }

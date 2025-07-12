@@ -18,6 +18,9 @@ class DatabaseStub implements DatabaseInterface {
   String get platformName => 'unsupported';
 
   @override
+  String? get currentDatabaseName => null;
+
+  @override
   Future<void> initialize(String databaseName) async {
     throw UnsupportedError('Database is not supported on this platform');
   }

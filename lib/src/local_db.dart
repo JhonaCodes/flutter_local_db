@@ -47,6 +47,27 @@ class LocalDB {
     _database = null;
   }
 
+  /// Get the current database name from the active database instance
+  static String? _getCurrentDatabaseName() {
+    if (_database == null) return null;
+    return _database!.currentDatabaseName;
+  }
+
+  /// Normalize database name for comparison (handle .db extension and paths)
+  static String? _normalizeDatabaseName(String? dbName) {
+    if (dbName == null) return null;
+    
+    // Extract just the filename if it's a path
+    String normalized = dbName.split('/').last.split('\\').last;
+    
+    // Remove .db extension for comparison
+    if (normalized.endsWith('.db')) {
+      normalized = normalized.substring(0, normalized.length - 3);
+    }
+    
+    return normalized.toLowerCase();
+  }
+
   /// Initializes the local database with a specified name.
   ///
   /// This method must be called before performing any database operations.
@@ -62,24 +83,41 @@ class LocalDB {
     try {
       Log.i('LocalDB initialization started');
 
-      // Close any existing connections before reinitializing (hot restart safety)
+      // Check if we already have a valid database connection with the same name
       if (_database != null) {
+        try {
+          final isValid = await _database!.ensureConnectionValid();
+          final currentDbName = _getCurrentDatabaseName();
+          
+          // Normalize names for comparison (handle .db extension)
+          final normalizedCurrent = _normalizeDatabaseName(currentDbName);
+          final normalizedRequested = _normalizeDatabaseName(localDbName);
+          
+          if (isValid && _database!.platformName.isNotEmpty && normalizedCurrent == normalizedRequested) {
+            Log.i('Reusing existing valid database connection for: $localDbName');
+            return; // Use existing connection, don't reinitialize
+          } else if (normalizedCurrent != normalizedRequested) {
+            Log.i('Database name changed from $currentDbName to $localDbName, reinitializing');
+          }
+        } catch (e) {
+          Log.w('Warning: Error checking existing database connection: $e');
+        }
+        
+        // Only close if connection is invalid
         try {
           await _database!.closeDatabase();
         } catch (e) {
-          Log.w('Warning: Error closing existing database during init: $e');
+          Log.w('Warning: Error closing invalid database during init: $e');
         }
+        _resetDatabaseInstance();
       }
-
-      // Reset the database instance to ensure clean state
-      _resetDatabaseInstance();
 
       // Initialize with the provided database name (no modifications)
       await _platformDatabase.initialize(localDbName);
       Log.i(
         'LocalDB initialized successfully for platform: ${_platformDatabase.platformName}',
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       Log.e('Error initializing LocalDB: $e', error: e);
       _resetDatabaseInstance();
       rethrow;
