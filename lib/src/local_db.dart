@@ -137,31 +137,38 @@ class LocalDB {
     Map<String, dynamic> data, {
     String? lastUpdate,
   }) async {
-    final validationError = _validateInput(key, data);
-    if (validationError != null) return validationError;
+    if (!_isValidId(key)) {
+      return Err(ErrorLocalDb.serializationError(
+        "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+      ));
+    }
 
-    return await _ensureDatabaseAndExecute((db) async {
-      final verifyId = await db.getById(key);
-      
-      return verifyId.when(
-        ok: (existingModel) async {
-          if (existingModel != null) {
-            return Err(ErrorLocalDb.databaseError(
-              "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
-            ));
-          }
+    if (!_isValidMap(data)) {
+      return Err(ErrorLocalDb.serializationError(
+        'The provided format data is invalid.\n$data',
+      ));
+    }
 
-          final model = LocalDbModel(
-            id: key,
-            hash: DateTime.now().millisecondsSinceEpoch.toString(),
-            data: data,
-          );
+    final verifyId = await GetById(key);
 
-          return await db.post(model);
-        },
-        err: (error) => Err(error),
-      );
-    });
+    return verifyId.when(
+      ok: (existingModel) async {
+        if (existingModel != null) {
+          return Err(ErrorLocalDb.databaseError(
+            "Cannot create new record: ID '$key' already exists. Use PUT method to update existing records.",
+          ));
+        }
+
+        final model = LocalDbModel(
+          id: key,
+          hash: DateTime.now().millisecondsSinceEpoch.toString(),
+          data: data,
+        );
+
+        return await DatabaseManager.execute(_databaseName!, (db) => db.post(model));
+      },
+      err: (error) => Err(error),
+    );
   }
 
   /// Retrieves all records from the local database.
@@ -173,19 +180,7 @@ class LocalDB {
   static Future<Result<List<LocalDbModel>, ErrorLocalDb>>
   // ignore: non_constant_identifier_names
   GetAll() async {
-    return await _ensureDatabaseAndExecute((db) async {
-      final result = await db.getAll();
-      return result.when(
-        ok: (records) {
-          Log.i('LocalDB.GetAll: Retrieved ${records.length} records successfully');
-          return Ok(records);
-        },
-        err: (error) {
-          Log.e('LocalDB.GetAll: Failed to retrieve records: $error');
-          return Err(error);
-        },
-      );
-    });
+    return await DatabaseManager.execute(_databaseName!, (db) => db.getAll());
   }
 
   /// Retrieves a single record by its unique identifier.
@@ -201,28 +196,13 @@ class LocalDB {
   static Future<Result<LocalDbModel?, ErrorLocalDb>> GetById(
     String id,
   ) async {
-    final validationError = _validateInput(id, null);
-    if (validationError != null) {
-      return Err(validationError.errorOrNull!);
+    if (!_isValidId(id)) {
+      return Err(ErrorLocalDb.validationError(
+        "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+      ));
     }
 
-    return await _ensureDatabaseAndExecute((db) async {
-      final result = await db.getById(id);
-      return result.when(
-        ok: (record) {
-          if (record != null) {
-            Log.i('LocalDB.GetById: Record found for ID: $id');
-          } else {
-            Log.i('LocalDB.GetById: No record found for ID: $id');
-          }
-          return Ok(record);
-        },
-        err: (error) {
-          Log.e('LocalDB.GetById: Failed to retrieve record for ID $id: $error');
-          return Err(error);
-        },
-      );
-    });
+    return await DatabaseManager.execute(_databaseName!, (db) => db.getById(id));
   }
 
   /// Updates an existing record in the database.
@@ -239,31 +219,26 @@ class LocalDB {
     String key,
     Map<String, dynamic> data,
   ) async {
-    final validationError = _validateInput(key, data);
-    if (validationError != null) return validationError;
+    final verifyId = await GetById(key);
 
-    return await _ensureDatabaseAndExecute((db) async {
-      final existingRecord = await db.getById(key);
-      
-      return existingRecord.when(
-        ok: (existingModel) async {
-          if (existingModel == null) {
-            return Err(ErrorLocalDb.notFound(
-              "Record '$key' not found. Use POST method to create new records.",
-            ));
-          }
+    return verifyId.when(
+      ok: (existingModel) async {
+        if (existingModel == null) {
+          return Err(ErrorLocalDb.notFound(
+            "Record '$key' not found. Use POST method to create new records.",
+          ));
+        }
 
-          final model = LocalDbModel(
-            id: key,
-            data: data,
-            hash: DateTime.now().millisecondsSinceEpoch.toString(),
-          );
+        final model = LocalDbModel(
+          id: key,
+          data: data,
+          hash: DateTime.now().millisecondsSinceEpoch.toString(),
+        );
 
-          return await db.put(model);
-        },
-        err: (error) => Err(error),
-      );
-    });
+        return await DatabaseManager.execute(_databaseName!, (db) => db.put(model));
+      },
+      err: (error) => Err(error),
+    );
   }
 
   /// Deletes a record by its unique identifier.
@@ -276,24 +251,13 @@ class LocalDB {
   /// - [Err] with an error message if the key is invalid or deletion fails
   // ignore: non_constant_identifier_names
   static Future<Result<bool, ErrorLocalDb>> Delete(String id) async {
-    final validationError = _validateInput(id, null);
-    if (validationError != null) {
-      return Err(validationError.errorOrNull!);
+    if (!_isValidId(id)) {
+      return Err(ErrorLocalDb.serializationError(
+        "Invalid key format. Key must be at least 3 characters long and can only contain letters, numbers, hyphens (-) and underscores (_).",
+      ));
     }
 
-    return await _ensureDatabaseAndExecute((db) async {
-      final result = await db.delete(id);
-      return result.when(
-        ok: (success) {
-          Log.i('LocalDB.Delete: Record deleted successfully for ID: $id');
-          return Ok(success);
-        },
-        err: (error) {
-          Log.e('LocalDB.Delete: Failed to delete record for ID $id: $error');
-          return Err(error);
-        },
-      );
-    });
+    return await DatabaseManager.execute(_databaseName!, (db) => db.delete(id));
   }
 
   /// Clear all data on the database.
@@ -303,19 +267,7 @@ class LocalDB {
   /// - [Err] with an error message if clearing fails
   // ignore: non_constant_identifier_names
   static Future<Result<bool, ErrorLocalDb>> ClearData() async {
-    return await _ensureDatabaseAndExecute((db) async {
-      final result = await db.cleanDatabase();
-      return result.when(
-        ok: (success) {
-          Log.i('LocalDB.ClearData: Database cleared successfully');
-          return Ok(success);
-        },
-        err: (error) {
-          Log.e('LocalDB.ClearData: Failed to clear database: $error');
-          return Err(error);
-        },
-      );
-    });
+    return await DatabaseManager.execute(_databaseName!, (db) => db.cleanDatabase());
   }
 
   /// Closes the database connection and frees all resources.
