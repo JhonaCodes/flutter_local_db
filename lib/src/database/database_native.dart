@@ -105,20 +105,20 @@ class DatabaseNative implements DatabaseInterface {
   Pointer<AppDbState>? _dbInstance;
   String? _lastDatabaseName;
 
-  /// Functions registration
-  Pointer<AppDbState> Function(Pointer<Utf8>)? _createDatabase;
-  PointerStringFFICallBack? _post;
-  PointerListFFICallBack? _get;
-  PointerStringFFICallBack? _getById;
-  PointerStringFFICallBack? _put;
-  PointerBoolFFICallBack? _delete;
-  PointerBoolFFICallBackDirect? _clearAllRecords;
-  Pointer<Utf8> Function(Pointer<AppDbState>)? _closeDatabase;
-  void Function(Pointer<Utf8>)? _freeCString;
-  bool Function(Pointer<AppDbState>)? _isDatabaseValid;
-  bool Function(Pointer<AppDbState>, int)? _validateInstanceGeneration;
-  Pointer<Utf8> Function(Pointer<AppDbState>)? _pingDatabase;
-  int Function()? _getCurrentGeneration;
+  /// Functions registration (static to be shared across instances)
+  static Pointer<AppDbState> Function(Pointer<Utf8>)? _createDatabase;
+  static PointerStringFFICallBack? _post;
+  static PointerListFFICallBack? _get;
+  static PointerStringFFICallBack? _getById;
+  static PointerStringFFICallBack? _put;
+  static PointerBoolFFICallBack? _delete;
+  static PointerBoolFFICallBackDirect? _clearAllRecords;
+  static Pointer<Utf8> Function(Pointer<AppDbState>)? _closeDatabase;
+  static void Function(Pointer<Utf8>)? _freeCString;
+  static bool Function(Pointer<AppDbState>)? _isDatabaseValid;
+  static bool Function(Pointer<AppDbState>, int)? _validateInstanceGeneration;
+  static Pointer<Utf8> Function(Pointer<AppDbState>)? _pingDatabase;
+  static int Function()? _getCurrentGeneration;
 
   @override
   bool get isSupported => !Platform.isLinux && !Platform.isWindows;
@@ -142,14 +142,16 @@ class DatabaseNative implements DatabaseInterface {
       _lib = Ok(DynamicLibrary.open(libPath));
     }
 
-    _bindFunctions();
-    Log.i('Functions bound successfully');
+    if (_lib case Ok(data: final lib)) {
+      _bindFunctions(lib);
+      Log.i('Functions bound successfully');
+    }
 
     await _init(databaseName);
     Log.i('Native database initialized successfully for testing');
   }
 
-  void _resetFunctionPointers() {
+  static void _resetFunctionPointers() {
     _createDatabase = null;
     _post = null;
     _get = null;
@@ -183,8 +185,10 @@ class DatabaseNative implements DatabaseInterface {
       _lib = await _loadRustNativeLib();
       Log.i('Native library loaded: $_lib');
 
-      _bindFunctions();
-      Log.i('Functions bound successfully');
+      if (_lib case Ok(data: final lib)) {
+        _bindFunctions(lib);
+        Log.i('Functions bound successfully');
+      }
 
       final appDir = await getApplicationDocumentsDirectory();
       Log.i('Using app directory for database storage');
@@ -226,9 +230,7 @@ class DatabaseNative implements DatabaseInterface {
     return Err("Unsupported platform: ${Platform.operatingSystem}");
   }
 
-  void _bindFunctions() {
-    switch (_lib) {
-      case Ok(data: DynamicLibrary lib):
+  static void _bindFunctions(DynamicLibrary lib) {
         _createDatabase = lib
             .lookupFunction<
               PointerAppDbStateCallBAck,
@@ -288,11 +290,6 @@ class DatabaseNative implements DatabaseInterface {
             .lookupFunction<Uint64 Function(), int Function()>(
               FFiFunctions.getCurrentGeneration.cName,
             );
-        break;
-      case Err(error: String error):
-        Log.e('Library loading error', error: error);
-        throw Exception(error);
-    }
   }
 
   Future<void> _init(String dbName) async {
@@ -300,7 +297,9 @@ class DatabaseNative implements DatabaseInterface {
       // Ensure FFI functions are always bound before initialization
       if (_createDatabase == null || _post == null || _get == null) {
         Log.w('FFI functions not bound during _init, binding now...');
-        _bindFunctions();
+        if (_lib case Ok(data: final lib)) {
+          _bindFunctions(lib);
+        }
       }
 
       if (_createDatabase == null) {
@@ -407,8 +406,10 @@ class DatabaseNative implements DatabaseInterface {
     if (_createDatabase == null || _post == null || _get == null) {
       Log.w('FFI functions not bound, attempting to rebind...');
       try {
-        _bindFunctions();
-        Log.i('FFI functions rebound successfully');
+        if (_lib case Ok(data: final lib)) {
+          _bindFunctions(lib);
+          Log.i('FFI functions rebound successfully');
+        }
       } catch (e) {
         Log.e('Failed to rebind FFI functions', error: e);
         return false;
@@ -552,8 +553,10 @@ class DatabaseNative implements DatabaseInterface {
       try {
         // Reset function pointers and rebind them
         _resetFunctionPointers();
-        _bindFunctions();
-        Log.i('FFI functions rebound during reinitialization');
+        if (_lib case Ok(data: final lib)) {
+          _bindFunctions(lib);
+          Log.i('FFI functions rebound during reinitialization');
+        }
 
         // Check if this is a testing scenario (database name contains full path)
         if (_lastDatabaseName!.contains('/') ||
