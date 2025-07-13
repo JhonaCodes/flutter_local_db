@@ -237,34 +237,23 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   Future<void> _init(String dbName) async {
     try {
-      log('=== DEBUG: Attempting to create database with path: $dbName');
+      log('Attempting to create database with path: $dbName');
       
-      // Test different path formats to understand what Rust expects
-      final testPaths = [
-        dbName,
-        '$dbName.db',
-        '$dbName.lmdb',
-        '/tmp/test_db',
-        'test_simple'
-      ];
+      // Rust expects the path to end with .lmdb
+      final lmdbPath = '$dbName.lmdb';
+      final dbNamePointer = lmdbPath.toNativeUtf8();
+      _dbInstance = _createDatabase(dbNamePointer);
       
-      for (final testPath in testPaths) {
-        log('Testing path: $testPath');
-        final pathPointer = testPath.toNativeUtf8();
-        final testInstance = _createDatabase(pathPointer);
-        log('Result for $testPath: ${testInstance == nullptr ? "NULL" : "SUCCESS"}');
-        calloc.free(pathPointer);
-        
-        if (testInstance != nullptr) {
-          _dbInstance = testInstance;
-          _hotRestartDetected = false;
-          log('Database created successfully with path: $testPath');
-          return;
-        }
+      if (_dbInstance == nullptr) {
+        calloc.free(dbNamePointer);
+        throw Exception('Failed to create database instance. Returned null pointer.');
       }
-      
-      throw Exception('All path formats failed. Rust create_db consistently returns null.');
 
+      // Reset hot restart flag on successful initialization
+      _hotRestartDetected = false;
+      log('Database instance created successfully: ${_dbInstance.toString()}');
+
+      calloc.free(dbNamePointer);
     } catch (error, stackTrace) {
       log('Error in _init: $error');
       log('Stack trace: $stackTrace');
