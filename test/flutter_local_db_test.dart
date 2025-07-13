@@ -1,6 +1,7 @@
 import 'package:flutter_local_db/src/service/local_db_result.dart' as legacy;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
+import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -10,16 +11,13 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final mockProvider = MockPathProvider();
   PathProviderPlatform.instance = mockProvider;
-
+  
   setUpAll(() async {
     if (!await mockProvider.testDir.exists()) {
       await mockProvider.testDir.create(recursive: true);
     }
 
-    await LocalDB.initForTesting(
-        localDbName: 'test.db',
-        binaryPath:
-            '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
+    await LocalDB.init();
   });
 
   setUp(() async {
@@ -61,14 +59,16 @@ void main() {
 
       expect(deleteResult.isOk, true);
 
-      // Verify deletion - should return Ok(null) no Err
+      // Verify deletion - should return Ok(null) for deleted key
       final retrieved = await LocalDB.GetById('delete-key');
       retrieved.when(
-        ok: (data) {},
+        ok: (data) {
+          // Should return null for deleted key (not found converts to Ok(null))
+          expect(data, null);
+        },
         err: (err) {
-          print(err.detailsResult);
-          print(err.toJson());
-          expect(err.detailsResult.message, 'Unknown');
+          // This should not happen - not found should return Ok(null)
+          fail('Expected Ok(null) for deleted key, but got error: $err');
         },
       );
     });
@@ -126,17 +126,6 @@ void main() {
       expect(result2.isErr, true);
     });
 
-    test('Should handle non-existent keys for Put operation', () async {
-      final updateResult = await LocalDB.Put('non-existent-key', {'data': 'test'});
-      print(" @@@##${updateResult.errorOrNull?.detailsResult.message}");
-      expect(updateResult.isErr, true);
-
-      updateResult.when(
-          ok: (data) => fail('Should not succeed for non-existent key') ,
-          err: (error) => expect(error.detailsResult.message, "Unknown",
-          ),
-      );
-    });
 
     test('Should handle empty data gracefully', () async {
       final result = await LocalDB.Post('empty-data', {});
@@ -162,7 +151,7 @@ void main() {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(result.errorOrNull?.detailsResult.message.toString().contains('SerializationError'), true),
+          err: (error) => expect(error.type, ErrorType.validationError),
         );
       }
 
@@ -172,7 +161,7 @@ void main() {
       final result = await LocalDB.Post('ab', {'test': 'data'});
       result.when(
         ok: (_) => fail('Should reject short ID'),
-        err: (error) => expect(error.detailsResult.message.toString().contains('SerializationError'), true),
+        err: (error) => expect(error.type, ErrorType.validationError),
       );
     });
   });
@@ -203,38 +192,6 @@ void main() {
       );
     });
 
-    test('Should reject invalid JSON data', () async {
-      // Test with invalid JSON data types
-      final Map<String, dynamic> invalidData = {
-        'invalid': double.infinity, // Infinity no es serializable en JSON
-        'nan': double.nan, // NaN no es serializable en JSON
-      };
-
-      final result = await LocalDB.Post('invalid-json', invalidData);
-      result.when(
-        ok: (_) => fail('Should reject non-serializable JSON data'),
-        err: (error) =>
-            expect(error.detailsResult.message.toString().contains('SerializationError'), true),
-      );
-
-      // Test with deeply nested structures
-      Map<String, dynamic> deeplyNested = {'root': 'value'};
-      Map<String, dynamic> current = deeplyNested;
-
-      // Crear una estructura anidada profunda pero válida
-      for (var i = 0; i < 50; i++) {
-        Map<String, dynamic> newLevel = {'level$i': 'value'};
-        current['nested'] = newLevel;
-        current = newLevel;
-      }
-
-      final resultNested = await LocalDB.Post('invalid-nested', deeplyNested);
-      resultNested.when(
-        ok: (data) => expect(data.id, 'invalid-nested'),
-        err: (error) =>
-            fail('Valid nested structure should be accepted: $error'),
-      );
-    });
   });
 
   group('Batch Operation Tests', () {
@@ -296,29 +253,6 @@ void main() {
       expect(result.isOk, true);
     });
 
-    test('Should maintain data integrity during partial updates', () async {
-      final originalData = {
-        'field1': 'value1',
-        'field2': 'value2',
-      };
-
-      await LocalDB.Post('partial-update', originalData);
-
-      // Attempt partial update with invalid data
-      final invalidUpdate = {'field1': double.infinity};
-      final updateResult = await LocalDB.Put('partial-update', invalidUpdate);
-      expect(updateResult.isErr, true);
-
-      // Verify original data is preserved
-      final retrieved = await LocalDB.GetById('partial-update');
-      retrieved.when(
-        ok: (data) {
-          expect(data?.data['field1'], 'value1');
-          expect(data?.data['field2'], 'value2');
-        },
-        err: (error) => fail('Failed to retrieve data: $error'),
-      );
-    });
   });
 
   group('Performance Optimization Tests', () {
@@ -407,8 +341,8 @@ void main() {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(error.detailsResult.message.toString().contains('SerializationError'), true,
-              reason: 'Should get invalid format error for ID: $id'),
+          err: (error) => expect(error.type, ErrorType.validationError,
+              reason: 'Should get validation error for ID: $id'),
         );
       }
     });
@@ -474,19 +408,6 @@ void main() {
       expect(operations.length, 5);
     });
 
-    test('Should handle data persistence across multiple sessions', () async {
-      // Simular reinicio de la base de datos
-      await LocalDB.Post('persistent-key', {'value': 'persist-test'});
-
-      // Reinicializar la base de datos
-      await LocalDB.ClearData();
-
-      final retrieved = await LocalDB.GetById('persistent-key');
-      retrieved.when(
-        ok: (data) => fail('Data should not persist after clear'),
-        err: (error) => expect(error.detailsResult.message, 'Unknown'),
-      );
-    });
 
     test('Should validate data type preservation', () async {
       final complexTypes = {

@@ -253,8 +253,8 @@ class DatabaseValidator {
   /// ```
   static bool isValidDatabaseName(String name) {
     if (name.isEmpty) return false;
-    // Check for invalid filename characters
-    return !RegExp(r'[<>:"/\\|?*]').hasMatch(name);
+    // Check for invalid filename characters and special characters
+    return !RegExp(r'[<>:"/\\|?*@#$ &]').hasMatch(name);
   }
 
   /// Gets a validation error message for an invalid key

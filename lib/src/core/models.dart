@@ -121,7 +121,16 @@ class DbEntry {
           _mapEquals(data, other.data);
 
   @override
-  int get hashCode => id.hashCode ^ hash.hashCode ^ data.hashCode;
+  int get hashCode => id.hashCode ^ hash.hashCode ^ _mapHashCode(data);
+
+  /// Hash code computation for maps that matches our equality comparison
+  static int _mapHashCode(Map<String, dynamic> map) {
+    int hash = 0;
+    for (final entry in map.entries) {
+      hash ^= entry.key.hashCode ^ entry.value.hashCode;
+    }
+    return hash;
+  }
 
   /// Deep equality comparison for maps
   static bool _mapEquals(Map<String, dynamic> a, Map<String, dynamic> b) {

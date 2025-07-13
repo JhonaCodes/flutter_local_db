@@ -558,10 +558,39 @@ class NativeDatabase implements Database {
   DbError _parseRustError(String errorResponse) {
     try {
       final response = jsonDecode(errorResponse) as Map<String, dynamic>;
+      
+      // Handle Rust error format: {"ErrorType": "message"}
+      if (response.containsKey('NotFound')) {
+        final errorMessage = response['NotFound'] as String;
+        return DbError.notFound(errorMessage);
+      }
+      
+      if (response.containsKey('ValidationError')) {
+        final errorMessage = response['ValidationError'] as String;
+        return DbError.validationError(errorMessage);
+      }
+      
+      if (response.containsKey('SerializationError')) {
+        final errorMessage = response['SerializationError'] as String;
+        return DbError.serializationError(errorMessage);
+      }
+      
+      if (response.containsKey('DatabaseError')) {
+        final errorMessage = response['DatabaseError'] as String;
+        return DbError.databaseError(errorMessage);
+      }
+      
+      // Fallback for legacy format {"Err": "message"}
       if (response.containsKey('Err')) {
         final errorData = response['Err'] as String;
         return DbError.databaseError('Rust error: $errorData');
       }
+      
+      // Unknown error format
+      final firstKey = response.keys.first;
+      final firstValue = response[firstKey] as String;
+      return DbError.databaseError('Rust error ($firstKey): $firstValue');
+      
     } catch (e) {
       // Fallback if JSON parsing fails
     }
