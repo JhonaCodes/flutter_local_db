@@ -38,6 +38,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
   String? _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
   bool _hotRestartDetected = false; // Flag para detectar hot restart
+  bool _isInitialized = false; // Flag para saber si ya se inicializó completamente
   
   /// Public getter for hot restart detected flag (for debugging/recovery purposes)
   bool get hotRestartDetected => _hotRestartDetected;
@@ -69,9 +70,22 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Future<void> initialize(String databaseName) async {
     try {
       log('Initializing DB on platform: ${Platform.operatingSystem}');
+      log('Is already initialized: $_isInitialized');
 
       _lastDatabaseName = databaseName;
 
+      // Si ya está inicializado (hot restart), solo reinicializar la instancia de DB
+      if (_isInitialized) {
+        log('Hot restart detected - skipping library and function binding');
+        _hotRestartDetected = false; // Reset flag
+        
+        final appDir = await getApplicationDocumentsDirectory();
+        await _init('${appDir.path}/$databaseName');
+        log('Database reinitialized successfully after hot restart');
+        return;
+      }
+
+      // Primera inicialización completa
       if(_lib == null) {
         /// Initialize native library.
         _lib = await CurrentPlatform.loadRustNativeLib();
@@ -101,7 +115,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       /// Initialize database with default route and database name.
       await _init('${appDir.path}/$databaseName');
-      log('Database initialized successfully');
+      
+      // Marcar como inicializado completamente
+      _isInitialized = true;
+      log('Database initialized successfully (first time)');
 
     } catch (e, stack) {
       log('Error initializing database: $e');
