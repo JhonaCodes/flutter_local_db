@@ -24,7 +24,16 @@ class LocalDB {
   ///
   /// Throws an exception if initialization fails
   static Future<void> init({required String localDbName}) async {
-    await LocalDbBridge.instance.initialize(localDbName);
+    try {
+      await LocalDbBridge.instance.initialize(localDbName);
+    } catch (e) {
+      log('Initial database initialization failed: $e');
+      log('This may be due to hot restart, attempting recovery...');
+      
+      // Mark hot restart detection and try again
+      LocalDbBridge.instance.hotRestartDetected = true;
+      await LocalDbBridge.instance.initialize(localDbName);
+    }
   }
 
   /// Avoid to use on production.

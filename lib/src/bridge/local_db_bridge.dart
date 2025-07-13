@@ -38,6 +38,12 @@ class LocalDbBridge extends LocalSbRequestImpl {
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
   String? _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
   bool _hotRestartDetected = false; // Flag para detectar hot restart
+  
+  /// Public getter for hot restart detected flag (for debugging/recovery purposes)
+  bool get hotRestartDetected => _hotRestartDetected;
+  
+  /// Public setter for hot restart detected flag (for recovery purposes)
+  set hotRestartDetected(bool value) => _hotRestartDetected = value;
 
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
@@ -104,6 +110,23 @@ class LocalDbBridge extends LocalSbRequestImpl {
     }
   }
 
+  /// Cierra la conexión de base de datos actual
+  Future<void> _closeCurrentDatabase() async {
+    if (_dbInstance != null && _dbInstance != nullptr) {
+      try {
+        log('Invalidating current database connection...');
+        // Since we don't have a close function, just null the instance
+        // and let the Rust side handle cleanup when we create a new instance
+        _dbInstance = null;
+        log('Database connection invalidated');
+      } catch (e) {
+        log('Error invalidating database: $e');
+        // Force null the instance even if there's an error
+        _dbInstance = null;
+      }
+    }
+  }
+
   /// Método para verificar si la conexión es válida y reinicializar si es necesario
   Future<bool> ensureConnectionValid() async {
     // Verificar si la instancia es válida o si se detectó hot restart
@@ -112,6 +135,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       if (_lastDatabaseName != null) {
         try {
+          // Close existing connection first
+          await _closeCurrentDatabase();
+          
           // Reset hot restart flag
           _hotRestartDetected = false;
           
@@ -210,37 +236,111 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   Future<void> _init(String dbName) async {
-    try {
-      log('Attempting to create database with path: $dbName');
-      
-      // Verify _createDatabase function is properly bound
-      if (_createDatabase == null) {
-        throw Exception('_createDatabase function is not properly bound');
-      }
+    String originalDbName = dbName;
+    int attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        log('=== Database Initialization Debug (Attempt $attempts) ===');
+        log('Attempting to create database with path: $dbName');
+        
+        // Check if file exists and permissions
+        final dbFile = File(dbName);
+        log('Database file exists: ${dbFile.existsSync()}');
+        if (dbFile.existsSync()) {
+          final stat = dbFile.statSync();
+          log('Database file size: ${stat.size} bytes');
+          log('Database file modified: ${stat.modified}');
+          
+          // Try to check if file is locked by attempting to open it
+          try {
+            final testFile = await dbFile.open(mode: FileMode.append);
+            await testFile.close();
+            log('Database file is accessible (not locked)');
+          } catch (e) {
+            log('WARNING: Database file appears to be locked: $e');
+            if (attempts < maxAttempts) {
+              // Create a new database name with timestamp
+              final timestamp = DateTime.now().millisecondsSinceEpoch;
+              final baseName = originalDbName.replaceAll('.db', '');
+              dbName = '${baseName}_$timestamp.db';
+              log('Trying with new database name: $dbName');
+              continue;
+            }
+          }
+        }
+        
+        // Check parent directory
+        final parentDir = Directory(dbFile.parent.path);
+        log('Parent directory exists: ${parentDir.existsSync()}');
+        log('Parent directory path: ${parentDir.path}');
+        
+        // Ensure parent directory exists
+        if (!parentDir.existsSync()) {
+          log('Creating parent directory...');
+          await parentDir.create(recursive: true);
+        }
+        
+        // Verify _createDatabase function is properly bound
+        if (_createDatabase == null) {
+          throw Exception('_createDatabase function is not properly bound');
+        }
 
-      final dbNamePointer = dbName.toNativeUtf8();
-      log('Created native UTF8 pointer for database name');
+        final dbNamePointer = dbName.toNativeUtf8();
+        log('Created native UTF8 pointer for database name');
+        log('UTF8 pointer address: ${dbNamePointer.address}');
 
-      // Si ya existe una instancia, vamos a crear una nueva de todos modos
-      log('Calling _createDatabase function...');
-      _dbInstance = _createDatabase(dbNamePointer);
-      log('_createDatabase returned: ${_dbInstance.toString()}');
+        // Si ya existe una instancia, vamos a crear una nueva de todos modos
+        log('Calling _createDatabase function...');
+        _dbInstance = _createDatabase(dbNamePointer);
+        log('_createDatabase returned: ${_dbInstance.toString()}');
+        log('_createDatabase address: ${_dbInstance?.address ?? 'null'}');
 
-      if (_dbInstance == nullptr) {
+        if (_dbInstance == nullptr) {
+          calloc.free(dbNamePointer);
+          
+          if (attempts < maxAttempts) {
+            log('Attempt $attempts failed, trying with different database name...');
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final baseName = originalDbName.replaceAll('.db', '');
+            dbName = '${baseName}_hotrestart_$timestamp.db';
+            await Future.delayed(Duration(milliseconds: 100)); // Brief delay
+            continue;
+          }
+          
+          log('ERROR: _createDatabase returned null pointer after $attempts attempts!');
+          log('This indicates the Rust function create_db failed internally');
+          log('Possible causes: file permissions, path issues, or Rust internal error');
+          throw Exception('Failed to create database instance after $attempts attempts. Returned null pointer.');
+        }
+
+        // Reset hot restart flag on successful initialization
+        _hotRestartDetected = false;
+        log('Database instance created successfully: ${_dbInstance.toString()}');
+        log('=== Database Initialization Complete ===');
+
         calloc.free(dbNamePointer);
-        throw Exception('Failed to create database instance. Returned null pointer. This usually means the Rust library is not properly loaded or the database path is invalid.');
+        return; // Success, exit the retry loop
+        
+      } catch (error, stackTrace) {
+        log('=== Database Initialization Failed (Attempt $attempts) ===');
+        log('Error in _init: $error');
+        log('Stack trace: $stackTrace');
+        
+        if (attempts >= maxAttempts) {
+          _hotRestartDetected = true;
+          rethrow;
+        }
+        
+        // Prepare for retry with different name
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final baseName = originalDbName.replaceAll('.db', '');
+        dbName = '${baseName}_retry${attempts}_$timestamp.db';
+        log('Retrying with database name: $dbName');
+        await Future.delayed(Duration(milliseconds: 200 * attempts)); // Increasing delay
       }
-
-      // Reset hot restart flag on successful initialization
-      _hotRestartDetected = false;
-      log('Database instance created successfully: ${_dbInstance.toString()}');
-
-      calloc.free(dbNamePointer);
-    } catch (error, stackTrace) {
-      log('Error in _init: $error');
-      log(stackTrace.toString());
-      _hotRestartDetected = true;
-      rethrow;
     }
   }
 
