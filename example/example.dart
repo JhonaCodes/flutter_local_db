@@ -41,12 +41,12 @@ class _HomePageState extends State<HomePage> {
     });
 
     result.when(
-      ok: (data) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User created: ${data.id}')),
-      ),
-      err: (error) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
-      ),
+      ok: (data) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('User created: ${data.id}'))),
+      err: (error) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $error'))),
     );
 
     setState(() {});
@@ -59,9 +59,9 @@ class _HomePageState extends State<HomePage> {
       ok: (success) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(success ? 'User deleted' : 'Delete failed')),
       ),
-      err: (error) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
-      ),
+      err: (error) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $error'))),
     );
 
     setState(() {});
@@ -69,17 +69,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Local DB Example'),
-      ),
+      appBar: AppBar(title: const Text('Local DB Example')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FutureBuilder(
           future: LocalDB.GetById(userID),
-          builder: (context, asyncSnapShot){
-
+          builder: (context, asyncSnapShot) {
             if (asyncSnapShot.hasError) {
               return Center(child: Text('Error: ${asyncSnapShot.error}'));
             }
@@ -88,33 +84,33 @@ class _HomePageState extends State<HomePage> {
               return const Center(child: Text('User not found'));
             }
 
-            if(asyncSnapShot.hasData && asyncSnapShot.data != null){
+            if (asyncSnapShot.hasData && asyncSnapShot.data != null) {
               return asyncSnapShot.data!.when(
                 ok: (userData) => userData == null
                     ? const Center(child: Text('No user found'))
                     : Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('ID: ${userData.id}'),
-                        Text('Data: ${userData.data}'),
-                      ],
-                    ),
-                  ),
-                ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('ID: ${userData.id}'),
+                              Text('Data: ${userData.data}'),
+                            ],
+                          ),
+                        ),
+                      ),
                 err: (error) => Center(
-                  child: Text('Error: $error',
-                      style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    'Error: $error',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
               );
             }
 
-
             return const Center(child: CircularProgressIndicator());
-
           },
         ),
       ),

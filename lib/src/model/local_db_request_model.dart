@@ -18,32 +18,20 @@ class LocalDbModel {
   ///
   /// [id] and [data] are required parameters.
   /// [hash] is optional and typically provided by the Rust backend.
-  LocalDbModel({
-    required this.id,
-    this.hash,
-    required this.data,
-  });
+  LocalDbModel({required this.id, this.hash, required this.data});
 
   /// Converts the model to a JSON map.
   ///
   /// Used for serialization when sending data to the Rust backend.
   /// All fields are included in the resulting map.
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'hash': hash,
-        'data': data,
-      };
+  Map<String, dynamic> toJson() => {'id': id, 'hash': hash, 'data': data};
 
   /// Creates a [LocalDbModel] instance from a JSON map.
   ///
   /// Used for deserializing data received from the Rust backend.
   /// Expects all fields to be present in the JSON map.
   factory LocalDbModel.fromJson(Map<String, dynamic> json) {
-    return LocalDbModel(
-      id: json['id'],
-      hash: json['hash'],
-      data: json['data'],
-    );
+    return LocalDbModel(id: json['id'], hash: json['hash'], data: json['data']);
   }
 
   /// Provides a string representation of the model.
@@ -62,10 +50,9 @@ class LocalDbModel {
     String? id,
     String? hash,
     Map<String, dynamic>? data,
-  }) =>
-      LocalDbModel(
-        id: id ?? this.id,
-        hash: hash ?? this.hash,
-        data: data ?? this.data,
-      );
+  }) => LocalDbModel(
+    id: id ?? this.id,
+    hash: hash ?? this.hash,
+    data: data ?? this.data,
+  );
 }

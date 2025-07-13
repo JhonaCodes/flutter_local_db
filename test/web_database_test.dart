@@ -14,7 +14,7 @@ void main() {
     test('Should initialize WebDatabase successfully', () async {
       final config = DbConfig(name: 'test_web_db');
       final result = await database.initialize(config);
-      
+
       result.when(
         ok: (_) => expect(true, true),
         err: (error) => fail('Initialization should succeed: ${error.message}'),
@@ -85,7 +85,7 @@ void main() {
       await database.initialize(config);
 
       await database.insert('delete-key', {'test': 'data'});
-      
+
       final deleteResult = await database.delete('delete-key');
       deleteResult.when(
         ok: (_) => expect(true, true),
@@ -117,7 +117,8 @@ void main() {
       final getAllResult = await database.getAll();
       getAllResult.when(
         ok: (entries) => expect(entries.length, 0),
-        err: (error) => fail('GetAll should succeed after clear: ${error.message}'),
+        err: (error) =>
+            fail('GetAll should succeed after clear: ${error.message}'),
       );
     });
 
@@ -165,7 +166,7 @@ void main() {
 
       final config = DbConfig(name: 'test_web_db');
       await database.initialize(config);
-      
+
       expect(await database.isConnectionValid(), true);
     });
 
@@ -174,7 +175,7 @@ void main() {
       await database.initialize(config);
 
       final invalidKeys = ['', 'a', 'ab', 'test@key', 'test space'];
-      
+
       for (final key in invalidKeys) {
         final result = await database.insert(key, {'test': 'data'});
         result.when(
@@ -187,10 +188,10 @@ void main() {
     test('Should close WebDatabase properly', () async {
       final config = DbConfig(name: 'test_web_db');
       await database.initialize(config);
-      
+
       await database.insert('test-key', {'test': 'data'});
       await database.close();
-      
+
       expect(await database.isConnectionValid(), false);
     });
 
@@ -205,8 +206,8 @@ void main() {
         'array': [1, 2, 3],
         'nested': {
           'field1': 'value1',
-          'field2': {'subfield': 'value2'}
-        }
+          'field2': {'subfield': 'value2'},
+        },
       };
 
       final insertResult = await database.insert('complex-data', complexData);

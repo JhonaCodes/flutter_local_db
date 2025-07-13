@@ -10,7 +10,7 @@ enum ErrorType {
   notFound,
   validationError,
   badRequest,
-  unknown
+  unknown,
 }
 
 /// Modelo para representar errores de la aplicación.
@@ -40,17 +40,25 @@ class ErrorLocalDb {
   });
 
   /// Crea un error de tipo DatabaseError
-  factory ErrorLocalDb.databaseError(String message, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.databaseError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.databaseError,
-      detailsResult:DetailsModel.fromJson(message, 'DatabaseError'),
+      detailsResult: DetailsModel.fromJson(message, 'DatabaseError'),
       originalError: originalError,
       stackTrace: stackTrace,
     );
   }
 
   /// Crea un error de tipo SerializationError
-  factory ErrorLocalDb.serializationError(String message, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.serializationError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.serializationError,
       detailsResult: DetailsModel.fromJson(message, 'SerializationError'),
@@ -60,40 +68,56 @@ class ErrorLocalDb {
   }
 
   /// Crea un error de tipo NotFound
-  factory ErrorLocalDb.notFound(String message, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.notFound(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.notFound,
-      detailsResult:DetailsModel.fromJson(message, 'NotFound'),
+      detailsResult: DetailsModel.fromJson(message, 'NotFound'),
       originalError: originalError,
       stackTrace: stackTrace,
     );
   }
 
   /// Crea un error de tipo ValidationError
-  factory ErrorLocalDb.validationError(String message, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.validationError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.validationError,
-      detailsResult:DetailsModel.fromJson(message, 'ValidationError'),
+      detailsResult: DetailsModel.fromJson(message, 'ValidationError'),
       originalError: originalError,
       stackTrace: stackTrace,
     );
   }
 
   /// Crea un error de tipo BadRequest
-  factory ErrorLocalDb.badRequest(String message, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.badRequest(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.badRequest,
-      detailsResult:DetailsModel.fromJson(message, 'BadRequest'),
+      detailsResult: DetailsModel.fromJson(message, 'BadRequest'),
       originalError: originalError,
       stackTrace: stackTrace,
     );
   }
 
   /// Crea un error de tipo desconocido
-  factory ErrorLocalDb.unknown(String message, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.unknown(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     return ErrorLocalDb(
       type: ErrorType.unknown,
-      detailsResult:DetailsModel.fromJson(message, 'Unknown'),
+      detailsResult: DetailsModel.fromJson(message, 'Unknown'),
       originalError: originalError,
       stackTrace: stackTrace,
     );
@@ -101,7 +125,11 @@ class ErrorLocalDb {
 
   /// Crea un modelo de error desde una cadena con formato de error Rust
   /// Por ejemplo: "NotFound: No model found with id: current-fasting-plan"
-  factory ErrorLocalDb.fromRustError(String rustErrorString, {Object? originalError, StackTrace? stackTrace}) {
+  factory ErrorLocalDb.fromRustError(
+    String rustErrorString, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) {
     // Intentar parsear el mensaje de error
     final colonIndex = rustErrorString.indexOf(':');
     if (colonIndex == -1) {
@@ -117,15 +145,35 @@ class ErrorLocalDb {
 
     switch (errorType) {
       case 'DatabaseError':
-        return ErrorLocalDb.databaseError(errorMessage, originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.databaseError(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'SerializationError':
-        return ErrorLocalDb.serializationError(errorMessage, originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.serializationError(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'NotFound':
-        return ErrorLocalDb.notFound(errorMessage, originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.notFound(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'ValidationError':
-        return ErrorLocalDb.validationError(errorMessage, originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.validationError(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       case 'BadRequest':
-        return ErrorLocalDb.badRequest(errorMessage, originalError: originalError, stackTrace: stackTrace);
+        return ErrorLocalDb.badRequest(
+          errorMessage,
+          originalError: originalError,
+          stackTrace: stackTrace,
+        );
       default:
         return ErrorLocalDb.unknown(
           rustErrorString,
@@ -166,40 +214,32 @@ class ErrorLocalDb {
   }
 }
 
-
 class DetailsModel {
   final String type;
   final String message;
 
   DetailsModel(this.type, this.message);
-  
-  factory DetailsModel.fromJson(String jsonString, [String? type]){
 
+  factory DetailsModel.fromJson(String jsonString, [String? type]) {
     final encoded = jsonEncode(jsonString);
 
     final isString = jsonDecode(encoded).runtimeType == String;
 
-    Map<String,dynamic> response = {};
+    Map<String, dynamic> response = {};
 
-    if(isString){
+    if (isString) {
       response = {
         'type': type ?? 'Unknown',
-        'message': jsonDecode(jsonEncode(jsonString))
+        'message': jsonDecode(jsonEncode(jsonString)),
       };
-    }else{
+    } else {
       response = jsonDecode(jsonString);
     }
 
-
-    
-    Map<String,dynamic> newJson = {
+    Map<String, dynamic> newJson = {
       "type": response.keys.first,
-      "message": response.values.first ?? ''
+      "message": response.values.first ?? '',
     };
-    return DetailsModel(
-        newJson['type'],
-        newJson['message']
-    );
-    
+    return DetailsModel(newJson['type'], newJson['message']);
   }
 }

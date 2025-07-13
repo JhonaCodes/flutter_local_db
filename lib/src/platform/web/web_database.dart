@@ -6,15 +6,15 @@ import '../../core/models.dart';
 import '../../core/log.dart';
 
 /// Web database implementation using in-memory storage with localStorage persistence
-/// 
+///
 /// Provides local database operations for web platforms using in-memory storage
 /// with browser localStorage persistence for optimal web compatibility.
-/// 
+///
 /// Example:
 /// ```dart
 /// final database = WebDatabase();
 /// await database.initialize(DbConfig(name: 'my_web_app'));
-/// 
+///
 /// final result = await database.insert('user-1', {'name': 'John'});
 /// result.when(
 ///   ok: (entry) => Log.i('Saved to localStorage: ${entry.id}'),
@@ -29,38 +29,49 @@ class WebDatabase implements Database {
   Future<DbResult<void>> initialize(DbConfig config) async {
     try {
       Log.i('WebDatabase.initialize started: ${config.name}');
-      
-      
+
       // Load existing data from localStorage if available
       await _loadFromStorage();
-      
+
       _isInitialized = true;
-      
+
       Log.i('WebDatabase initialized successfully');
       return const Ok(null);
-
     } catch (e, stackTrace) {
-      Log.e('Failed to initialize WebDatabase', error: e, stackTrace: stackTrace);
-      return Err(DbError.connectionError(
-        'Web database initialization failed: ${e.toString()}',
-        originalError: e,
+      Log.e(
+        'Failed to initialize WebDatabase',
+        error: e,
         stackTrace: stackTrace,
-      ));
+      );
+      return Err(
+        DbError.connectionError(
+          'Web database initialization failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   @override
-  Future<DbResult<DbEntry>> insert(String key, Map<String, dynamic> data) async {
+  Future<DbResult<DbEntry>> insert(
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     if (!_isInitialized) {
       return Err(DbError.connectionError('Database not initialized'));
     }
 
     if (!DatabaseValidator.isValidKey(key)) {
-      return Err(DbError.validationError(DatabaseValidator.getKeyValidationError(key)));
+      return Err(
+        DbError.validationError(DatabaseValidator.getKeyValidationError(key)),
+      );
     }
 
     if (!DatabaseValidator.isValidData(data)) {
-      return Err(DbError.validationError('The provided data format is invalid'));
+      return Err(
+        DbError.validationError('The provided data format is invalid'),
+      );
     }
 
     try {
@@ -68,9 +79,11 @@ class WebDatabase implements Database {
 
       // Check if key already exists
       if (_memoryStorage.containsKey(key)) {
-        return Err(DbError.validationError(
-          "Cannot create new record: ID '$key' already exists. Use update method to modify existing records."
-        ));
+        return Err(
+          DbError.validationError(
+            "Cannot create new record: ID '$key' already exists. Use update method to modify existing records.",
+          ),
+        );
       }
 
       // Create entry with timestamp hash
@@ -86,14 +99,15 @@ class WebDatabase implements Database {
 
       Log.i('Record inserted successfully: $key');
       return Ok(entry);
-
     } catch (e, stackTrace) {
       Log.e('Failed to insert record: $key', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'Insert operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'Insert operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -104,7 +118,9 @@ class WebDatabase implements Database {
     }
 
     if (!DatabaseValidator.isValidKey(key)) {
-      return Err(DbError.validationError(DatabaseValidator.getKeyValidationError(key)));
+      return Err(
+        DbError.validationError(DatabaseValidator.getKeyValidationError(key)),
+      );
     }
 
     try {
@@ -117,19 +133,23 @@ class WebDatabase implements Database {
 
       Log.d('Record retrieved successfully: $key');
       return Ok(entry);
-
     } catch (e, stackTrace) {
       Log.e('Failed to get record: $key', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'Get operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'Get operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   @override
-  Future<DbResult<DbEntry>> update(String key, Map<String, dynamic> data) async {
+  Future<DbResult<DbEntry>> update(
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     if (!_isInitialized) {
       return Err(DbError.connectionError('Database not initialized'));
     }
@@ -139,9 +159,11 @@ class WebDatabase implements Database {
 
       // Verify record exists
       if (!_memoryStorage.containsKey(key)) {
-        return Err(DbError.notFound(
-          "Record '$key' not found. Use insert method to create new records."
-        ));
+        return Err(
+          DbError.notFound(
+            "Record '$key' not found. Use insert method to create new records.",
+          ),
+        );
       }
 
       // Create updated entry
@@ -157,14 +179,15 @@ class WebDatabase implements Database {
 
       Log.i('Record updated successfully: $key');
       return Ok(entry);
-
     } catch (e, stackTrace) {
       Log.e('Failed to update record: $key', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'Update operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'Update operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -175,7 +198,9 @@ class WebDatabase implements Database {
     }
 
     if (!DatabaseValidator.isValidKey(key)) {
-      return Err(DbError.validationError(DatabaseValidator.getKeyValidationError(key)));
+      return Err(
+        DbError.validationError(DatabaseValidator.getKeyValidationError(key)),
+      );
     }
 
     try {
@@ -186,14 +211,15 @@ class WebDatabase implements Database {
 
       Log.i('Record deleted successfully: $key');
       return const Ok(null);
-
     } catch (e, stackTrace) {
       Log.e('Failed to delete record: $key', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'Delete operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'Delete operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -210,14 +236,15 @@ class WebDatabase implements Database {
 
       Log.i('Retrieved ${entries.length} records');
       return Ok(entries);
-
     } catch (e, stackTrace) {
       Log.e('Failed to get all records', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'GetAll operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'GetAll operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -234,14 +261,15 @@ class WebDatabase implements Database {
 
       Log.i('Retrieved ${keys.length} keys');
       return Ok(keys);
-
     } catch (e, stackTrace) {
       Log.e('Failed to get all keys', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'GetAllKeys operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'GetAllKeys operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -259,14 +287,15 @@ class WebDatabase implements Database {
 
       Log.i('Database cleared successfully');
       return const Ok(null);
-
     } catch (e, stackTrace) {
       Log.e('Failed to clear database', error: e, stackTrace: stackTrace);
-      return Err(DbError.databaseError(
-        'Clear operation failed: ${e.toString()}',
-        originalError: e,
-        stackTrace: stackTrace,
-      ));
+      return Err(
+        DbError.databaseError(
+          'Clear operation failed: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -289,7 +318,6 @@ class WebDatabase implements Database {
       // For web compatibility, we'll use a simple memory-based approach
       // In a real implementation, you could use window.localStorage
       Log.d('WebDatabase: using in-memory storage for web compatibility');
-      
     } catch (e) {
       Log.w('Failed to load from storage, starting with empty database: $e');
     }
@@ -301,7 +329,6 @@ class WebDatabase implements Database {
       // For web compatibility, we'll use a simple memory-based approach
       // In a real implementation, you could use window.localStorage
       Log.d('WebDatabase: data persisted in memory');
-      
     } catch (e) {
       Log.w('Failed to save to storage: $e');
     }

@@ -9,21 +9,21 @@ import 'platform/database_stub.dart'
     if (dart.library.js_interop) 'platform/database_web.dart';
 
 /// Factory class for creating platform-appropriate database instances
-/// 
+///
 /// Automatically selects the correct database implementation based on
 /// the target platform:
 /// - Native platforms (Android, iOS, macOS): Uses FFI with Rust/LMDB
 /// - Web platform: Uses IndexedDB with JavaScript interop
-/// 
+///
 /// This provides a unified API while leveraging optimal storage
 /// technologies for each platform.
-/// 
+///
 /// Example:
 /// ```dart
 /// // Create and initialize database
 /// final database = DatabaseFactory.create();
 /// await database.initialize(DbConfig(name: 'my_app_db'));
-/// 
+///
 /// // Use database operations
 /// final result = await database.insert('user-1', {'name': 'John'});
 /// result.when(
@@ -35,11 +35,11 @@ class DatabaseFactory {
   DatabaseFactory._();
 
   /// Creates a database instance for the current platform
-  /// 
+  ///
   /// Returns:
   /// - [NativeDatabase] on Android, iOS, macOS
   /// - [WebDatabase] on web browsers
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final db = DatabaseFactory.create();
@@ -54,22 +54,22 @@ class DatabaseFactory {
   }
 
   /// Creates and initializes a database with the given configuration
-  /// 
+  ///
   /// Convenience method that combines database creation and initialization
   /// in a single call with proper error handling.
-  /// 
+  ///
   /// Parameters:
   /// - [config]: Database configuration including name and options
-  /// 
+  ///
   /// Returns:
   /// - [Ok] with the initialized database instance
   /// - [Err] with initialization error details
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final config = DbConfig(name: 'user_data', maxRecordsPerFile: 5000);
   /// final result = await DatabaseFactory.createAndInitialize(config);
-  /// 
+  ///
   /// result.when(
   ///   ok: (db) => print('Database ready: ${db.runtimeType}'),
   ///   err: (error) => print('Setup failed: ${error.message}')
@@ -78,10 +78,10 @@ class DatabaseFactory {
   static Future<DbResult<Database>> createAndInitialize(DbConfig config) async {
     try {
       Log.i('DatabaseFactory.createAndInitialize: ${config.name}');
-      
+
       final database = create();
       final initResult = await database.initialize(config);
-      
+
       return initResult.when(
         ok: (_) {
           Log.i('Database created and initialized successfully');
@@ -92,27 +92,32 @@ class DatabaseFactory {
           return Err(error);
         },
       );
-
     } catch (e, stackTrace) {
-      Log.e('DatabaseFactory.createAndInitialize failed', error: e, stackTrace: stackTrace);
-      return Err(DbError.connectionError(
-        'Failed to create and initialize database: ${e.toString()}',
-        originalError: e,
+      Log.e(
+        'DatabaseFactory.createAndInitialize failed',
+        error: e,
         stackTrace: stackTrace,
-      ));
+      );
+      return Err(
+        DbError.connectionError(
+          'Failed to create and initialize database: ${e.toString()}',
+          originalError: e,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
   /// Validates database configuration before creation
-  /// 
+  ///
   /// Checks that the configuration is valid and suitable for the
   /// current platform before attempting to create the database.
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final config = DbConfig(name: 'test-db');
   /// final validation = DatabaseFactory.validateConfig(config);
-  /// 
+  ///
   /// validation.when(
   ///   ok: (_) => print('Config is valid'),
   ///   err: (error) => print('Invalid config: ${error.message}')
@@ -123,22 +128,28 @@ class DatabaseFactory {
 
     // Validate database name
     if (!DatabaseValidator.isValidDatabaseName(config.name)) {
-      return Err(DbError.validationError(
-        'Invalid database name: "${config.name}". Name must not contain special characters.'
-      ));
+      return Err(
+        DbError.validationError(
+          'Invalid database name: "${config.name}". Name must not contain special characters.',
+        ),
+      );
     }
 
     // Validate configuration parameters
     if (config.maxRecordsPerFile <= 0) {
-      return Err(DbError.validationError(
-        'maxRecordsPerFile must be greater than 0, got: ${config.maxRecordsPerFile}'
-      ));
+      return Err(
+        DbError.validationError(
+          'maxRecordsPerFile must be greater than 0, got: ${config.maxRecordsPerFile}',
+        ),
+      );
     }
 
     if (config.backupEveryDays < 0) {
-      return Err(DbError.validationError(
-        'backupEveryDays must be non-negative, got: ${config.backupEveryDays}'
-      ));
+      return Err(
+        DbError.validationError(
+          'backupEveryDays must be non-negative, got: ${config.backupEveryDays}',
+        ),
+      );
     }
 
     Log.d('Database configuration validated successfully');
@@ -146,10 +157,10 @@ class DatabaseFactory {
   }
 
   /// Gets information about the current platform's database implementation
-  /// 
+  ///
   /// Useful for debugging and logging to understand which backend
   /// is being used on the current platform.
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final info = DatabaseFactory.getPlatformInfo();
@@ -158,10 +169,10 @@ class DatabaseFactory {
   static DatabasePlatformInfo getPlatformInfo() {
     final database = create();
     final implementation = database.runtimeType.toString();
-    
+
     String platform;
     String backend;
-    
+
     if (implementation.contains('Native')) {
       platform = 'Native (Android/iOS/macOS)';
       backend = 'Rust + LMDB via FFI';
@@ -182,16 +193,16 @@ class DatabaseFactory {
 }
 
 /// Information about the database platform and implementation
-/// 
+///
 /// Provides details about which database backend is being used
 /// on the current platform.
 class DatabasePlatformInfo {
   /// The platform name (e.g., "Native", "Web Browser")
   final String platform;
-  
+
   /// The implementation class name
   final String implementation;
-  
+
   /// The backend technology being used
   final String backend;
 
@@ -202,5 +213,6 @@ class DatabasePlatformInfo {
   });
 
   @override
-  String toString() => 'DatabasePlatformInfo(platform: $platform, implementation: $implementation, backend: $backend)';
+  String toString() =>
+      'DatabasePlatformInfo(platform: $platform, implementation: $implementation, backend: $backend)';
 }

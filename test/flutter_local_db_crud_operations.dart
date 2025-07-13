@@ -15,9 +15,10 @@ void main() {
     }
 
     await LocalDB.initForTesting(
-        localDbName: 'test.db',
-        binaryPath:
-            '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib');
+      localDbName: 'test.db',
+      binaryPath:
+          '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib',
+    );
   });
 
   setUp(() async {
@@ -43,9 +44,12 @@ void main() {
 
       // Un benchmark agresivo que busca al menos 2000 operaciones por segundo
       // Esto sería comparable con SQLite en modo optimizado
-      expect(operationsPerSecond >= 10000, true,
-          reason:
-              'Performance benchmark failed: $operationsPerSecond ops/s is below target of 2000 ops/s');
+      expect(
+        operationsPerSecond >= 10000,
+        true,
+        reason:
+            'Performance benchmark failed: $operationsPerSecond ops/s is below target of 2000 ops/s',
+      );
     });
 
     test('Benchmark for reading operations', () async {
@@ -68,9 +72,12 @@ void main() {
       print('Read operations per second: $operationsPerSecond ops/s');
 
       // Las lecturas deberían ser más rápidas que las escrituras, al menos 5000 ops/s
-      expect(operationsPerSecond >= 5000, true,
-          reason:
-              'Read performance benchmark failed: $operationsPerSecond ops/s is below target of 5000 ops/s');
+      expect(
+        operationsPerSecond >= 5000,
+        true,
+        reason:
+            'Read performance benchmark failed: $operationsPerSecond ops/s is below target of 5000 ops/s',
+      );
     });
   });
 }

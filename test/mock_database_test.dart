@@ -8,7 +8,7 @@ void main() {
     test('Should create appropriate database instance', () {
       final database = DatabaseFactory.create();
       expect(database, isNotNull);
-      
+
       final info = DatabaseFactory.getPlatformInfo();
       expect(info.platform, isNotNull);
       expect(info.implementation, isNotNull);
@@ -18,10 +18,11 @@ void main() {
     test('Should validate database configuration', () {
       final validConfig = DbConfig(name: 'valid_db_name');
       final validationResult = DatabaseFactory.validateConfig(validConfig);
-      
+
       validationResult.when(
         ok: (_) => expect(true, true),
-        err: (error) => fail('Valid config should pass validation: ${error.message}'),
+        err: (error) =>
+            fail('Valid config should pass validation: ${error.message}'),
       );
     });
 
@@ -45,7 +46,7 @@ void main() {
     test('Should validate configuration parameters', () {
       final invalidConfig1 = DbConfig(name: 'test', maxRecordsPerFile: -1);
       final result1 = DatabaseFactory.validateConfig(invalidConfig1);
-      
+
       result1.when(
         ok: (_) => fail('Should reject negative maxRecordsPerFile'),
         err: (error) => expect(error.type, DbErrorType.validation),
@@ -53,7 +54,7 @@ void main() {
 
       final invalidConfig2 = DbConfig(name: 'test', backupEveryDays: -1);
       final result2 = DatabaseFactory.validateConfig(invalidConfig2);
-      
+
       result2.when(
         ok: (_) => fail('Should reject negative backupEveryDays'),
         err: (error) => expect(error.type, DbErrorType.validation),
@@ -62,14 +63,14 @@ void main() {
 
     test('Should provide platform information', () {
       final info = DatabaseFactory.getPlatformInfo();
-      
+
       expect(info.platform, isNotEmpty);
       expect(info.implementation, isNotEmpty);
       expect(info.backend, isNotEmpty);
-      
+
       // Platform should be either Native or Web
-      final isValidPlatform = info.platform.contains('Native') || 
-                             info.platform.contains('Web');
+      final isValidPlatform =
+          info.platform.contains('Native') || info.platform.contains('Web');
       expect(isValidPlatform, true);
     });
   });
@@ -77,24 +78,24 @@ void main() {
   group('Result Pattern Tests', () {
     test('Should handle Ok results correctly', () {
       final okResult = Ok<String, String>('success');
-      
+
       okResult.when(
         ok: (value) => expect(value, 'success'),
         err: (_) => fail('Should not call err for Ok result'),
       );
-      
+
       expect(okResult.isOk, true);
       expect(okResult.isErr, false);
     });
 
     test('Should handle Err results correctly', () {
       final errResult = Err<String, String>('error');
-      
+
       errResult.when(
         ok: (_) => fail('Should not call ok for Err result'),
         err: (error) => expect(error, 'error'),
       );
-      
+
       expect(errResult.isOk, false);
       expect(errResult.isErr, true);
     });
@@ -102,7 +103,7 @@ void main() {
     test('Should transform Ok results with map', () {
       final okResult = Ok<int, String>(42);
       final mappedResult = okResult.map((value) => value.toString());
-      
+
       mappedResult.when(
         ok: (value) => expect(value, '42'),
         err: (_) => fail('Should not be error after map'),
@@ -112,7 +113,7 @@ void main() {
     test('Should not transform Err results with map', () {
       final errResult = Err<int, String>('error');
       final mappedResult = errResult.map((value) => value.toString());
-      
+
       mappedResult.when(
         ok: (_) => fail('Should remain error after map'),
         err: (error) => expect(error, 'error'),
@@ -121,8 +122,10 @@ void main() {
 
     test('Should chain Ok results with flatMap', () {
       final okResult = Ok<int, String>(5);
-      final chainedResult = okResult.flatMap((value) => Ok<String, String>('Value: $value'));
-      
+      final chainedResult = okResult.flatMap(
+        (value) => Ok<String, String>('Value: $value'),
+      );
+
       chainedResult.when(
         ok: (value) => expect(value, 'Value: 5'),
         err: (_) => fail('Should not be error after flatMap'),
@@ -131,8 +134,10 @@ void main() {
 
     test('Should handle Err in flatMap chain', () {
       final okResult = Ok<int, String>(5);
-      final chainedResult = okResult.flatMap((value) => Err<String, String>('chain error'));
-      
+      final chainedResult = okResult.flatMap(
+        (value) => Err<String, String>('chain error'),
+      );
+
       chainedResult.when(
         ok: (_) => fail('Should be error after flatMap with Err'),
         err: (error) => expect(error, 'chain error'),
@@ -158,13 +163,13 @@ void main() {
     test('Should include stack trace and original error when provided', () {
       final originalError = Exception('Original exception');
       final stackTrace = StackTrace.current;
-      
+
       final dbError = DbError.databaseError(
         'Database operation failed',
         originalError: originalError,
         stackTrace: stackTrace,
       );
-      
+
       expect(dbError.originalError, originalError);
       expect(dbError.stackTrace, stackTrace);
     });
@@ -177,7 +182,7 @@ void main() {
         data: {'key': 'value'},
         hash: 'test-hash',
       );
-      
+
       expect(entry.id, 'test-id');
       expect(entry.data['key'], 'value');
       expect(entry.hash, 'test-hash');
@@ -191,10 +196,10 @@ void main() {
         hash: 'test-hash',
         sizeKb: 1.5,
       );
-      
+
       final json = originalEntry.toJson();
       final restoredEntry = DbEntry.fromJson(json);
-      
+
       expect(restoredEntry.id, originalEntry.id);
       expect(restoredEntry.data, originalEntry.data);
       expect(restoredEntry.hash, originalEntry.hash);
@@ -207,12 +212,12 @@ void main() {
         data: {'key': 'original'},
         hash: 'original-hash',
       );
-      
+
       final copiedEntry = originalEntry.copyWith(
         data: {'key': 'updated'},
         hash: 'updated-hash',
       );
-      
+
       expect(copiedEntry.id, 'original-id'); // Should keep original
       expect(copiedEntry.data['key'], 'updated');
       expect(copiedEntry.hash, 'updated-hash');
@@ -224,19 +229,19 @@ void main() {
         data: {'key': 'value'},
         hash: 'test-hash',
       );
-      
+
       final entry2 = DbEntry(
         id: 'test-id',
         data: {'key': 'value'},
         hash: 'test-hash',
       );
-      
+
       final entry3 = DbEntry(
         id: 'different-id',
         data: {'key': 'value'},
         hash: 'test-hash',
       );
-      
+
       expect(entry1 == entry2, true);
       expect(entry1 == entry3, false);
       expect(entry1.hashCode == entry2.hashCode, true);
@@ -246,7 +251,7 @@ void main() {
   group('DbConfig Tests', () {
     test('Should create DbConfig with defaults', () {
       final config = DbConfig(name: 'test_db');
-      
+
       expect(config.name, 'test_db');
       expect(config.maxRecordsPerFile, 10000);
       expect(config.backupEveryDays, 7);
@@ -260,7 +265,7 @@ void main() {
         backupEveryDays: 14,
         hashEncrypt: true,
       );
-      
+
       expect(config.name, 'custom_db');
       expect(config.maxRecordsPerFile, 5000);
       expect(config.backupEveryDays, 14);
@@ -274,12 +279,15 @@ void main() {
         backupEveryDays: 10,
         hashEncrypt: true,
       );
-      
+
       final json = originalConfig.toJson();
       final restoredConfig = DbConfig.fromJson(json);
-      
+
       expect(restoredConfig.name, originalConfig.name);
-      expect(restoredConfig.maxRecordsPerFile, originalConfig.maxRecordsPerFile);
+      expect(
+        restoredConfig.maxRecordsPerFile,
+        originalConfig.maxRecordsPerFile,
+      );
       expect(restoredConfig.backupEveryDays, originalConfig.backupEveryDays);
       expect(restoredConfig.hashEncrypt, originalConfig.hashEncrypt);
     });

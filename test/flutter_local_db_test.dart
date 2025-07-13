@@ -1,7 +1,6 @@
 import 'package:flutter_local_db/src/service/local_db_result.dart' as legacy;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
-import 'package:flutter_local_db/src/model/local_db_error_model.dart';
 
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -11,7 +10,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final mockProvider = MockPathProvider();
   PathProviderPlatform.instance = mockProvider;
-  
+
   setUpAll(() async {
     if (!await mockProvider.testDir.exists()) {
       await mockProvider.testDir.create(recursive: true);
@@ -37,12 +36,13 @@ void main() {
       expect(retrieved.isOk, true);
       expect(retrieved.data?.data['name'], 'test');
       expect(retrieved.data?.data['value'], 123);
-
     });
 
     test('Should update existing data', () async {
       await await LocalDB.Post('update-key', {'value': 'initial'});
-      final updateResult = await LocalDB.Put('update-key', {'value': 'updated'});
+      final updateResult = await LocalDB.Put('update-key', {
+        'value': 'updated',
+      });
       expect(updateResult.isOk, true);
 
       final retrieved = await LocalDB.GetById('update-key');
@@ -77,8 +77,9 @@ void main() {
   group('LocalDB Concurrent Operations', () {
     test('Should handle multiple concurrent writes', () async {
       // Crear una lista de Futures para ejecutar operaciones concurrentes
-      final futures = List.generate(10, (index) =>
-          LocalDB.Post('concurrent-$index', {'value': index})
+      final futures = List.generate(
+        10,
+        (index) => LocalDB.Post('concurrent-$index', {'value': index}),
       );
 
       // Esperar a que todas las operaciones se completen y verificar sus resultados
@@ -98,11 +99,11 @@ void main() {
 
       // Crear una lista de Futures para operaciones en lote
       final futures = List.generate(
-          50,
-              (index) => LocalDB.Post('bulk-$index', {
-            'data': 'test-data-$index',
-            'timestamp': DateTime.now().toIso8601String(),
-          })
+        50,
+        (index) => LocalDB.Post('bulk-$index', {
+          'data': 'test-data-$index',
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
       );
 
       // Esperar a que todas las operaciones se completen
@@ -125,7 +126,6 @@ void main() {
       final result2 = await LocalDB.Post('a', {'test': 'data'});
       expect(result2.isErr, true);
     });
-
 
     test('Should handle empty data gracefully', () async {
       final result = await LocalDB.Post('empty-data', {});
@@ -154,7 +154,6 @@ void main() {
           err: (error) => expect(error.type, ErrorType.validationError),
         );
       }
-
     });
 
     test('Should reject IDs shorter than 3 characters', () async {
@@ -175,8 +174,8 @@ void main() {
         'array': [1, 2, 3],
         'nested': {
           'field1': 'value1',
-          'field2': {'subfield': 'value2'}
-        }
+          'field2': {'subfield': 'value2'},
+        },
       };
 
       final result = await LocalDB.Post('complex-data', complexData);
@@ -191,16 +190,17 @@ void main() {
         err: (error) => fail('Failed to retrieve complex data: $error'),
       );
     });
-
   });
 
   group('Batch Operation Tests', () {
     test('Should handle batch operations with different data sizes', () async {
       final smallData = {'value': 'small'};
       final mediumData = Map.fromEntries(
-          List.generate(100, (i) => MapEntry('key$i', 'value$i')));
+        List.generate(100, (i) => MapEntry('key$i', 'value$i')),
+      );
       final largeData = Map.fromEntries(
-          List.generate(1000, (i) => MapEntry('key$i', 'value$i')));
+        List.generate(1000, (i) => MapEntry('key$i', 'value$i')),
+      );
 
       final operations = [
         await LocalDB.Post('small-data', smallData),
@@ -220,11 +220,15 @@ void main() {
 
         if (current.isOk && current.data != null) {
           final newCounter = current.data!.data['counter'] + 1;
-          final updateResult =
-              await LocalDB.Put('concurrent-counter', {'counter': newCounter});
+          final updateResult = await LocalDB.Put('concurrent-counter', {
+            'counter': newCounter,
+          });
 
-          expect(updateResult.isOk, true,
-              reason: 'Failed to update counter at iteration $i');
+          expect(
+            updateResult.isOk,
+            true,
+            reason: 'Failed to update counter at iteration $i',
+          );
         } else {
           fail('Failed to fetch current counter value at iteration $i');
         }
@@ -232,8 +236,11 @@ void main() {
 
       final finalResult = await LocalDB.GetById('concurrent-counter');
       finalResult.when(
-        ok: (data) => expect(data?.data['counter'], 100,
-            reason: 'Final counter value mismatch'),
+        ok: (data) => expect(
+          data?.data['counter'],
+          100,
+          reason: 'Final counter value mismatch',
+        ),
         err: (error) => fail('Failed to verify concurrent operations: $error'),
       );
     });
@@ -243,7 +250,7 @@ void main() {
     test('Should handle database cleanup after failed operations', () async {
       // Simulate a failed operation
       final invalidData = {
-        'key': double.infinity
+        'key': double.infinity,
       }; // Will fail JSON serialization
       await LocalDB.Post('failed-op', invalidData);
 
@@ -252,7 +259,6 @@ void main() {
       final result = await LocalDB.Post('recovery-test', validData);
       expect(result.isOk, true);
     });
-
   });
 
   group('Performance Optimization Tests', () {
@@ -261,9 +267,10 @@ void main() {
 
       // Create 1000 records y esperar a que todos terminen
       final writeFutures = List.generate(
-          1000,
-              (i) => LocalDB.Post('perf-test-$i',
-              {'data': List.generate(100, (j) => 'value-$j').join(',')})
+        1000,
+        (i) => LocalDB.Post('perf-test-$i', {
+          'data': List.generate(100, (j) => 'value-$j').join(','),
+        }),
       );
 
       // Esperar a que todas las escrituras se completen
@@ -289,10 +296,17 @@ void main() {
       );
 
       // Performance assertions - ajustar según sea necesario para tu entorno
-      expect(writeTime / 1000 < 50, true,
-          reason: 'Average write time per record: ${writeTime/1000}ms exceeded 50ms limit');
-      expect(readTime < 1000, true,
-          reason: 'Total read time: ${readTime}ms exceeded 1000ms limit');
+      expect(
+        writeTime / 1000 < 50,
+        true,
+        reason:
+            'Average write time per record: ${writeTime / 1000}ms exceeded 50ms limit',
+      );
+      expect(
+        readTime < 1000,
+        true,
+        reason: 'Total read time: ${readTime}ms exceeded 1000ms limit',
+      );
     });
 
     test('Should handle rapid sequential operations efficiently', () async {
@@ -341,8 +355,11 @@ void main() {
         final result = await LocalDB.Post(id, {'test': 'data'});
         result.when(
           ok: (_) => fail('Should reject invalid ID: $id'),
-          err: (error) => expect(error.type, ErrorType.validationError,
-              reason: 'Should get validation error for ID: $id'),
+          err: (error) => expect(
+            error.type,
+            ErrorType.validationError,
+            reason: 'Should get validation error for ID: $id',
+          ),
         );
       }
     });
@@ -353,7 +370,7 @@ void main() {
         'empty': '',
         'special': '!@#\$%^&*()',
         'unicode': '你好世界',
-        'emoji': '👋🌍'
+        'emoji': '👋🌍',
       };
 
       final result = await LocalDB.Post('special-chars', specialData);
@@ -384,8 +401,10 @@ void main() {
           final retrieved = await LocalDB.GetById(longKey);
           retrieved.when(
             ok: (retrievedData) {
-              expect(retrievedData?.data['description'],
-                  'Testing maximum key length');
+              expect(
+                retrievedData?.data['description'],
+                'Testing maximum key length',
+              );
             },
             err: (error) => fail('Failed to retrieve long key data'),
           );
@@ -408,7 +427,6 @@ void main() {
       expect(operations.length, 5);
     });
 
-
     test('Should validate data type preservation', () async {
       final complexTypes = {
         'integer': 42,
@@ -416,7 +434,7 @@ void main() {
         'bool': true,
         'datetime': DateTime.now().toIso8601String(),
         'list': [1, 2, 3],
-        'map': {'nested': 'value'}
+        'map': {'nested': 'value'},
       };
 
       final result = await LocalDB.Post('type-preservation', complexTypes);
@@ -438,7 +456,7 @@ void main() {
 
     test('Should handle maximum data payload size', () async {
       final largePayload = {
-        'big_data': List.generate(10000, (index) => 'chunk-$index').join()
+        'big_data': List.generate(10000, (index) => 'chunk-$index').join(),
       };
 
       final result = await LocalDB.Post('large-payload', largePayload);
@@ -447,8 +465,10 @@ void main() {
           final retrieved = await LocalDB.GetById('large-payload');
           retrieved.when(
             ok: (retrievedData) {
-              expect(retrievedData?.data['big_data'].length,
-                  largePayload['big_data']!.length);
+              expect(
+                retrievedData?.data['big_data'].length,
+                largePayload['big_data']!.length,
+              );
             },
             err: (error) => fail('Failed to retrieve large payload'),
           );
@@ -457,40 +477,43 @@ void main() {
       );
     });
 
-    test('Should provide transaction-like behavior for critical updates',
-        () async {
-      await LocalDB.Post('transaction-test', {'balance': 100});
+    test(
+      'Should provide transaction-like behavior for critical updates',
+      () async {
+        await LocalDB.Post('transaction-test', {'balance': 100});
 
-      try {
-        // Simular una actualización crítica
-        final current = await LocalDB.GetById('transaction-test');
-        if (current.isOk && current.data != null) {
-          final newBalance = current.data!.data['balance'] - 50;
+        try {
+          // Simular una actualización crítica
+          final current = await LocalDB.GetById('transaction-test');
+          if (current.isOk && current.data != null) {
+            final newBalance = current.data!.data['balance'] - 50;
 
-          // Primera operación
-          await LocalDB.Put('transaction-test', {'balance': newBalance});
+            // Primera operación
+            await LocalDB.Put('transaction-test', {'balance': newBalance});
 
-          // Simular un error potencial
-          if (newBalance < 0) {
-            throw Exception('Insufficient funds');
+            // Simular un error potencial
+            if (newBalance < 0) {
+              throw Exception('Insufficient funds');
+            }
+
+            // Segunda operación
+            final finalResult = await LocalDB.GetById('transaction-test');
+            finalResult.when(
+              ok: (data) {
+                expect(data?.data['balance'], 50);
+              },
+              err: (error) => fail('Transaction-like update failed'),
+            );
           }
-
-          // Segunda operación
-          final finalResult = await LocalDB.GetById('transaction-test');
-          finalResult.when(
-            ok: (data) {
-              expect(data?.data['balance'], 50);
-            },
-            err: (error) => fail('Transaction-like update failed'),
-          );
+        } catch (e) {
+          // Manejo de errores
+          final rollback = await LocalDB.Put('transaction-test', {
+            'balance': 100,
+          });
+          expect(rollback.isOk, true);
         }
-      } catch (e) {
-        // Manejo de errores
-        final rollback =
-            await LocalDB.Put('transaction-test', {'balance': 100});
-        expect(rollback.isOk, true);
-      }
-    });
+      },
+    );
 
     test('Should handle case sensitivity in keys', () async {
       await LocalDB.Post('CaseSensitive', {'value': 'uppercase'});
@@ -595,13 +618,13 @@ void main() {
 
       for (int i = 0; i < 100; i++) {
         stressOperations.add(LocalDB.Post('stress-$i', {'index': i}));
-        stressOperations
-            .add(LocalDB.Put('stress-${i % 10}', {'updated': true}));
+        stressOperations.add(
+          LocalDB.Put('stress-${i % 10}', {'updated': true}),
+        );
         stressOperations.add(LocalDB.GetById('stress-${i % 10}'));
       }
 
       expect(stressOperations.length, 300);
     });
   });
-
 }

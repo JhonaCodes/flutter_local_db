@@ -23,17 +23,15 @@ abstract class LocalDbResult<T, E> {
   const LocalDbResult();
 
   /// Pattern matches on the result to handle both success and error cases
-  R when<R>({
-    required R Function(T) ok,
-    required R Function(E) err,
-  });
+  R when<R>({required R Function(T) ok, required R Function(E) err});
 
   /// Transforms the success value if present
   LocalDbResult<R, E> map<R>(R Function(T value) transform);
 
   /// Chains operations that might fail
   LocalDbResult<R, E> flatMap<R>(
-      LocalDbResult<R, E> Function(T value) transform);
+    LocalDbResult<R, E> Function(T value) transform,
+  );
 
   /// Safely attempts to get the success value
   R whenData<R>(R Function(T) ok) {
@@ -46,10 +44,7 @@ abstract class LocalDbResult<T, E> {
 
   /// Safely handles the error if present
   R? whenError<R>(R Function(E) err) {
-    return this.when(
-      ok: (_) => null,
-      err: err,
-    );
+    return this.when(ok: (_) => null, err: err);
   }
 
   /// Returns true if this is a success result
@@ -65,10 +60,8 @@ abstract class LocalDbResult<T, E> {
   E? get errorOrNull => this.whenError((error) => error);
 
   @override
-  String toString() => this.when(
-        ok: (data) => 'Ok($data)',
-        err: (error) => 'Err($error)',
-      );
+  String toString() =>
+      this.when(ok: (data) => 'Ok($data)', err: (error) => 'Err($error)');
 
   @override
   bool operator ==(Object other) {
@@ -79,10 +72,8 @@ abstract class LocalDbResult<T, E> {
   }
 
   @override
-  int get hashCode => this.when(
-        ok: (data) => data.hashCode,
-        err: (error) => error.hashCode,
-      );
+  int get hashCode =>
+      this.when(ok: (data) => data.hashCode, err: (error) => error.hashCode);
 }
 
 /// Represents a successful result
@@ -93,10 +84,7 @@ class Ok<T, E> extends LocalDbResult<T, E> {
   const Ok(this.data);
 
   @override
-  R when<R>({
-    required R Function(T) ok,
-    required R Function(E) err,
-  }) {
+  R when<R>({required R Function(T) ok, required R Function(E) err}) {
     return ok(data);
   }
 
@@ -107,7 +95,8 @@ class Ok<T, E> extends LocalDbResult<T, E> {
 
   @override
   LocalDbResult<R, E> flatMap<R>(
-      LocalDbResult<R, E> Function(T value) transform) {
+    LocalDbResult<R, E> Function(T value) transform,
+  ) {
     return transform(data);
   }
 }
@@ -119,10 +108,7 @@ class Err<T, E> extends LocalDbResult<T, E> {
   const Err(this.error);
 
   @override
-  R when<R>({
-    required R Function(T) ok,
-    required R Function(E) err,
-  }) {
+  R when<R>({required R Function(T) ok, required R Function(E) err}) {
     return err(error);
   }
 
@@ -133,7 +119,8 @@ class Err<T, E> extends LocalDbResult<T, E> {
 
   @override
   LocalDbResult<R, E> flatMap<R>(
-      LocalDbResult<R, E> Function(T value) transform) {
+    LocalDbResult<R, E> Function(T value) transform,
+  ) {
     return Err(error);
   }
 }
@@ -150,26 +137,17 @@ extension ResultExtensions<T, E> on LocalDbResult<T, E> {
 
   /// Attempts to recover from an error
   LocalDbResult<T, E> recover(LocalDbResult<T, E> Function(E error) transform) {
-    return when(
-      ok: (value) => Ok(value),
-      err: transform,
-    );
+    return when(ok: (value) => Ok(value), err: transform);
   }
 
   /// Gets the success value or a default from the error
   T getOrElse(T Function(E error) orElse) {
-    return when(
-      ok: (value) => value,
-      err: orElse,
-    );
+    return when(ok: (value) => value, err: orElse);
   }
 
   /// Gets the success value or a default value
   T getOrDefault(T defaultValue) {
-    return when(
-      ok: (value) => value,
-      err: (_) => defaultValue,
-    );
+    return when(ok: (value) => value, err: (_) => defaultValue);
   }
 }
 
@@ -186,9 +164,6 @@ extension FutureResultExtensions<T, E> on Future<LocalDbResult<T, E>> {
     Future<LocalDbResult<R, E>> Function(T value) transform,
   ) async {
     final result = await this;
-    return result.when(
-      ok: transform,
-      err: (error) => Err(error),
-    );
+    return result.when(ok: transform, err: (error) => Err(error));
   }
 }

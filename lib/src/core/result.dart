@@ -1,9 +1,9 @@
 /// Result Pattern Implementation for Flutter Local DB
 /// Based on result_controller standard
-/// 
+///
 /// Represents a result that can be either successful (Ok) or an error (Err).
 /// This eliminates the need for exceptions by encapsulating operations that can fail.
-/// 
+///
 /// Example:
 /// ```dart
 /// Result<String, DbError> saveUser(User user) {
@@ -14,7 +14,7 @@
 ///     return Err(DbError.saveFailed(e.toString()));
 ///   }
 /// }
-/// 
+///
 /// // Usage:
 /// final result = saveUser(user);
 /// final message = result.when(
@@ -26,7 +26,7 @@ abstract class Result<T, E> {
   const Result();
 
   /// Pattern matches on the result to handle both success and error cases
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// result.when(
@@ -34,13 +34,10 @@ abstract class Result<T, E> {
   ///   err: (error) => print('Error: $error')
   /// );
   /// ```
-  R when<R>({
-    required R Function(T) ok,
-    required R Function(E) err,
-  });
+  R when<R>({required R Function(T) ok, required R Function(E) err});
 
   /// Transforms the success value if present, preserving error
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final userResult = Ok<User, String>(user);
@@ -50,7 +47,7 @@ abstract class Result<T, E> {
   Result<R, E> map<R>(R Function(T value) transform);
 
   /// Chains operations that might fail
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final result = getUserById(id)
@@ -66,7 +63,7 @@ abstract class Result<T, E> {
   bool get isErr => !isOk;
 
   /// Gets the success value or throws if this is an error
-  /// 
+  ///
   /// Warning: Use with caution. Prefer `when()` for safe access.
   T get data => when(
     ok: (value) => value,
@@ -74,16 +71,11 @@ abstract class Result<T, E> {
   );
 
   /// Gets the error value if present, null otherwise
-  E? get errorOrNull => when(
-    ok: (_) => null,
-    err: (error) => error,
-  );
+  E? get errorOrNull => when(ok: (_) => null, err: (error) => error);
 
   @override
-  String toString() => when(
-    ok: (data) => 'Ok($data)',
-    err: (error) => 'Err($error)',
-  );
+  String toString() =>
+      when(ok: (data) => 'Ok($data)', err: (error) => 'Err($error)');
 
   @override
   bool operator ==(Object other) {
@@ -94,14 +86,12 @@ abstract class Result<T, E> {
   }
 
   @override
-  int get hashCode => when(
-    ok: (data) => data.hashCode,
-    err: (error) => error.hashCode,
-  );
+  int get hashCode =>
+      when(ok: (data) => data.hashCode, err: (error) => error.hashCode);
 }
 
 /// Represents a successful result containing a value of type T
-/// 
+///
 /// Example:
 /// ```dart
 /// final success = Ok<String, String>('Operation completed');
@@ -114,20 +104,19 @@ class Ok<T, E> extends Result<T, E> {
   const Ok(this.data);
 
   @override
-  R when<R>({
-    required R Function(T) ok,
-    required R Function(E) err,
-  }) => ok(data);
+  R when<R>({required R Function(T) ok, required R Function(E) err}) =>
+      ok(data);
 
   @override
   Result<R, E> map<R>(R Function(T value) transform) => Ok(transform(data));
 
   @override
-  Result<R, E> flatMap<R>(Result<R, E> Function(T value) transform) => transform(data);
+  Result<R, E> flatMap<R>(Result<R, E> Function(T value) transform) =>
+      transform(data);
 }
 
 /// Represents an error result containing an error of type E
-/// 
+///
 /// Example:
 /// ```dart
 /// final failure = Err<String, String>('Operation failed');
@@ -140,20 +129,19 @@ class Err<T, E> extends Result<T, E> {
   const Err(this.error);
 
   @override
-  R when<R>({
-    required R Function(T) ok,
-    required R Function(E) err,
-  }) => err(error);
+  R when<R>({required R Function(T) ok, required R Function(E) err}) =>
+      err(error);
 
   @override
   Result<R, E> map<R>(R Function(T value) transform) => Err(error);
 
   @override
-  Result<R, E> flatMap<R>(Result<R, E> Function(T value) transform) => Err(error);
+  Result<R, E> flatMap<R>(Result<R, E> Function(T value) transform) =>
+      Err(error);
 }
 
 /// Specialized Result for Local Database operations
-/// 
+///
 /// Example:
 /// ```dart
 /// Future<DbResult<User>> fetchUser(String id) async {
@@ -170,7 +158,7 @@ typedef DbResult<T> = Result<T, DbError>;
 /// Extension methods for Result
 extension ResultExtensions<T, E> on Result<T, E> {
   /// Transforms the error value if present
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final result = Err<String, String>('network error');
@@ -184,50 +172,41 @@ extension ResultExtensions<T, E> on Result<T, E> {
   }
 
   /// Attempts to recover from an error
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final result = fetchFromNetwork()
   ///   .recover((error) => fetchFromCache());
   /// ```
   Result<T, E> recover(Result<T, E> Function(E error) transform) {
-    return when(
-      ok: (value) => Ok(value),
-      err: transform,
-    );
+    return when(ok: (value) => Ok(value), err: transform);
   }
 
   /// Gets the success value or a default from the error
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final value = result.getOrElse((error) => 'default value');
   /// ```
   T getOrElse(T Function(E error) orElse) {
-    return when(
-      ok: (value) => value,
-      err: orElse,
-    );
+    return when(ok: (value) => value, err: orElse);
   }
 
   /// Gets the success value or a default value
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final value = result.getOrDefault('default value');
   /// ```
   T getOrDefault(T defaultValue) {
-    return when(
-      ok: (value) => value,
-      err: (_) => defaultValue,
-    );
+    return when(ok: (value) => value, err: (_) => defaultValue);
   }
 }
 
 /// Extension methods for Future<Result>
 extension FutureResultExtensions<T, E> on Future<Result<T, E>> {
   /// Maps the success value of a Future<Result>
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final futureResult = fetchUser(id).map((user) => user.name);
@@ -238,7 +217,7 @@ extension FutureResultExtensions<T, E> on Future<Result<T, E>> {
   }
 
   /// Chains async operations that might fail
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final result = fetchUser(id)
@@ -249,15 +228,12 @@ extension FutureResultExtensions<T, E> on Future<Result<T, E>> {
     Future<Result<R, E>> Function(T value) transform,
   ) async {
     final result = await this;
-    return result.when(
-      ok: transform,
-      err: (error) => Err(error),
-    );
+    return result.when(ok: transform, err: (error) => Err(error));
   }
 }
 
 /// Database-specific error types
-/// 
+///
 /// Example:
 /// ```dart
 /// final error = DbError.notFound('User with ID 123 not found');
@@ -279,11 +255,8 @@ class DbError {
   });
 
   /// Creates a not found error
-  factory DbError.notFound(String message) => DbError(
-    title: 'Not Found',
-    message: message,
-    type: DbErrorType.notFound,
-  );
+  factory DbError.notFound(String message) =>
+      DbError(title: 'Not Found', message: message, type: DbErrorType.notFound);
 
   /// Creates a validation error
   factory DbError.validationError(String message) => DbError(
@@ -293,7 +266,11 @@ class DbError {
   );
 
   /// Creates a database operation error
-  factory DbError.databaseError(String message, {Object? originalError, StackTrace? stackTrace}) => DbError(
+  factory DbError.databaseError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) => DbError(
     title: 'Database Error',
     message: message,
     type: DbErrorType.database,
@@ -302,7 +279,11 @@ class DbError {
   );
 
   /// Creates a serialization error
-  factory DbError.serializationError(String message, {Object? originalError, StackTrace? stackTrace}) => DbError(
+  factory DbError.serializationError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) => DbError(
     title: 'Serialization Error',
     message: message,
     type: DbErrorType.serialization,
@@ -311,7 +292,11 @@ class DbError {
   );
 
   /// Creates a connection error
-  factory DbError.connectionError(String message, {Object? originalError, StackTrace? stackTrace}) => DbError(
+  factory DbError.connectionError(
+    String message, {
+    Object? originalError,
+    StackTrace? stackTrace,
+  }) => DbError(
     title: 'Connection Error',
     message: message,
     type: DbErrorType.connection,

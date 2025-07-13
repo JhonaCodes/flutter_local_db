@@ -1,9 +1,8 @@
-
 /// Represents a data entry in the local database
-/// 
+///
 /// Contains the ID, data payload, and metadata for each record stored.
 /// The data must be JSON-serializable for cross-platform compatibility.
-/// 
+///
 /// Example:
 /// ```dart
 /// final entry = DbEntry(
@@ -11,32 +10,32 @@
 ///   data: {'name': 'John Doe', 'email': 'john@example.com'},
 ///   hash: '1640995200000',
 /// );
-/// 
+///
 /// // Converting to/from JSON
 /// final json = entry.toJson();
 /// final restored = DbEntry.fromJson(json);
 /// ```
 class DbEntry {
   /// Unique identifier for the database entry
-  /// 
+  ///
   /// Must be at least 3 characters long and contain only alphanumeric
   /// characters, hyphens, and underscores.
   final String id;
 
   /// The actual data payload stored in the database
-  /// 
+  ///
   /// Must be JSON-serializable. Complex objects should be converted
   /// to Map<String, dynamic> before storing.
   final Map<String, dynamic> data;
 
   /// Hash or timestamp for tracking changes
-  /// 
+  ///
   /// Typically contains a timestamp in milliseconds since epoch,
   /// used for versioning and conflict resolution.
   final String hash;
 
   /// Size of the entry in kilobytes (optional)
-  /// 
+  ///
   /// Used for monitoring storage usage and performance optimization.
   final double? sizeKb;
 
@@ -48,7 +47,7 @@ class DbEntry {
   });
 
   /// Creates a DbEntry from JSON data
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final json = {
@@ -68,7 +67,7 @@ class DbEntry {
   }
 
   /// Converts the DbEntry to JSON format
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final entry = DbEntry(id: 'test', data: {'key': 'value'}, hash: '123');
@@ -85,7 +84,7 @@ class DbEntry {
   }
 
   /// Creates a copy of this entry with updated fields
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final originalEntry = DbEntry(id: 'test', data: {}, hash: '123');
@@ -143,9 +142,9 @@ class DbEntry {
 }
 
 /// Configuration options for database initialization
-/// 
+///
 /// Contains settings that affect database behavior across platforms.
-/// 
+///
 /// Example:
 /// ```dart
 /// final config = DbConfig(
@@ -157,23 +156,23 @@ class DbEntry {
 /// ```
 class DbConfig {
   /// Name of the database
-  /// 
+  ///
   /// Used as the filename for the database file. Should not include
   /// file extensions as they are added automatically per platform.
   final String name;
 
   /// Maximum number of records per database file
-  /// 
+  ///
   /// Used for performance optimization and file size management.
   final int maxRecordsPerFile;
 
   /// Backup interval in days
-  /// 
+  ///
   /// How often automatic backups are created (if supported by platform).
   final int backupEveryDays;
 
   /// Whether to encrypt hash values
-  /// 
+  ///
   /// Provides additional security for sensitive data.
   final bool hashEncrypt;
 

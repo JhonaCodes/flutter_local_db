@@ -29,7 +29,6 @@ enum FFiFunctions {
   /// Rust function: `clear_all_records`
   clearAllRecords('clear_all_records'),
 
-
   closeDatabase('close_database');
 
   /// The corresponding C function name in the Rust FFI layer
