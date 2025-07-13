@@ -1,6 +1,6 @@
 name: flutter_local_db
-description: "A high-performance NoSQL database for Flutter, powered by Rust's LMDB, with seamless FFI integration and efficient data handling."
-version: 0.4.1
+description: "A high-performance cross-platform local database for Flutter. Native platforms use Rust+LMDB via FFI, web uses IndexedDB for optimal performance."
+version: 0.6.0
 homepage: https://github.com/JhonaCodes/flutter_local_db
 repository: https://github.com/JhonaCodes/flutter_local_db.git
 
@@ -10,16 +10,24 @@ topics:
   - ffi
   - rust
   - storage
+  - indexeddb
+  - cross-platform
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=1.17.0"
+  sdk: '>=3.8.1 <4.0.0'
+  flutter: ">=3.32.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  # Path provider for native platforms
   path_provider: ^2.1.5
+  # FFI for native Rust integration
   ffi: ^2.1.3
+  # Logger for structured logging
+  logger: ^2.4.0
+  # Web interop for IndexedDB (Flutter 3.32.x)
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

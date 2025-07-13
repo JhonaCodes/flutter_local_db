@@ -1,4 +1,4 @@
-import 'package:flutter_local_db/src/service/local_db_result.dart';
+import 'package:flutter_local_db/src/service/local_db_result.dart' as legacy;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
 
@@ -634,7 +634,7 @@ void main() {
           final currentValue = current.data!.data['counter'] ?? 0;
           return LocalDB.Put(key, {'counter': currentValue + 1});
         }
-        return Future.value(Err('Failed to read'));
+        return Future.value(legacy.Err('Failed to read'));
       });
 
       final finalResult = await LocalDB.GetById(key);
