@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.8.0 (Breaking Changes)
+
+⚠️ **BREAKING CHANGES WARNING**  
+This version introduces significant simplifications and standardizations. There is no automatic migration or data recovery system available.
+
+### Breaking Changes
+- **Standardized Database Naming**: No custom database names allowed. The system now uses a standardized name `flutter_local_db` internally
+- **No Data Recovery**: Lost data cannot be recovered if you upgrade from previous versions
+- **Simplified Initialization**: The API has been further simplified to reduce user configuration errors
+- **Removed Custom Configuration**: All database configuration options have been removed in favor of sensible defaults
+
+### Added
+- Standardized database naming for consistency across applications
+- Improved error handling with more specific error types
+- Enhanced FFI error parsing for better debugging
+- Cleaner test suite with improved isolation
+- **Rust Backend Migration**: Migrated from redb to LMDB for better performance and stability
+
+### Changed
+- Database initialization now uses a fixed, standard database name
+- Error messages are more descriptive and developer-friendly
+- Rust error format parsing has been updated for better compatibility
+- Test suite cleanup and optimization
+- **Database Backend**: Replaced redb with LMDB for improved native performance and memory efficiency
+
+### Removed
+- Custom database naming capability
+- Data migration tools
+- Complex configuration options
+- Legacy error handling patterns
+
+### Migration Guide
+**Warning: No automatic migration is available. Data will be lost.**
+
+1. **Backup your data** before upgrading (if needed)
+2. Update initialization code:
+   ```dart
+   // Old (all previous versions)
+   await LocalDB.init(/* any custom config */);
+   
+   // New (0.8.0+)
+   await LocalDB.init(); // No configuration needed
+   ```
+3. **Accept data loss**: Previous database files will not be accessible
+4. Re-populate your database with fresh data
+
 ### 0.4.1
 - Update description.
 - Improve database initialization.

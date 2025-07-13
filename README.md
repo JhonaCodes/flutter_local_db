@@ -12,7 +12,8 @@ A high-performance local database for Flutter that leverages Rust's LMDB embedde
 🛡️ **Result Types**: Rust-inspired Result types for better error handling  
 📱 **Cross-Platform**: Supports Android, iOS, and macOS  
 ⚡ **Async Operations**: All database operations are asynchronous  
-🔍 **Smart Querying**: Efficient data retrieval through LMDB's memory-mapped implementation
+🔍 **Smart Querying**: Efficient data retrieval through LMDB's memory-mapped implementation  
+🚀 **Backend Migration**: Recently migrated from redb to LMDB for improved performance and stability
 
 ## Installation
 
@@ -20,7 +21,7 @@ Add to your pubspec.yaml:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.4.1
+  flutter_local_db: ^0.8.0
 ```
 
 ## Basic Usage
@@ -31,7 +32,7 @@ dependencies:
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize with standard database name
+  // Initialize database (uses standardized name internally)
   await LocalDB.init();
   
   runApp(MyApp());
@@ -113,7 +114,7 @@ result.when(
 
 - **Flutter Layer**: Provides high-level API and type safety
 - **FFI Bridge**: Handles communication between Flutter and Rust
-- **Rust Core**: Manages the LMDB database operations
+- **Rust Core**: Manages the LMDB database operations (migrated from redb for better performance)
 - **Result Types**: Provides type-safe error handling
 
 ### Platform Support
@@ -132,6 +133,7 @@ result.when(
 - Platform-specific limitations may apply
 - Currently no support for complex queries or indexing
 - No automatic migration system
+- Database name is standardized (no custom naming allowed)
 
 ## Contributing
 
