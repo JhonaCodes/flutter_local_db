@@ -113,8 +113,17 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Functions bound successfully');
 
       /// Define default route.
-      final appDir = await getApplicationDocumentsDirectory();
-      log('Using app directory: ${appDir.path}');
+      Directory appDir;
+      try {
+        // Usar Application Documents Directory como estándar
+        appDir = await getApplicationDocumentsDirectory();
+        log('Using Application Documents Directory: ${appDir.path}');
+      } catch (e) {
+        // Fallback a Application Support Directory si falla el Documents
+        log('Application Documents Directory failed: $e');
+        appDir = await getApplicationSupportDirectory();
+        log('Using Application Support Directory fallback: ${appDir.path}');
+      }
 
       /// Initialize database with default route and database name.
       // Ensure database name doesn't have extension, Rust expects .lmdb
@@ -164,7 +173,12 @@ class LocalDbBridge extends LocalSbRequestImpl {
         _dbInstance = null;
         
         // Reinicializar solo la instancia de base de datos
-        final appDir = await getApplicationDocumentsDirectory();
+        Directory appDir;
+        try {
+          appDir = await getApplicationDocumentsDirectory();
+        } catch (e) {
+          appDir = await getApplicationSupportDirectory();
+        }
         final dbBaseName = _lastDatabaseName!.replaceAll('.db', '');
         await _init('${appDir.path}/$dbBaseName');
         log('Database connection reestablished successfully');
