@@ -71,6 +71,20 @@ class LocalDbBridge extends LocalSbRequestImpl {
         _lib = await CurrentPlatform.loadRustNativeLib();
         log('Library loaded: ${_lib}');
       }
+
+      // Verify library was loaded successfully
+      switch (_lib) {
+        case Ok(data: DynamicLibrary lib):
+          log('Library loaded successfully: $lib');
+          break;
+        case Err(error: String error):
+          log('Failed to load library: $error');
+          throw Exception('Failed to load native library: $error');
+        case null:
+          log('Library is null');
+          throw Exception('Native library is null');
+      }
+
       /// Bind functions.
       _bindFunctions();
       log('Functions bound successfully');
@@ -152,22 +166,42 @@ class LocalDbBridge extends LocalSbRequestImpl {
   void _bindFunctions() {
     switch (_lib) {
       case Ok(data: DynamicLibrary lib):
-        _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck,
-            PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
-        _post = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.pushData.cName);
-        _get =
-            lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
-                FFiFunctions.getAll.cName);
-        _getById = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.getById.cName);
-        _put = lib.lookupFunction<PointerStringFFICallBack,
-            PointerStringFFICallBack>(FFiFunctions.updateData.cName);
-        _delete =
-            lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
-                FFiFunctions.delete.cName);
-        _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
-            PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+        try {
+          log('Binding function: ${FFiFunctions.createDb.cName}');
+          _createDatabase = lib.lookupFunction<PointerAppDbStateCallBAck,
+              PointerAppDbStateCallBAck>(FFiFunctions.createDb.cName);
+          
+          log('Binding function: ${FFiFunctions.pushData.cName}');
+          _post = lib.lookupFunction<PointerStringFFICallBack,
+              PointerStringFFICallBack>(FFiFunctions.pushData.cName);
+          
+          log('Binding function: ${FFiFunctions.getAll.cName}');
+          _get =
+              lib.lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+                  FFiFunctions.getAll.cName);
+          
+          log('Binding function: ${FFiFunctions.getById.cName}');
+          _getById = lib.lookupFunction<PointerStringFFICallBack,
+              PointerStringFFICallBack>(FFiFunctions.getById.cName);
+          
+          log('Binding function: ${FFiFunctions.updateData.cName}');
+          _put = lib.lookupFunction<PointerStringFFICallBack,
+              PointerStringFFICallBack>(FFiFunctions.updateData.cName);
+          
+          log('Binding function: ${FFiFunctions.delete.cName}');
+          _delete =
+              lib.lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+                  FFiFunctions.delete.cName);
+          
+          log('Binding function: ${FFiFunctions.clearAllRecords.cName}');
+          _clearAllRecords = lib.lookupFunction<PointerBoolFFICallBackDirect,
+              PointerBoolFFICallBackDirect>(FFiFunctions.clearAllRecords.cName);
+          
+          log('All functions bound successfully');
+        } catch (e) {
+          log('Error binding functions: $e');
+          throw Exception('Failed to bind FFI functions: $e');
+        }
         break;
       case Err(error: String error):
         log(error);
@@ -177,13 +211,24 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   Future<void> _init(String dbName) async {
     try {
+      log('Attempting to create database with path: $dbName');
+      
+      // Verify _createDatabase function is properly bound
+      if (_createDatabase == null) {
+        throw Exception('_createDatabase function is not properly bound');
+      }
+
       final dbNamePointer = dbName.toNativeUtf8();
+      log('Created native UTF8 pointer for database name');
 
       // Si ya existe una instancia, vamos a crear una nueva de todos modos
+      log('Calling _createDatabase function...');
       _dbInstance = _createDatabase(dbNamePointer);
+      log('_createDatabase returned: ${_dbInstance.toString()}');
 
       if (_dbInstance == nullptr) {
-        throw Exception('Failed to create database instance. Returned null pointer.');
+        calloc.free(dbNamePointer);
+        throw Exception('Failed to create database instance. Returned null pointer. This usually means the Rust library is not properly loaded or the database path is invalid.');
       }
 
       // Reset hot restart flag on successful initialization
@@ -396,8 +441,18 @@ sealed class CurrentPlatform {
     }
 
     if (Platform.isMacOS) {
-      final arch = await FFiNativeLibLocation.macos.toMacosArchPath();
-      return Ok(DynamicLibrary.open(arch));
+      try {
+        final arch = await FFiNativeLibLocation.macos.toMacosArchPath();
+        log('Attempting to load macOS library: $arch');
+        return Ok(DynamicLibrary.open(arch));
+      } catch (e) {
+        log('Failed to load architecture-specific library, trying default: $e');
+        try {
+          return Ok(DynamicLibrary.open(FFiNativeLibLocation.macos.lib));
+        } catch (e2) {
+          return Err("Error loading library on macOS: $e2");
+        }
+      }
     }
 
     if (Platform.isIOS) {
