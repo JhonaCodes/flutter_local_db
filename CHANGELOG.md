@@ -46,6 +46,53 @@ This version introduces significant simplifications and standardizations. There 
 3. **Accept data loss**: Previous database files will not be accessible
 4. Re-populate your database with fresh data
 
+### 0.7.0
+#### Added
+- Enhanced hot reload support for better development experience
+- Comprehensive test suite improvements
+- Security enhancements for FFI operations
+- Improved error handling and logging
+
+#### Changed
+- Enhanced FFI stability and performance
+- Better connection management
+- Improved memory leak prevention
+
+#### Fixed
+- Hot reload issues with database connections
+- Memory leaks in FFI layer
+- Connection management improvements
+
+### 0.6.0
+#### Added
+- Full web platform support using IndexedDB
+- Hot restart support for development
+- Cross-platform unified API
+
+#### Changed
+- Improved platform abstraction
+- Enhanced web integration
+- Better cross-platform compatibility
+
+#### Fixed
+- Platform-specific initialization issues
+- Web compatibility problems
+
+### 0.5.1
+#### Fixed
+- Minor bug fixes and improvements
+- Enhanced stability
+
+### 0.5.0
+#### Added
+- Web platform support (IndexedDB integration)
+- Unified API across all platforms
+- Enhanced cross-platform compatibility
+
+#### Changed
+- Improved platform detection and initialization
+- Better error handling across platforms
+
 ### 0.4.1
 - Update description.
 - Improve database initialization.
