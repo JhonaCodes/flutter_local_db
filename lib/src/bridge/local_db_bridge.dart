@@ -74,14 +74,15 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
       _lastDatabaseName = databaseName;
 
-      // Si ya está inicializado (hot restart), solo reinicializar la instancia de DB
+      // Si ya está inicializado (hot restart), usar ensureConnectionValid
       if (_isInitialized) {
-        log('Hot restart detected - skipping library and function binding');
-        _hotRestartDetected = false; // Reset flag
-        
-        final appDir = await getApplicationDocumentsDirectory();
-        await _init('${appDir.path}/$databaseName');
-        log('Database reinitialized successfully after hot restart');
+        log('Hot restart detected - using connection validation');
+        _hotRestartDetected = true;
+        final isValid = await ensureConnectionValid();
+        if (!isValid) {
+          throw Exception('Failed to reestablish database connection after hot restart');
+        }
+        log('Database connection reestablished successfully');
         return;
       }
 
@@ -146,57 +147,31 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   /// Método para verificar si la conexión es válida y reinicializar si es necesario
   Future<bool> ensureConnectionValid() async {
-    // Verificar si la instancia es válida o si se detectó hot restart
-    if (_dbInstance == null || _dbInstance == nullptr || _hotRestartDetected) {
-      log('Database connection invalid (hot restart: $_hotRestartDetected), attempting to reinitialize...');
+    // Si no hay hot restart detectado y la instancia es válida, todo está bien
+    if (!_hotRestartDetected && _dbInstance != null && _dbInstance != nullptr) {
+      return true;
+    }
 
-      if (_lastDatabaseName != null) {
-        try {
-          // Close existing connection first
-          _closeCurrentDatabase();
-          
-          // Wait a brief moment for cleanup
-          await Future.delayed(Duration(milliseconds: 100));
-          
-          // Reset hot restart flag
-          _hotRestartDetected = false;
-          
-          // Reinicializar solo la instancia de base de datos, no la librería
-          final appDir = await getApplicationDocumentsDirectory();
-          await _init('${appDir.path}/$_lastDatabaseName');
-          log('Database reinitialized successfully after hot restart');
-          return true;
-        } catch (e) {
-          log('Failed to reinitialize database: $e');
-          _hotRestartDetected = true; // Marcar para próximo intento
-          return false;
-        }
-      } else {
-        log('Cannot reinitialize: no previous database name stored');
+    log('Attempting to reestablish database connection...');
+
+    if (_lastDatabaseName != null) {
+      try {
+        // Invalidar instancia actual
+        _dbInstance = null;
+        
+        // Reinicializar solo la instancia de base de datos
+        final appDir = await getApplicationDocumentsDirectory();
+        await _init('${appDir.path}/$_lastDatabaseName');
+        log('Database connection reestablished successfully');
+        return true;
+      } catch (e) {
+        log('Failed to reestablish database connection: $e');
         return false;
       }
+    } else {
+      log('Cannot reestablish connection: no database name stored');
+      return false;
     }
-
-    // Test the connection with a simple operation to detect stale pointers
-    try {
-      if (_dbInstance != null && _dbInstance != nullptr) {
-        // Intentar una operación mínima para verificar si el puntero es válido
-        final testResult = _get(_dbInstance!);
-        if (testResult == nullptr) {
-          log('Database pointer appears stale, marking for reinitialization');
-          _hotRestartDetected = true;
-          return await ensureConnectionValid(); // Recursiva para reinicializar
-        }
-        // Liberar el resultado de test inmediatamente
-        malloc.free(testResult);
-      }
-    } catch (e) {
-      log('Connection test failed, marking for reinitialization: $e');
-      _hotRestartDetected = true;
-      return await ensureConnectionValid(); // Recursiva para reinicializar
-    }
-
-    return true;
   }
 
   /// Functions registration
@@ -256,119 +231,27 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   Future<void> _init(String dbName) async {
-    int attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        log('=== Database Initialization Debug (Attempt $attempts) ===');
-        log('Attempting to create database with path: $dbName');
-        
-        // Check if file exists and permissions
-        final dbFile = File(dbName);
-        log('Database file exists: ${dbFile.existsSync()}');
-        if (dbFile.existsSync()) {
-          final stat = dbFile.statSync();
-          log('Database file size: ${stat.size} bytes');
-          log('Database file modified: ${stat.modified}');
-          
-          // Try to check if file is locked by attempting to open it
-          try {
-            final testFile = await dbFile.open(mode: FileMode.append);
-            await testFile.close();
-            log('Database file is accessible (not locked)');
-          } catch (e) {
-            log('WARNING: Database file appears to be locked: $e');
-            if (attempts < maxAttempts) {
-              log('Waiting for file to become available (attempt $attempts/$maxAttempts)...');
-              await Future.delayed(Duration(milliseconds: 500 * attempts)); // Wait for file to unlock
-              continue; // Retry with same file name
-            }
-          }
-        }
-        
-        // Check parent directory
-        final parentDir = Directory(dbFile.parent.path);
-        log('Parent directory exists: ${parentDir.existsSync()}');
-        log('Parent directory path: ${parentDir.path}');
-        
-        // Ensure parent directory exists
-        if (!parentDir.existsSync()) {
-          log('Creating parent directory...');
-          await parentDir.create(recursive: true);
-        }
-        
-        // Verify _createDatabase function is properly bound
-        if (_createDatabase == null) {
-          throw Exception('_createDatabase function is not properly bound');
-        }
-
-        final dbNamePointer = dbName.toNativeUtf8();
-        log('Created native UTF8 pointer for database name');
-        log('UTF8 pointer address: ${dbNamePointer.address}');
-
-        // Si ya existe una instancia, vamos a crear una nueva de todos modos
-        log('Calling _createDatabase function...');
-        _dbInstance = _createDatabase(dbNamePointer);
-        log('_createDatabase returned: ${_dbInstance.toString()}');
-        log('_createDatabase address: ${_dbInstance?.address ?? 'null'}');
-
-        if (_dbInstance == nullptr) {
-          calloc.free(dbNamePointer);
-          
-          if (attempts < maxAttempts) {
-            log('Attempt $attempts failed, retrying with same database file...');
-            await Future.delayed(Duration(milliseconds: 300 * attempts)); // Brief delay
-            continue; // Retry with same file name
-          }
-          
-          log('ERROR: _createDatabase returned null pointer after $attempts attempts!');
-          log('This indicates the Rust function create_db failed internally');
-          log('Possible causes: file permissions, path issues, or Rust internal error');
-          throw Exception('Failed to create database instance after $attempts attempts. Returned null pointer.');
-        }
-
-        // Reset hot restart flag on successful initialization
-        _hotRestartDetected = false;
-        log('Database instance created successfully: ${_dbInstance.toString()}');
-        log('Final database path used: $dbName');
-        
-        // Verify data persistence by checking if we can retrieve existing data
-        try {
-          final testResult = _get(_dbInstance!);
-          if (testResult != nullptr) {
-            final resultString = testResult.cast<Utf8>().toDartString();
-            malloc.free(testResult);
-            final response = jsonDecode(resultString);
-            if (response.containsKey('Ok')) {
-              final dataList = jsonDecode(response['Ok']) as List;
-              log('Successfully reconnected to database with ${dataList.length} existing records');
-            }
-          }
-        } catch (e) {
-          log('Note: Could not verify existing data during initialization: $e');
-        }
-        
-        log('=== Database Initialization Complete ===');
-
+    try {
+      log('Attempting to create database with path: $dbName');
+      
+      final dbNamePointer = dbName.toNativeUtf8();
+      _dbInstance = _createDatabase(dbNamePointer);
+      
+      if (_dbInstance == nullptr) {
         calloc.free(dbNamePointer);
-        return; // Success, exit the retry loop
-        
-      } catch (error, stackTrace) {
-        log('=== Database Initialization Failed (Attempt $attempts) ===');
-        log('Error in _init: $error');
-        log('Stack trace: $stackTrace');
-        
-        if (attempts >= maxAttempts) {
-          _hotRestartDetected = true;
-          rethrow;
-        }
-        
-        // Retry with same file name after a delay
-        log('Retrying with same database file after delay...');
-        await Future.delayed(Duration(milliseconds: 400 * attempts)); // Increasing delay
+        throw Exception('Failed to create database instance. Returned null pointer.');
       }
+
+      // Reset hot restart flag on successful initialization
+      _hotRestartDetected = false;
+      log('Database instance created successfully: ${_dbInstance.toString()}');
+
+      calloc.free(dbNamePointer);
+    } catch (error, stackTrace) {
+      log('Error in _init: $error');
+      log('Stack trace: $stackTrace');
+      _hotRestartDetected = true;
+      rethrow;
     }
   }
 
