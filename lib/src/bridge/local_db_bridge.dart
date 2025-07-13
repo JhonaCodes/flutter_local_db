@@ -64,7 +64,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
     final appDir = await getApplicationDocumentsDirectory();
 
     /// Initialize database with default route and database name.
-    await _init('${appDir.path}/$databaseName');
+    // Remove .db extension since Rust will add .lmdb
+    final dbBaseName = databaseName.replaceAll('.db', '');
+    await _init('${appDir.path}/$dbBaseName');
   }
 
   Future<void> initialize(String databaseName) async {
@@ -115,7 +117,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Using app directory: ${appDir.path}');
 
       /// Initialize database with default route and database name.
-      await _init('${appDir.path}/$databaseName');
+      // Remove .db extension since Rust will add .lmdb
+      final dbBaseName = databaseName.replaceAll('.db', '');
+      await _init('${appDir.path}/$dbBaseName');
       
       // Marcar como inicializado completamente
       _isInitialized = true;
@@ -161,7 +165,8 @@ class LocalDbBridge extends LocalSbRequestImpl {
         
         // Reinicializar solo la instancia de base de datos
         final appDir = await getApplicationDocumentsDirectory();
-        await _init('${appDir.path}/$_lastDatabaseName');
+        final dbBaseName = _lastDatabaseName!.replaceAll('.db', '');
+        await _init('${appDir.path}/$dbBaseName');
         log('Database connection reestablished successfully');
         return true;
       } catch (e) {
