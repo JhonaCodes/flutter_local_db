@@ -193,7 +193,7 @@ class DetailsModel {
 
     
     Map<String,dynamic> newJson = {
-      "type": response.keys.first ??'',
+      "type": response.keys.first,
       "message": response.values.first ?? ''
     };
     return DetailsModel(
