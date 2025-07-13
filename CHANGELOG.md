@@ -70,10 +70,10 @@
 ### 0.3.0-alpha.1
 
 ⚠️ **BREAKING CHANGES WARNING**
-This version introduces significant architectural changes by replacing the JSON-based storage with RedB (Rust Embedded Database). There is no automatic migration system available. Please ensure you have backed up your data before upgrading, as you will need to manually migrate your existing data to the new format.
+This version introduces significant architectural changes by replacing the JSON-based storage with LMDB (Lightning Memory-Mapped Database). There is no automatic migration system available. Please ensure you have backed up your data before upgrading, as you will need to manually migrate your existing data to the new format.
 
 #### Breaking Changes
-- Removed JSON-based storage in favor of RedB (Rust Embedded Database)
+- Removed JSON-based storage in favor of LMDB (Lightning Memory-Mapped Database)
 - Removed `ConfigDBModel` and related configurations
 - Reduced minimum ID length requirement from 9 to 3 characters
 - Removed `MobileDirectoryManager` and directory management abstractions
@@ -84,7 +84,7 @@ This version introduces significant architectural changes by replacing the JSON-
 - Transitioned to Result-based error handling
 
 #### Added
-- Rust-based core using RedB embedded database
+- Rust-based core using LMDB embedded database
 - FFI bridge for native platform integration
 - Result type system for robust error handling
 - Cross-platform native libraries:
@@ -127,7 +127,7 @@ This version introduces significant architectural changes by replacing the JSON-
    );
 
    // New
-   await LocalDB.init(localDbName: "my_app_db");
+   await LocalDB.init();
    ```
 3. Update CRUD operations to handle Results:
    ```dart

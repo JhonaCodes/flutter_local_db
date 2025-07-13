@@ -1,5 +1,5 @@
 name: flutter_local_db
-description: "A high-performance NoSQL database for Flutter, powered by Rust’s RedB, with seamless FFI integration and efficient data handling."
+description: "A high-performance NoSQL database for Flutter, powered by Rust's LMDB, with seamless FFI integration and efficient data handling."
 version: 0.4.1
 homepage: https://github.com/JhonaCodes/flutter_local_db
 repository: https://github.com/JhonaCodes/flutter_local_db.git

@@ -1,18 +1,18 @@
 # Flutter Local DB
 
-A high-performance local database for Flutter that leverages Rust's RedB embedded database through FFI (Foreign Function Interface). This library provides a robust, efficient, and safe way to store local data in your Flutter applications across multiple platforms.
+A high-performance local database for Flutter that leverages Rust's LMDB embedded database through FFI (Foreign Function Interface). This library provides a robust, efficient, and safe way to store local data in your Flutter applications across multiple platforms.
 
 ![flutter_local_db](https://github.com/user-attachments/assets/09c97008-cfc6-4588-b54c-5737ad00e9e4)
 
 ## Features
 
-🦀 **Rust Powered**: Uses [RedB](https://docs.rs/redb/latest/redb) embedded database for maximum performance and reliability  
+🦀 **Rust Powered**: Uses [LMDB](https://www.symas.com/lmdb) Lightning Memory-Mapped Database for maximum performance and reliability  
 🔄 **FFI Integration**: Seamless integration between Flutter and Rust  
 🎯 **Simple API**: Store and retrieve JSON data with minimal code, [FFI-DART](https://github.com/JhonaCodes/offline_first_core)  
 🛡️ **Result Types**: Rust-inspired Result types for better error handling  
 📱 **Cross-Platform**: Supports Android, iOS, and macOS  
 ⚡ **Async Operations**: All database operations are asynchronous  
-🔍 **Smart Querying**: Efficient data retrieval through RedB's B-tree implementation
+🔍 **Smart Querying**: Efficient data retrieval through LMDB's memory-mapped implementation
 
 ## Installation
 
@@ -31,9 +31,8 @@ dependencies:
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize with database name
-  // use .db extension
-  await LocalDB.init(localDbName: "my_app.db");
+  // Initialize with standard database name
+  await LocalDB.init();
   
   runApp(MyApp());
 }
@@ -114,7 +113,7 @@ result.when(
 
 - **Flutter Layer**: Provides high-level API and type safety
 - **FFI Bridge**: Handles communication between Flutter and Rust
-- **Rust Core**: Manages the RedB database operations
+- **Rust Core**: Manages the LMDB database operations
 - **Result Types**: Provides type-safe error handling
 
 ### Platform Support
