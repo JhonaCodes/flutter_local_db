@@ -117,7 +117,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
       log('Using app directory: ${appDir.path}');
 
       /// Initialize database with default route and database name.
-      // Remove .db extension since Rust will add .lmdb
+      // Ensure database name doesn't have extension, Rust expects .lmdb
       final dbBaseName = databaseName.replaceAll('.db', '');
       await _init('${appDir.path}/$dbBaseName');
       
@@ -237,10 +237,11 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   Future<void> _init(String dbName) async {
     try {
-      log('Attempting to create database with path: $dbName');
-      
       // Rust expects the path to end with .lmdb
       final lmdbPath = '$dbName.lmdb';
+      log('Attempting to create database with base path: $dbName');
+      log('Full LMDB path: $lmdbPath');
+      
       final dbNamePointer = lmdbPath.toNativeUtf8();
       _dbInstance = _createDatabase(dbNamePointer);
       

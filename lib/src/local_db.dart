@@ -15,16 +15,14 @@ import 'model/local_db_request_model.dart';
 /// Uses a bridge pattern to abstract database interactions and provides
 /// type-safe results using [LocalDbResult].
 class LocalDB {
-  /// Initializes the local database with a specified name.
+  /// Initializes the local database with a standard name.
   ///
   /// This method must be called before performing any database operations.
-  ///
-  /// Parameters:
-  /// - [localDbName]: A unique name for the local database instance
+  /// Uses a standard database name to avoid user errors and simplify the API.
   ///
   /// Throws an exception if initialization fails
-  static Future<void> init({required String localDbName}) async {
-    await LocalDbBridge.instance.initialize(localDbName);
+  static Future<void> init() async {
+    await LocalDbBridge.instance.initialize('flutter_local_db');
   }
 
   /// Avoid to use on production.

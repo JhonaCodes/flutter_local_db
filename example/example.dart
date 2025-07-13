@@ -3,7 +3,7 @@ import 'package:flutter_local_db/flutter_local_db.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await LocalDB.init(localDbName: 'example_local_db');
+  await LocalDB.init();
   runApp(const ExampleApp());
 }
 
