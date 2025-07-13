@@ -111,12 +111,12 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   /// Cierra la conexión de base de datos actual
-  Future<void> _closeCurrentDatabase() async {
+  void _closeCurrentDatabase() {
     if (_dbInstance != null && _dbInstance != nullptr) {
       try {
         log('Invalidating current database connection...');
-        // Since we don't have a close function, just null the instance
-        // and let the Rust side handle cleanup when we create a new instance
+        // For now, just null the instance - the Rust close_database function
+        // is available but needs to be compiled into the library
         _dbInstance = null;
         log('Database connection invalidated');
       } catch (e) {
@@ -136,7 +136,10 @@ class LocalDbBridge extends LocalSbRequestImpl {
       if (_lastDatabaseName != null) {
         try {
           // Close existing connection first
-          await _closeCurrentDatabase();
+          _closeCurrentDatabase();
+          
+          // Wait a brief moment for cleanup
+          await Future.delayed(Duration(milliseconds: 100));
           
           // Reset hot restart flag
           _hotRestartDetected = false;
@@ -236,7 +239,6 @@ class LocalDbBridge extends LocalSbRequestImpl {
   }
 
   Future<void> _init(String dbName) async {
-    String originalDbName = dbName;
     int attempts = 0;
     const maxAttempts = 3;
     
@@ -262,12 +264,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
           } catch (e) {
             log('WARNING: Database file appears to be locked: $e');
             if (attempts < maxAttempts) {
-              // Create a new database name with timestamp
-              final timestamp = DateTime.now().millisecondsSinceEpoch;
-              final baseName = originalDbName.replaceAll('.db', '');
-              dbName = '${baseName}_$timestamp.db';
-              log('Trying with new database name: $dbName');
-              continue;
+              log('Waiting for file to become available (attempt $attempts/$maxAttempts)...');
+              await Future.delayed(Duration(milliseconds: 500 * attempts)); // Wait for file to unlock
+              continue; // Retry with same file name
             }
           }
         }
@@ -302,12 +301,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
           calloc.free(dbNamePointer);
           
           if (attempts < maxAttempts) {
-            log('Attempt $attempts failed, trying with different database name...');
-            final timestamp = DateTime.now().millisecondsSinceEpoch;
-            final baseName = originalDbName.replaceAll('.db', '');
-            dbName = '${baseName}_hotrestart_$timestamp.db';
-            await Future.delayed(Duration(milliseconds: 100)); // Brief delay
-            continue;
+            log('Attempt $attempts failed, retrying with same database file...');
+            await Future.delayed(Duration(milliseconds: 300 * attempts)); // Brief delay
+            continue; // Retry with same file name
           }
           
           log('ERROR: _createDatabase returned null pointer after $attempts attempts!');
@@ -319,6 +315,24 @@ class LocalDbBridge extends LocalSbRequestImpl {
         // Reset hot restart flag on successful initialization
         _hotRestartDetected = false;
         log('Database instance created successfully: ${_dbInstance.toString()}');
+        log('Final database path used: $dbName');
+        
+        // Verify data persistence by checking if we can retrieve existing data
+        try {
+          final testResult = _get(_dbInstance!);
+          if (testResult != nullptr) {
+            final resultString = testResult.cast<Utf8>().toDartString();
+            malloc.free(testResult);
+            final response = jsonDecode(resultString);
+            if (response.containsKey('Ok')) {
+              final dataList = jsonDecode(response['Ok']) as List;
+              log('Successfully reconnected to database with ${dataList.length} existing records');
+            }
+          }
+        } catch (e) {
+          log('Note: Could not verify existing data during initialization: $e');
+        }
+        
         log('=== Database Initialization Complete ===');
 
         calloc.free(dbNamePointer);
@@ -334,12 +348,9 @@ class LocalDbBridge extends LocalSbRequestImpl {
           rethrow;
         }
         
-        // Prepare for retry with different name
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final baseName = originalDbName.replaceAll('.db', '');
-        dbName = '${baseName}_retry${attempts}_$timestamp.db';
-        log('Retrying with database name: $dbName');
-        await Future.delayed(Duration(milliseconds: 200 * attempts)); // Increasing delay
+        // Retry with same file name after a delay
+        log('Retrying with same database file after delay...');
+        await Future.delayed(Duration(milliseconds: 400 * attempts)); // Increasing delay
       }
     }
   }

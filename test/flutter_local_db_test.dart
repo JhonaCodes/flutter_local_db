@@ -1,6 +1,7 @@
 import 'package:flutter_local_db/src/service/local_db_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_db/flutter_local_db.dart';
+import 'package:flutter_local_db/src/bridge/local_db_bridge.dart';
 
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -680,6 +681,73 @@ void main() {
       }
 
       expect(stressOperations.length, 300);
+    });
+  });
+
+  group('Hot Restart Tests', () {
+    test('Should persist data after simulated hot restart', () async {
+      // First, create some test data
+      final testData1 = {'name': 'John', 'age': 30};
+      final testData2 = {'name': 'Jane', 'age': 25};
+      
+      await LocalDB.Post('user-1', testData1);
+      await LocalDB.Post('user-2', testData2);
+      
+      // Verify data exists before "hot restart"
+      final beforeRestart = await LocalDB.GetAll();
+      expect(beforeRestart.isOk, true);
+      expect(beforeRestart.data!.length, 2);
+      
+      // Simulate hot restart by forcing reinitialization
+      // This mimics what happens during actual hot restart
+      LocalDbBridge.instance.hotRestartDetected = true;
+      
+      // Try to access data after marking hot restart
+      final afterRestart = await LocalDB.GetAll();
+      
+      // Debug information
+      print('After restart result: ${afterRestart.isOk}');
+      if (afterRestart.isErr) {
+        print('Error after restart: ${afterRestart.errorOrNull}');
+      }
+      
+      expect(afterRestart.isOk, true);
+      expect(afterRestart.data!.length, 2);
+      
+      // Verify specific data is still there
+      final user1 = await LocalDB.GetById('user-1');
+      expect(user1.isOk, true);
+      expect(user1.data?.data['name'], 'John');
+      expect(user1.data?.data['age'], 30);
+      
+      final user2 = await LocalDB.GetById('user-2');
+      expect(user2.isOk, true);
+      expect(user2.data?.data['name'], 'Jane');
+      expect(user2.data?.data['age'], 25);
+    });
+    
+    test('Should handle multiple hot restarts gracefully', () async {
+      // Create initial data
+      await LocalDB.Post('persistent-key', {'counter': 1});
+      
+      // Simulate multiple hot restarts
+      for (int i = 2; i <= 5; i++) {
+        LocalDbBridge.instance.hotRestartDetected = true;
+        
+        // Update the counter
+        await LocalDB.Put('persistent-key', {'counter': i});
+        
+        // Verify data persists
+        final result = await LocalDB.GetById('persistent-key');
+        expect(result.isOk, true);
+        expect(result.data?.data['counter'], i);
+      }
+      
+      // Final verification
+      final finalResult = await LocalDB.GetAll();
+      expect(finalResult.isOk, true);
+      expect(finalResult.data!.length, 1);
+      expect(finalResult.data!.first.data['counter'], 5);
     });
   });
 }
