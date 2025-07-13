@@ -37,6 +37,7 @@ class LocalDbBridge extends LocalSbRequestImpl {
   LocalDbResult<DynamicLibrary, String>? _lib;
   Pointer<AppDbState>? _dbInstance; // Cambiado de late a nullable
   String? _lastDatabaseName; // Almacena el último nombre de base de datos utilizado
+  bool _hotRestartDetected = false; // Flag para detectar hot restart
 
   Future<void> initForTesting(String databaseName, String libPath) async {
     if (!databaseName.contains('.db')) {
@@ -91,24 +92,48 @@ class LocalDbBridge extends LocalSbRequestImpl {
 
   /// Método para verificar si la conexión es válida y reinicializar si es necesario
   Future<bool> ensureConnectionValid() async {
-    // Verificar si la instancia es válida
-    if (_dbInstance == null || _dbInstance == nullptr) {
-      log('Database connection invalid, attempting to reinitialize...');
+    // Verificar si la instancia es válida o si se detectó hot restart
+    if (_dbInstance == null || _dbInstance == nullptr || _hotRestartDetected) {
+      log('Database connection invalid (hot restart: $_hotRestartDetected), attempting to reinitialize...');
 
       if (_lastDatabaseName != null) {
         try {
+          // Reset hot restart flag
+          _hotRestartDetected = false;
+          
+          // Reinicializar solo la instancia de base de datos, no la librería
           final appDir = await getApplicationDocumentsDirectory();
           await _init('${appDir.path}/$_lastDatabaseName');
-          log('Database reinitialized successfully');
+          log('Database reinitialized successfully after hot restart');
           return true;
         } catch (e) {
           log('Failed to reinitialize database: $e');
+          _hotRestartDetected = true; // Marcar para próximo intento
           return false;
         }
       } else {
         log('Cannot reinitialize: no previous database name stored');
         return false;
       }
+    }
+
+    // Test the connection with a simple operation to detect stale pointers
+    try {
+      if (_dbInstance != null && _dbInstance != nullptr) {
+        // Intentar una operación mínima para verificar si el puntero es válido
+        final testResult = _get(_dbInstance!);
+        if (testResult == nullptr) {
+          log('Database pointer appears stale, marking for reinitialization');
+          _hotRestartDetected = true;
+          return await ensureConnectionValid(); // Recursiva para reinicializar
+        }
+        // Liberar el resultado de test inmediatamente
+        malloc.free(testResult);
+      }
+    } catch (e) {
+      log('Connection test failed, marking for reinitialization: $e');
+      _hotRestartDetected = true;
+      return await ensureConnectionValid(); // Recursiva para reinicializar
     }
 
     return true;
@@ -161,10 +186,16 @@ class LocalDbBridge extends LocalSbRequestImpl {
         throw Exception('Failed to create database instance. Returned null pointer.');
       }
 
+      // Reset hot restart flag on successful initialization
+      _hotRestartDetected = false;
+      log('Database instance created successfully: ${_dbInstance.toString()}');
+
       calloc.free(dbNamePointer);
     } catch (error, stackTrace) {
       log('Error in _init: $error');
       log(stackTrace.toString());
+      _hotRestartDetected = true;
+      rethrow;
     }
   }
 
