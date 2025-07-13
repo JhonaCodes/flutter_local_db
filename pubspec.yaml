@@ -5,13 +5,11 @@ homepage: https://github.com/JhonaCodes/flutter_local_db
 repository: https://github.com/JhonaCodes/flutter_local_db.git
 
 topics:
-  - database
   - nosql
   - ffi
   - rust
   - storage
   - indexeddb
-  - cross-platform
 
 environment:
   sdk: '>=3.8.1 <4.0.0'
