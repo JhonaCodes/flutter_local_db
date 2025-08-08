@@ -22,10 +22,9 @@ dependencies:
   path_provider: ^2.1.5
   # FFI for native Rust integration
   ffi: ^2.1.3
-  # Logger for structured logging
-  logger: ^2.4.0
   # Web interop for IndexedDB (Flutter 3.32.x)
   web: ^1.1.0
+  logging: ^1.3.0
 
 dev_dependencies:
   flutter_test:
