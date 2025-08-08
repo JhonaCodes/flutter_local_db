@@ -2,12 +2,12 @@
 ///
 /// Provides unified database operations across all platforms:
 /// - **Native platforms** (Android, iOS, macOS): Rust + LMDB via FFI
-/// - **Web platform**: In-memory storage with localStorage persistence
+/// - **Web platform**: IndexedDB for persistent storage
 ///
 /// Features:
 /// - ✅ Unified API across all platforms
 /// - ✅ High-performance native backend (10,000+ ops/sec)
-/// - ✅ Web-optimized in-memory storage
+/// - ✅ Web-optimized IndexedDB storage (persistent, non-volatile)
 /// - ✅ Result-based error handling
 /// - ✅ JSON-serializable data storage
 /// - ✅ Hot restart support
@@ -19,16 +19,35 @@
 /// // Initialize database
 /// await LocalDB.init();
 ///
-/// // Create a record
-/// final result = await LocalDB.Post('user-123', {
+/// // ✅ CREATE a new record (fails if ID already exists)
+/// final createResult = await LocalDB.Post('user-123', {
 ///   'name': 'John Doe',
 ///   'email': 'john@example.com',
 ///   'age': 30
 /// });
 ///
-/// result.when(
-///   ok: (model) => print('Created user: ${model.id}'),
-///   err: (error) => print('Error: ${error.message}')
+/// createResult.when(
+///   ok: (model) => print('✅ New user created: ${model.id}'),
+///   err: (error) {
+///     if (error.message.contains('already exists')) {
+///       print('❌ User exists! Use Put to update instead.');
+///     }
+///   }
+/// );
+///
+/// // ✅ UPDATE existing record (fails if ID doesn't exist)
+/// final updateResult = await LocalDB.Put('user-123', {
+///   'name': 'John Smith',  // Updated name
+///   'age': 31              // Updated age
+/// });
+///
+/// updateResult.when(
+///   ok: (model) => print('✅ User updated: ${model.id}'),
+///   err: (error) {
+///     if (error.message.contains('does not exist')) {
+///       print('❌ User not found! Use Post to create first.');
+///     }
+///   }
 /// );
 ///
 /// // Retrieve the record

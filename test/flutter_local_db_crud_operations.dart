@@ -1,4 +1,5 @@
 import 'package:flutter_local_db/flutter_local_db.dart';
+import 'package:flutter_local_db/src/core/log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -15,7 +16,7 @@ void main() {
     }
 
     await LocalDB.initForTesting(
-      localDbName: 'test.db',
+      localDbName: 'test',
       binaryPath:
           '../flutter_local_db/macos/Frameworks/liboffline_first_core_arm64.dylib',
     );
@@ -44,12 +45,15 @@ void main() {
 
       // Un benchmark agresivo que busca al menos 2000 operaciones por segundo
       // Esto sería comparable con SQLite en modo optimizado
+
       expect(
         operationsPerSecond >= 10000,
         true,
         reason:
             'Performance benchmark failed: $operationsPerSecond ops/s is below target of 2000 ops/s',
       );
+
+      Log.w("@@@@$operationsPerSecond@@@");
     });
 
     test('Benchmark for reading operations', () async {

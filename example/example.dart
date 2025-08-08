@@ -32,6 +32,40 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String userID = 'user-123';
+  bool _connectionTest = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _testConnectionAfterHotReload();
+  }
+
+  /// Test database connection after hot reload
+  Future<void> _testConnectionAfterHotReload() async {
+    try {
+      // Test database connection immediately after hot reload
+      final result = await LocalDB.GetById(userID);
+      result.when(
+        ok: (data) {
+          setState(() {
+            _connectionTest = true;
+          });
+          print('✅ Hot reload test: Database connection is working');
+        },
+        err: (error) {
+          setState(() {
+            _connectionTest = true;
+          });
+          print('⚠️ Hot reload test: $error');
+        },
+      );
+    } catch (e) {
+      print('❌ Hot reload test failed: $e');
+      setState(() {
+        _connectionTest = true;
+      });
+    }
+  }
 
   Future<void> _createUser() async {
     final result = await LocalDB.Post(userID, {
@@ -70,7 +104,19 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Local DB Example')),
+      appBar: AppBar(
+        title: const Text('Local DB Example'),
+        actions: [
+          // Hot reload connection indicator
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: Icon(
+              _connectionTest ? Icons.check_circle : Icons.hourglass_empty,
+              color: _connectionTest ? Colors.green : Colors.orange,
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FutureBuilder(

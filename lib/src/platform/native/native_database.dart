@@ -135,7 +135,9 @@ class NativeDatabase implements Database {
       if (existsResult.isOk) {
         return Err(
           DbError.validationError(
-            "Cannot create new record: ID '$key' already exists. Use update method to modify existing records.",
+            "❌ Record creation failed: ID '$key' already exists.\n" +
+            "💡 Solution: Use LocalDB.Put('$key', data) to UPDATE the existing record, " +
+            "or choose a different ID for LocalDB.Post().",
           ),
         );
       }
@@ -260,7 +262,9 @@ class NativeDatabase implements Database {
       if (existsResult.isErr) {
         return Err(
           DbError.notFound(
-            "Record '$key' not found. Use insert method to create new records.",
+            "❌ Record update failed: ID '$key' does not exist.\n" +
+            "💡 Solution: Use LocalDB.Post('$key', data) to CREATE a new record, " +
+            "or verify the ID exists with LocalDB.GetById('$key').",
           ),
         );
       }
@@ -451,14 +455,40 @@ class NativeDatabase implements Database {
 
   @override
   Future<bool> isConnectionValid() async {
-    return _isInitialized && _dbInstance != null && _dbInstance != nullptr;
+    // Basic state check
+    if (!_isInitialized || _dbInstance == null || _dbInstance == nullptr) {
+      return false;
+    }
+
+    // Advanced validation: test the actual FFI connection
+    try {
+      return await _testConnection();
+    } catch (e) {
+      Log.w('Connection validity test failed: $e');
+      return false;
+    }
   }
 
   @override
   Future<void> close() async {
-    Log.i('NativeDatabase.close');
+    Log.i('NativeDatabase.close - cleaning up resources');
+    
+    // Safely clear database instance
+    if (_dbInstance != null && _dbInstance != nullptr) {
+      try {
+        // Note: We don't call a close function on Rust side because LMDB handles it
+        // We just need to release our reference to the pointer
+        Log.d('Releasing database instance pointer');
+      } catch (e) {
+        Log.w('Error during database cleanup: $e');
+      }
+    }
+    
     _dbInstance = null;
     _isInitialized = false;
+    
+    // Keep _lastDatabaseName for potential recovery
+    Log.d('Database connection closed and resources cleaned');
   }
 
   /// Loads the native library for the current platform
@@ -582,23 +612,93 @@ class NativeDatabase implements Database {
   }
 
   /// Ensures the database connection is valid, reinitializing if needed
+  /// 
+  /// This method provides robust hot reload support by:
+  /// - Detecting invalid FFI pointers after hot reload
+  /// - Automatically reinitializing database connection
+  /// - Preserving data persistence across reloads
   Future<bool> _ensureConnectionValid() async {
+    // First level check: basic state validation
     if (!_isInitialized || _dbInstance == null || _dbInstance == nullptr) {
-      Log.w('Database connection invalid, attempting to reestablish');
+      Log.w('Database connection invalid - performing recovery');
+      return await _recoverConnection();
+    }
 
-      if (_lastDatabaseName != null) {
-        try {
-          final config = DbConfig(name: _lastDatabaseName!);
-          final result = await initialize(config);
-          return result.isOk;
-        } catch (e) {
-          Log.e('Failed to reestablish database connection', error: e);
+    // Second level check: FFI pointer validity
+    try {
+      // Test the connection with a non-destructive operation
+      // This will fail if FFI pointer is stale after hot reload
+      final testResult = await _testConnection();
+      if (!testResult) {
+        Log.w('Database connection test failed - FFI pointer may be stale');
+        _isInitialized = false; // Mark as invalid
+        return await _recoverConnection();
+      }
+    } catch (e) {
+      Log.w('Database connection validation error: $e - attempting recovery');
+      _isInitialized = false;
+      return await _recoverConnection();
+    }
+
+    return true;
+  }
+
+  /// Recovers database connection using saved configuration
+  Future<bool> _recoverConnection() async {
+    if (_lastDatabaseName != null) {
+      try {
+        Log.i('Recovering database connection: $_lastDatabaseName');
+        
+        // Clear current invalid state
+        _dbInstance = null;
+        _isInitialized = false;
+        
+        // Reinitialize with saved config
+        final config = DbConfig(name: _lastDatabaseName!);
+        final result = await initialize(config);
+        
+        if (result.isOk) {
+          Log.i('Database connection recovered successfully');
+          return true;
+        } else {
+          Log.e('Database recovery failed: ${result.errorOrNull?.message}');
           return false;
         }
+      } catch (e) {
+        Log.e('Failed to recover database connection', error: e);
+        return false;
       }
+    }
+    
+    Log.e('Cannot recover database - no saved configuration');
+    return false;
+  }
+
+  /// Tests database connection validity without side effects
+  Future<bool> _testConnection() async {
+    if (_dbInstance == null || _dbInstance == nullptr) {
       return false;
     }
-    return true;
+
+    try {
+      // Perform a lightweight operation to test FFI connection
+      // We'll use get_all operation which doesn't modify data
+      final resultPointer = _get(_dbInstance!);
+      
+      if (resultPointer == nullptr) {
+        Log.d('Connection test failed: null pointer returned');
+        return false;
+      }
+
+      // If we got a valid pointer, the connection is working
+      malloc.free(resultPointer);
+      Log.d('Database connection test passed');
+      return true;
+    } catch (e) {
+      // Any exception means the FFI connection is broken
+      Log.d('Connection test failed with exception: $e');
+      return false;
+    }
   }
 
   /// Parses a Rust error response

@@ -6,7 +6,7 @@ import 'core/log.dart';
 // Conditional imports for platform-specific implementations
 import 'platform/database_stub.dart'
     if (dart.library.io) 'platform/database_io.dart'
-    if (dart.library.js_interop) 'platform/database_web.dart';
+    if (dart.library.js) 'platform/database_web.dart';
 
 /// Factory class for creating platform-appropriate database instances
 ///
@@ -178,7 +178,7 @@ class DatabaseFactory {
       backend = 'Rust + LMDB via FFI';
     } else if (implementation.contains('Web')) {
       platform = 'Web Browser';
-      backend = 'In-memory + localStorage';
+      backend = 'IndexedDB (persistent)';
     } else {
       platform = 'Unknown';
       backend = 'Unknown';

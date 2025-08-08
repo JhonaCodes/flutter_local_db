@@ -221,25 +221,25 @@ class DetailsModel {
   DetailsModel(this.type, this.message);
 
   factory DetailsModel.fromJson(String jsonString, [String? type]) {
-    final encoded = jsonEncode(jsonString);
-
-    final isString = jsonDecode(encoded).runtimeType == String;
-
-    Map<String, dynamic> response = {};
-
-    if (isString) {
-      response = {
-        'type': type ?? 'Unknown',
-        'message': jsonDecode(jsonEncode(jsonString)),
-      };
-    } else {
-      response = jsonDecode(jsonString);
+    // Si ya tenemos un tipo, simplemente usar el string como mensaje
+    if (type != null) {
+      return DetailsModel(type, jsonString);
     }
-
-    Map<String, dynamic> newJson = {
-      "type": response.keys.first,
-      "message": response.values.first ?? '',
-    };
-    return DetailsModel(newJson['type'], newJson['message']);
+    
+    // Intentar parsear como JSON
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is Map<String, dynamic>) {
+        return DetailsModel(
+          decoded['type']?.toString() ?? 'Unknown',
+          decoded['message']?.toString() ?? jsonString,
+        );
+      }
+    } catch (e) {
+      // Si no es JSON válido, usar como mensaje directo
+    }
+    
+    // Fallback: usar el string completo como mensaje
+    return DetailsModel(type ?? 'Unknown', jsonString);
   }
 }
