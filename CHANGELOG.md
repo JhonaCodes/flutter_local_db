@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+
+### Added
+- Official web platform support using IndexedDB with a unified API across platforms.
+
 ## 0.8.0 (Breaking Changes)
 
 ⚠️ **BREAKING CHANGES WARNING**  

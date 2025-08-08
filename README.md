@@ -10,7 +10,7 @@ A high-performance local database for Flutter that leverages Rust's LMDB embedde
 🔄 **FFI Integration**: Seamless integration between Flutter and Rust  
 🎯 **Simple API**: Store and retrieve JSON data with minimal code, [FFI-DART](https://github.com/JhonaCodes/offline_first_core)  
 🛡️ **Result Types**: Rust-inspired Result types for better error handling  
-📱 **Cross-Platform**: Supports Android, iOS, and macOS  
+📱 **Cross-Platform**: Supports Android, iOS, macOS, and Web  
 ⚡ **Async Operations**: All database operations are asynchronous  
 🔍 **Smart Querying**: Efficient data retrieval through LMDB's memory-mapped implementation  
 🚀 **Backend Migration**: Recently migrated from redb to LMDB for improved performance and stability
@@ -21,7 +21,7 @@ Add to your pubspec.yaml:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^0.8.0
+  flutter_local_db: ^0.9.0
 ```
 
 ## Basic Usage
@@ -122,9 +122,22 @@ result.when(
 - ✅ Android: `.so` shared library
 - ✅ iOS: `.a` static library
 - ✅ macOS: `.dylib` dynamic library
+- ✅ Web: IndexedDB
 - 🚧 Windows: Coming soon
 - 🚧 Linux: Coming soon
-- 🚧 Web: Coming soon
+
+## Web Support
+
+The web implementation uses IndexedDB under the hood and exposes the exact same `LocalDB` API used on native platforms.
+
+- No extra setup required; just add the dependency and use it.
+- Requires Flutter `>= 3.32.0` (as configured in `pubspec.yaml`).
+- No FFI on web; storage runs fully in the browser.
+
+Notes and limitations on web:
+- Browser storage quotas apply; persistent storage is subject to browser policies.
+- File-system paths are not applicable on web.
+- Performance characteristics differ from LMDB on native, but the API and behavior remain consistent.
 
 ## Limitations
 
