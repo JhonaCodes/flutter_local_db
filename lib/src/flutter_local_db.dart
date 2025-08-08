@@ -22,7 +22,7 @@ import 'service/local_db_result.dart' as legacy;
 /// - ✅ Unified API across all platforms
 /// - ✅ Result-based error handling (no exceptions)
 /// - ✅ JSON-serializable data storage
-/// - ✅ Hot restart support  
+/// - ✅ Hot restart support
 /// - ✅ High performance (10,000+ ops/sec on native, 1,000+ ops/sec on web)
 /// - ✅ Persistent storage (non-volatile data)
 ///
@@ -55,7 +55,7 @@ import 'service/local_db_result.dart' as legacy;
 /// updateResult.when(
 ///   ok: (entry) => print('✅ Updated: ${entry.id}'),
 ///   err: (error) {
-///     if (error.message.contains('does not exist')) {  
+///     if (error.message.contains('does not exist')) {
 ///       print('❌ Use LocalDB.Post() to create new record first!');
 ///     }
 ///   }
@@ -99,17 +99,17 @@ class LocalDB {
     try {
       final config = DbConfig(name: 'flutter_local_db');
       _lastConfig = config; // Store config for hot reload recovery
-      
+
       final result = await DatabaseFactory.createAndInitialize(config);
 
       result.when(
         ok: (database) {
           _database = database;
           _isInitialized = true;
-          
+
           // Register hot reload listener in debug mode
           _registerHotReloadListener();
-          
+
           Log.i('LocalDB initialized successfully');
         },
         err: (error) {
@@ -147,17 +147,17 @@ class LocalDB {
     try {
       final config = DbConfig(name: localDbName);
       _lastConfig = config; // Store config for hot reload recovery
-      
+
       final result = await DatabaseFactory.createAndInitialize(config);
 
       result.when(
         ok: (database) {
           _database = database;
           _isInitialized = true;
-          
+
           // Register hot reload listener in debug mode
           _registerHotReloadListener();
-          
+
           Log.i('LocalDB test instance initialized');
         },
         err: (error) {
@@ -547,9 +547,9 @@ class LocalDB {
     // Only register in debug mode and if not already registered
     if (kDebugMode && !_hotReloadListenerRegistered) {
       _hotReloadListenerRegistered = true;
-      
+
       Log.i('Registering hot reload listener for database recovery');
-      
+
       // Listen for hot reload events
       SchedulerBinding.instance.addPostFrameCallback((_) {
         // Register for future hot reloads
@@ -557,7 +557,7 @@ class LocalDB {
           _handleHotReload();
         }
       });
-      
+
       // Alternative: Use development service observer
       if (SchedulerBinding.instance.lifecycleState != null) {
         _registerLifecycleListener();
@@ -568,7 +568,7 @@ class LocalDB {
   /// Handles hot reload detection and database recovery
   static void _handleHotReload() {
     Log.i('Hot reload detected - checking database connection');
-    
+
     // Invalidate current connection state to force reinitialization
     if (_database != null) {
       _isInitialized = false;
@@ -586,12 +586,16 @@ class LocalDB {
   static Future<bool> _ensureValidConnection() async {
     if (!_isInitialized || _database == null) {
       Log.w('Database connection invalid - attempting recovery');
-      
+
       if (_lastConfig != null) {
         try {
-          Log.i('Attempting database recovery with config: ${_lastConfig!.name}');
-          final result = await DatabaseFactory.createAndInitialize(_lastConfig!);
-          
+          Log.i(
+            'Attempting database recovery with config: ${_lastConfig!.name}',
+          );
+          final result = await DatabaseFactory.createAndInitialize(
+            _lastConfig!,
+          );
+
           return result.when(
             ok: (database) {
               _database = database;
@@ -609,11 +613,11 @@ class LocalDB {
           return false;
         }
       }
-      
+
       Log.e('Cannot recover database - no saved configuration');
       return false;
     }
-    
+
     // Check if the existing connection is still valid
     if (_database != null) {
       final isValid = await _database!.isConnectionValid();
@@ -623,7 +627,7 @@ class LocalDB {
         return await _ensureValidConnection(); // Recursive recovery
       }
     }
-    
+
     return true;
   }
 }

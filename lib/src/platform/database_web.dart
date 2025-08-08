@@ -16,7 +16,7 @@ import 'web/web_database.dart';
 /// ```dart
 /// final database = createDatabase();
 /// await database.initialize(DbConfig(name: 'my_web_app'));
-/// 
+///
 /// // Works exactly like native platforms
 /// final result = await database.insert('user-1', {'name': 'John'});
 /// ```

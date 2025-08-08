@@ -32,7 +32,7 @@ import 'services/indexed_db_service.dart';
 ///
 /// Browser Compatibility:
 /// - Chrome/Edge: Full support
-/// - Firefox: Full support  
+/// - Firefox: Full support
 /// - Safari: Full support
 /// - Mobile browsers: Full support
 ///
@@ -55,7 +55,7 @@ import 'services/indexed_db_service.dart';
 ///
 /// Performance Characteristics:
 /// - Insert/Update: ~1-5ms typical latency
-/// - Get operations: ~1-2ms typical latency  
+/// - Get operations: ~1-2ms typical latency
 /// - Bulk operations: ~1000+ records/second
 /// - Storage limits: Typically 50-100MB+ depending on browser
 class WebDatabase implements Database {
@@ -65,9 +65,9 @@ class WebDatabase implements Database {
   Future<DbResult<void>> initialize(DbConfig config) async {
     try {
       Log.i('WebDatabase.initialize started: ${config.name}');
-      
+
       final result = await _service.initialize(config.name);
-      
+
       return result.when(
         ok: (_) {
           Log.i('WebDatabase initialized successfully with IndexedDB');
@@ -95,7 +95,10 @@ class WebDatabase implements Database {
   }
 
   @override
-  Future<DbResult<DbEntry>> insert(String key, Map<String, dynamic> data) async {
+  Future<DbResult<DbEntry>> insert(
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     if (!DatabaseValidator.isValidKey(key)) {
       return Err(
         DbError.validationError(DatabaseValidator.getKeyValidationError(key)),
@@ -123,7 +126,10 @@ class WebDatabase implements Database {
   }
 
   @override
-  Future<DbResult<DbEntry>> update(String key, Map<String, dynamic> data) async {
+  Future<DbResult<DbEntry>> update(
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     if (!DatabaseValidator.isValidKey(key)) {
       return Err(
         DbError.validationError(DatabaseValidator.getKeyValidationError(key)),

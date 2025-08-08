@@ -8,7 +8,7 @@ import 'indexed_db_transaction_manager.dart';
 import 'js_object_converter.dart';
 
 /// Core service for IndexedDB operations
-/// 
+///
 /// Provides high-level database operations built on top of IndexedDB.
 /// Handles connection management, data conversion, and error handling
 /// while maintaining a clean separation of concerns.
@@ -21,7 +21,7 @@ class IndexedDBService {
   bool get isInitialized => _database != null && _transactionManager != null;
 
   /// Initializes the IndexedDB connection
-  /// 
+  ///
   /// Opens the database, creates object stores if needed, and sets up
   /// the transaction manager for subsequent operations.
   Future<DbResult<void>> initialize(String dbName) async {
@@ -40,16 +40,23 @@ class IndexedDBService {
         err: (error) => Err(error),
       );
     } catch (e, stackTrace) {
-      Log.e('IndexedDBService initialization failed', error: e, stackTrace: stackTrace);
+      Log.e(
+        'IndexedDBService initialization failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return Err(DbError.connectionError('Service initialization failed: $e'));
     }
   }
 
   /// Inserts a new record into the database
-  /// 
+  ///
   /// Checks for key existence to prevent duplicates and stores the entry
   /// with proper conversion to JavaScript objects.
-  Future<DbResult<DbEntry>> insert(String key, Map<String, dynamic> data) async {
+  Future<DbResult<DbEntry>> insert(
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     if (!isInitialized) {
       return Err(DbError.connectionError('Service not initialized'));
     }
@@ -60,11 +67,13 @@ class IndexedDBService {
       // Check if key already exists
       final existingResult = await get(key);
       if (existingResult.isOk) {
-        return Err(DbError.validationError(
-          "❌ Record creation failed: ID '$key' already exists.\n" +
-          "💡 Solution: Use LocalDB.Put('$key', data) to UPDATE the existing record, " +
-          "or choose a different ID for LocalDB.Post().",
-        ));
+        return Err(
+          DbError.validationError(
+            "❌ Record creation failed: ID '$key' already exists.\n" +
+                "💡 Solution: Use LocalDB.Put('$key', data) to UPDATE the existing record, " +
+                "or choose a different ID for LocalDB.Post().",
+          ),
+        );
       }
 
       // Create entry with timestamp hash
@@ -83,7 +92,7 @@ class IndexedDBService {
   }
 
   /// Retrieves a record by key
-  /// 
+  ///
   /// Returns the record if found, or a not found error if it doesn't exist.
   Future<DbResult<DbEntry>> get(String key) async {
     if (!isInitialized) {
@@ -95,14 +104,14 @@ class IndexedDBService {
 
       return await _transactionManager!.executeReadOperation((store) async {
         final request = store.get(key.toJS);
-        
+
         return await _transactionManager!.createRequestOperation<DbEntry>(
           request,
           (result) {
             if (result == null) {
               throw DbError.notFound("No record found with key: $key");
             }
-            
+
             final record = JSObjectConverter.jsObjectToMap(result);
             final entry = JSObjectConverter.mapToDbEntry(record);
             Log.d('Record retrieved successfully: $key');
@@ -118,9 +127,12 @@ class IndexedDBService {
   }
 
   /// Updates an existing record
-  /// 
+  ///
   /// Verifies the record exists before updating to maintain data integrity.
-  Future<DbResult<DbEntry>> update(String key, Map<String, dynamic> data) async {
+  Future<DbResult<DbEntry>> update(
+    String key,
+    Map<String, dynamic> data,
+  ) async {
     if (!isInitialized) {
       return Err(DbError.connectionError('Service not initialized'));
     }
@@ -131,11 +143,13 @@ class IndexedDBService {
       // Verify record exists
       final existingResult = await get(key);
       if (existingResult.isErr) {
-        return Err(DbError.notFound(
-          "❌ Record update failed: ID '$key' does not exist.\n" +
-          "💡 Solution: Use LocalDB.Post('$key', data) to CREATE a new record, " +
-          "or verify the ID exists with LocalDB.GetById('$key').",
-        ));
+        return Err(
+          DbError.notFound(
+            "❌ Record update failed: ID '$key' does not exist.\n" +
+                "💡 Solution: Use LocalDB.Post('$key', data) to CREATE a new record, " +
+                "or verify the ID exists with LocalDB.GetById('$key').",
+          ),
+        );
       }
 
       // Create updated entry
@@ -153,7 +167,7 @@ class IndexedDBService {
   }
 
   /// Deletes a record by key
-  /// 
+  ///
   /// Removes the record from the database if it exists.
   Future<DbResult<void>> delete(String key) async {
     if (!isInitialized) {
@@ -165,7 +179,7 @@ class IndexedDBService {
 
       return await _transactionManager!.executeWriteOperation((store) async {
         final request = store.delete(key.toJS);
-        
+
         final result = await _transactionManager!.createVoidRequestOperation(
           request,
           operationName: 'delete($key)',
@@ -184,7 +198,7 @@ class IndexedDBService {
   }
 
   /// Retrieves all records from the database
-  /// 
+  ///
   /// Returns a list of all stored entries.
   Future<DbResult<List<DbEntry>>> getAll() async {
     if (!isInitialized) {
@@ -196,18 +210,18 @@ class IndexedDBService {
 
       return await _transactionManager!.executeReadOperation((store) async {
         final request = store.getAll();
-        
+
         return await _transactionManager!.createRequestOperation<List<DbEntry>>(
           request,
           (result) {
             final resultList = result as List;
             final entries = <DbEntry>[];
-            
+
             for (final item in resultList) {
               final record = JSObjectConverter.jsObjectToMap(item);
               entries.add(JSObjectConverter.mapToDbEntry(record));
             }
-            
+
             Log.i('Retrieved ${entries.length} records from IndexedDB');
             return entries;
           },
@@ -221,7 +235,7 @@ class IndexedDBService {
   }
 
   /// Retrieves all keys from the database
-  /// 
+  ///
   /// Returns a list of all stored keys without loading the full records.
   Future<DbResult<List<String>>> getAllKeys() async {
     if (!isInitialized) {
@@ -233,13 +247,13 @@ class IndexedDBService {
 
       return await _transactionManager!.executeReadOperation((store) async {
         final request = store.getAllKeys();
-        
+
         return await _transactionManager!.createRequestOperation<List<String>>(
           request,
           (result) {
             final resultList = result as List;
             final keys = resultList.map((key) => key.toString()).toList();
-            
+
             Log.i('Retrieved ${keys.length} keys from IndexedDB');
             return keys;
           },
@@ -253,7 +267,7 @@ class IndexedDBService {
   }
 
   /// Clears all records from the database
-  /// 
+  ///
   /// Removes all stored data while keeping the database structure intact.
   Future<DbResult<void>> clear() async {
     if (!isInitialized) {
@@ -265,7 +279,7 @@ class IndexedDBService {
 
       return await _transactionManager!.executeWriteOperation((store) async {
         final request = store.clear();
-        
+
         final result = await _transactionManager!.createVoidRequestOperation(
           request,
           operationName: 'clear',
@@ -284,23 +298,23 @@ class IndexedDBService {
   }
 
   /// Closes the database connection
-  /// 
+  ///
   /// Releases resources and cleans up the connection.
   Future<void> close() async {
     Log.i('IndexedDBService.close');
-    
+
     try {
       _database?.close();
     } catch (e) {
       Log.e('Error closing database: $e');
     }
-    
+
     _database = null;
     _transactionManager = null;
   }
 
   /// Checks if the connection is valid and ready for operations
-  /// 
+  ///
   /// Validates that the database and transaction manager are properly initialized.
   bool isConnectionValid() {
     return isInitialized && (_transactionManager?.isValid() ?? false);
@@ -313,50 +327,66 @@ class IndexedDBService {
     try {
       // Check IndexedDB support
       if (!web.window.indexedDB.isDefinedAndNotNull) {
-        return Err(DbError.connectionError('IndexedDB is not supported in this browser'));
+        return Err(
+          DbError.connectionError('IndexedDB is not supported in this browser'),
+        );
       }
 
       final request = web.window.indexedDB.open(_dbName, 1);
 
       request.onupgradeneeded = ((web.IDBVersionChangeEvent event) {
         try {
-          final db = (event.target as web.IDBOpenDBRequest).result as web.IDBDatabase;
-          
+          final db =
+              (event.target as web.IDBOpenDBRequest).result as web.IDBDatabase;
+
           if (!db.objectStoreNames.contains(_storeName)) {
-            db.createObjectStore(_storeName, web.IDBObjectStoreParameters(keyPath: 'id'.toJS));
+            db.createObjectStore(
+              _storeName,
+              web.IDBObjectStoreParameters(keyPath: 'id'.toJS),
+            );
             Log.d('Created IndexedDB object store: $_storeName');
           }
         } catch (e) {
           Log.e('Error during IndexedDB upgrade: $e');
-          completer.complete(Err(DbError.connectionError('Database upgrade failed: $e')));
+          completer.complete(
+            Err(DbError.connectionError('Database upgrade failed: $e')),
+          );
         }
       }).toJS;
 
       request.onsuccess = ((web.Event event) {
         try {
-          final db = (event.target as web.IDBOpenDBRequest).result as web.IDBDatabase;
+          final db =
+              (event.target as web.IDBOpenDBRequest).result as web.IDBDatabase;
           Log.i('IndexedDB opened successfully');
           completer.complete(Ok(db));
         } catch (e) {
           Log.e('Error accessing IndexedDB result: $e');
-          completer.complete(Err(DbError.connectionError('Failed to access database: $e')));
+          completer.complete(
+            Err(DbError.connectionError('Failed to access database: $e')),
+          );
         }
       }).toJS;
 
       request.onerror = ((web.Event event) {
         final error = (event.target as web.IDBOpenDBRequest).error;
         Log.e('IndexedDB open failed: $error');
-        completer.complete(Err(DbError.connectionError('Failed to open IndexedDB: $error')));
+        completer.complete(
+          Err(DbError.connectionError('Failed to open IndexedDB: $error')),
+        );
       }).toJS;
 
       request.onblocked = ((web.Event event) {
         Log.w('IndexedDB open blocked - another connection might be open');
-        completer.complete(Err(DbError.connectionError('Database connection blocked')));
+        completer.complete(
+          Err(DbError.connectionError('Database connection blocked')),
+        );
       }).toJS;
-
     } catch (e, stackTrace) {
       Log.e('Exception opening IndexedDB', error: e, stackTrace: stackTrace);
-      return Err(DbError.connectionError('IndexedDB not supported or failed: $e'));
+      return Err(
+        DbError.connectionError('IndexedDB not supported or failed: $e'),
+      );
     }
 
     return completer.future;
@@ -367,7 +397,7 @@ class IndexedDBService {
     return await _transactionManager!.executeWriteOperation((store) async {
       final record = JSObjectConverter.entryToJSObject(entry);
       final request = store.put(record.jsify()!);
-      
+
       final result = await _transactionManager!.createVoidRequestOperation(
         request,
         operationName: 'store(${entry.id})',

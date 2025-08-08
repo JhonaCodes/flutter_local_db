@@ -136,8 +136,8 @@ class NativeDatabase implements Database {
         return Err(
           DbError.validationError(
             "❌ Record creation failed: ID '$key' already exists.\n" +
-            "💡 Solution: Use LocalDB.Put('$key', data) to UPDATE the existing record, " +
-            "or choose a different ID for LocalDB.Post().",
+                "💡 Solution: Use LocalDB.Put('$key', data) to UPDATE the existing record, " +
+                "or choose a different ID for LocalDB.Post().",
           ),
         );
       }
@@ -263,8 +263,8 @@ class NativeDatabase implements Database {
         return Err(
           DbError.notFound(
             "❌ Record update failed: ID '$key' does not exist.\n" +
-            "💡 Solution: Use LocalDB.Post('$key', data) to CREATE a new record, " +
-            "or verify the ID exists with LocalDB.GetById('$key').",
+                "💡 Solution: Use LocalDB.Post('$key', data) to CREATE a new record, " +
+                "or verify the ID exists with LocalDB.GetById('$key').",
           ),
         );
       }
@@ -472,7 +472,7 @@ class NativeDatabase implements Database {
   @override
   Future<void> close() async {
     Log.i('NativeDatabase.close - cleaning up resources');
-    
+
     // Safely clear database instance
     if (_dbInstance != null && _dbInstance != nullptr) {
       try {
@@ -483,10 +483,10 @@ class NativeDatabase implements Database {
         Log.w('Error during database cleanup: $e');
       }
     }
-    
+
     _dbInstance = null;
     _isInitialized = false;
-    
+
     // Keep _lastDatabaseName for potential recovery
     Log.d('Database connection closed and resources cleaned');
   }
@@ -612,7 +612,7 @@ class NativeDatabase implements Database {
   }
 
   /// Ensures the database connection is valid, reinitializing if needed
-  /// 
+  ///
   /// This method provides robust hot reload support by:
   /// - Detecting invalid FFI pointers after hot reload
   /// - Automatically reinitializing database connection
@@ -648,15 +648,15 @@ class NativeDatabase implements Database {
     if (_lastDatabaseName != null) {
       try {
         Log.i('Recovering database connection: $_lastDatabaseName');
-        
+
         // Clear current invalid state
         _dbInstance = null;
         _isInitialized = false;
-        
+
         // Reinitialize with saved config
         final config = DbConfig(name: _lastDatabaseName!);
         final result = await initialize(config);
-        
+
         if (result.isOk) {
           Log.i('Database connection recovered successfully');
           return true;
@@ -669,7 +669,7 @@ class NativeDatabase implements Database {
         return false;
       }
     }
-    
+
     Log.e('Cannot recover database - no saved configuration');
     return false;
   }
@@ -684,7 +684,7 @@ class NativeDatabase implements Database {
       // Perform a lightweight operation to test FFI connection
       // We'll use get_all operation which doesn't modify data
       final resultPointer = _get(_dbInstance!);
-      
+
       if (resultPointer == nullptr) {
         Log.d('Connection test failed: null pointer returned');
         return false;

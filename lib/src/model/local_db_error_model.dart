@@ -225,7 +225,7 @@ class DetailsModel {
     if (type != null) {
       return DetailsModel(type, jsonString);
     }
-    
+
     // Intentar parsear como JSON
     try {
       final decoded = jsonDecode(jsonString);
@@ -238,7 +238,7 @@ class DetailsModel {
     } catch (e) {
       // Si no es JSON válido, usar como mensaje directo
     }
-    
+
     // Fallback: usar el string completo como mensaje
     return DetailsModel(type ?? 'Unknown', jsonString);
   }
