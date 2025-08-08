@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 import '../../../core/result.dart';
-import '../../../core/models.dart';
 import '../../../core/log.dart';
 
 /// Manages IndexedDB transactions and provides type-safe operations

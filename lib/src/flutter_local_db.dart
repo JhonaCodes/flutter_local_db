@@ -511,15 +511,6 @@ class LocalDB {
     _hotReloadListenerRegistered = false;
   }
 
-  /// Ensures the database is initialized, throwing if not
-  static bool _ensureInitialized() {
-    if (!_isInitialized || _database == null) {
-      Log.e('Database operation attempted without initialization');
-      return false;
-    }
-    return true;
-  }
-
   /// Converts a DbEntry to LocalDbModel for backward compatibility
   static LocalDbModel _entryToLocalDbModel(DbEntry entry) {
     return LocalDbModel(id: entry.id, data: entry.data, hash: entry.hash);

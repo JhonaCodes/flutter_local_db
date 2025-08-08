@@ -108,8 +108,7 @@ class Log {
             // Look for the full path in stackTrace lines
             String? absolutePath;
             for (final stackLine in lines) {
-              if (packageName != null &&
-                  stackLine.contains('package:$packageName/$filePath')) {
+              if (stackLine.contains('package:$packageName/$filePath')) {
                 // Try to find the real path in the stackTrace
                 final fullPathMatch = RegExp(
                   '\\(([^)]+/$filePath):\\d+:\\d+\\)',
