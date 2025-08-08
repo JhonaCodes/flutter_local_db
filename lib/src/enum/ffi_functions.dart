@@ -6,8 +6,8 @@ enum FFiFunctions {
   createDb('create_db'),
 
   /// Inserts new data into the database
-  /// Rust function: `push_data`
-  pushData('push_data'),
+  /// Rust function: `post_data`
+  postData('post_data'),
 
   /// Retrieves a single record by its unique identifier
   /// Rust function: `get_by_id`
@@ -18,8 +18,8 @@ enum FFiFunctions {
   getAll('get_all'),
 
   /// Updates an existing record in the database
-  /// Rust function: `update_data`
-  updateData('update_data'),
+  /// Rust function: `put_data`
+  putData('put_data'),
 
   /// Deletes a record by its unique identifier
   /// Rust function: `delete_by_id`

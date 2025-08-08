@@ -541,7 +541,7 @@ class NativeDatabase implements Database {
 
       _post = _lib!
           .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
-            FFiFunctions.pushData.cName,
+            FFiFunctions.postData.cName,
           );
 
       _get = _lib!
@@ -556,7 +556,7 @@ class NativeDatabase implements Database {
 
       _put = _lib!
           .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
-            FFiFunctions.updateData.cName,
+            FFiFunctions.putData.cName,
           );
 
       _delete = _lib!
