@@ -1,5 +1,6 @@
 // lib/flutter_local_db.dart
 
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
@@ -467,47 +468,36 @@ For development, run the build process or copy binaries manually.
   static List<String> _getPossibleLibraryPaths() {
     final List<String> paths = [];
     
+    // Función helper para encontrar la ruta del paquete
+    String? packagePath = _findPackagePath();
+    
     if (Platform.isMacOS) {
       final libName = 'liboffline_first_core.dylib';
       paths.addAll([
         // Ruta relativa desde el directorio del proyecto (para desarrollo)
         'plugins/binaries/macos/$libName',
-        // Ruta desde pub cache (para dependencias)
+        // Si encontramos la ruta del paquete, usarla
+        if (packagePath != null) '$packagePath/plugins/binaries/macos/$libName',
+        // Rutas estándar de pub
         'packages/flutter_local_db/plugins/binaries/macos/$libName',
-        // Ruta desde .dart_tool
-        '.dart_tool/package_config_subset/flutter_local_db/plugins/binaries/macos/$libName',
-        // Ruta absoluta al paquete flutter_local_db
-        '/Volumes/Data/Private/04_Librarys/flutter_local_db/plugins/binaries/macos/$libName',
-        // Intenta encontrar flutter_local_db en el directorio padre
-        '../flutter_local_db/plugins/binaries/macos/$libName',
-        '../../flutter_local_db/plugins/binaries/macos/$libName',
-        '../../../flutter_local_db/plugins/binaries/macos/$libName',
-        // Búsqueda en cache de pub
-        '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dartlang.org/flutter_local_db/plugins/binaries/macos/$libName',
+        // Flutter asset path
+        'assets/packages/flutter_local_db/plugins/binaries/macos/$libName',
       ]);
     } else if (Platform.isLinux) {
       final libName = 'liboffline_first_core.so';
       paths.addAll([
         'plugins/binaries/linux/$libName',
+        if (packagePath != null) '$packagePath/plugins/binaries/linux/$libName',
         'packages/flutter_local_db/plugins/binaries/linux/$libName',
-        '.dart_tool/package_config_subset/flutter_local_db/plugins/binaries/linux/$libName',
-        '/Volumes/Data/Private/04_Librarys/flutter_local_db/plugins/binaries/linux/$libName',
-        '../flutter_local_db/plugins/binaries/linux/$libName',
-        '../../flutter_local_db/plugins/binaries/linux/$libName',
-        '../../../flutter_local_db/plugins/binaries/linux/$libName',
-        '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dartlang.org/flutter_local_db/plugins/binaries/linux/$libName',
+        'assets/packages/flutter_local_db/plugins/binaries/linux/$libName',
       ]);
     } else if (Platform.isWindows) {
       final libName = 'offline_first_core.dll';
       paths.addAll([
         'plugins/binaries/windows/$libName',
+        if (packagePath != null) '$packagePath/plugins/binaries/windows/$libName',
         'packages/flutter_local_db/plugins/binaries/windows/$libName',
-        '.dart_tool/package_config_subset/flutter_local_db/plugins/binaries/windows/$libName',
-        '/Volumes/Data/Private/04_Librarys/flutter_local_db/plugins/binaries/windows/$libName',
-        '../flutter_local_db/plugins/binaries/windows/$libName',
-        '../../flutter_local_db/plugins/binaries/windows/$libName',
-        '../../../flutter_local_db/plugins/binaries/windows/$libName',
-        '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dartlang.org/flutter_local_db/plugins/binaries/windows/$libName',
+        'assets/packages/flutter_local_db/plugins/binaries/windows/$libName',
       ]);
     } else if (Platform.isAndroid) {
       paths.add('liboffline_first_core.so'); // Android maneja automáticamente
@@ -518,6 +508,53 @@ For development, run the build process or copy binaries manually.
     }
     
     return paths;
+  }
+  
+  static String? _findPackagePath() {
+    try {
+      // Intentar encontrar package_config.json
+      final packageConfigFile = File('.dart_tool/package_config.json');
+      if (packageConfigFile.existsSync()) {
+        final content = packageConfigFile.readAsStringSync();
+        final config = jsonDecode(content) as Map<String, dynamic>;
+        final packages = config['packages'] as List<dynamic>?;
+        
+        if (packages != null) {
+          for (final package in packages) {
+            final packageMap = package as Map<String, dynamic>;
+            if (packageMap['name'] == 'flutter_local_db') {
+              final rootUri = packageMap['rootUri'] as String?;
+              if (rootUri != null) {
+                // Convertir URI relativa a ruta absoluta
+                if (rootUri.startsWith('../')) {
+                  return '${Directory.current.path}/$rootUri';
+                } else if (rootUri.startsWith('file://')) {
+                  return rootUri.substring(7);
+                }
+                return rootUri;
+              }
+            }
+          }
+        }
+      }
+      
+      // Fallback: buscar en directorios padre
+      Directory currentDir = Directory.current;
+      for (int i = 0; i < 5; i++) {
+        final possiblePath = '${currentDir.path}/flutter_local_db';
+        if (Directory(possiblePath).existsSync()) {
+          return possiblePath;
+        }
+        final parent = currentDir.parent;
+        if (parent.path == currentDir.path) break; // Llegamos a la raíz
+        currentDir = parent;
+      }
+      
+    } catch (e) {
+      _logger.fine('Could not find package path: $e');
+    }
+    
+    return null;
   }
   
   void _loadFunctions(DynamicLibrary lib) {
