@@ -15,15 +15,23 @@ import '../../enum/ffi_native_lib_location.dart';
 /// Opaque type representing the native database state
 final class AppDbState extends Opaque {}
 
-/// FFI function signatures
-typedef PointerStringFFICallBack =
-    Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerAppDbStateCallBack = Pointer<AppDbState> Function(Pointer<Utf8>);
-typedef PointerBoolFFICallBack =
-    Pointer<Bool> Function(Pointer<AppDbState>, Pointer<Utf8>);
-typedef PointerBoolFFICallBackDirect =
-    Pointer<Bool> Function(Pointer<AppDbState>);
-typedef PointerListFFICallBack = Pointer<Utf8> Function(Pointer<AppDbState>);
+/// FFI Native function signatures (C side)
+typedef _CreateDatabaseNative = Pointer<AppDbState> Function(Pointer<Utf8>);
+typedef _PostDataNative = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _GetByIdNative = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _PutDataNative = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _DeleteNative = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _GetAllNative = Pointer<Utf8> Function(Pointer<AppDbState>);
+typedef _ClearAllNative = Pointer<Utf8> Function(Pointer<AppDbState>);
+
+/// FFI Dart function signatures (Dart side)
+typedef _CreateDatabaseDart = Pointer<AppDbState> Function(Pointer<Utf8>);
+typedef _PostDataDart = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _GetByIdDart = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _PutDataDart = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _DeleteDart = Pointer<Utf8> Function(Pointer<AppDbState>, Pointer<Utf8>);
+typedef _GetAllDart = Pointer<Utf8> Function(Pointer<AppDbState>);
+typedef _ClearAllDart = Pointer<Utf8> Function(Pointer<AppDbState>);
 
 /// Native database implementation using FFI with Rust/LMDB backend
 ///
@@ -47,14 +55,14 @@ class NativeDatabase implements Database {
   String? _lastDatabaseName;
   bool _isInitialized = false;
 
-  /// FFI function bindings
-  late final Pointer<AppDbState> Function(Pointer<Utf8>) _createDatabase;
-  late final PointerStringFFICallBack _post;
-  late final PointerListFFICallBack _get;
-  late final PointerStringFFICallBack _getById;
-  late final PointerStringFFICallBack _put;
-  late final PointerBoolFFICallBack _delete;
-  late final PointerBoolFFICallBackDirect _clearAllRecords;
+  /// FFI function bindings - typed according to Dart FFI best practices
+  late final _CreateDatabaseDart _createDatabase;
+  late final _PostDataDart _postData;
+  late final _GetAllDart _getAllData;
+  late final _GetByIdDart _getDataById;
+  late final _PutDataDart _putData;
+  late final _DeleteDart _deleteData;
+  late final _ClearAllDart _clearAllRecords;
 
   @override
   Future<DbResult<void>> initialize(DbConfig config) async {
@@ -154,7 +162,7 @@ class NativeDatabase implements Database {
       final jsonPointer = jsonString.toNativeUtf8();
 
       try {
-        final resultPointer = _post(_dbInstance!, jsonPointer);
+        final resultPointer = _postData(_dbInstance!, jsonPointer);
         final resultString = resultPointer.cast<Utf8>().toDartString();
 
         calloc.free(resultPointer);
@@ -207,7 +215,7 @@ class NativeDatabase implements Database {
       final keyPointer = key.toNativeUtf8();
 
       try {
-        final resultPointer = _getById(_dbInstance!, keyPointer);
+        final resultPointer = _getDataById(_dbInstance!, keyPointer);
         calloc.free(keyPointer);
 
         if (resultPointer == nullptr) {
@@ -281,7 +289,7 @@ class NativeDatabase implements Database {
       final jsonPointer = jsonString.toNativeUtf8();
 
       try {
-        final resultPointer = _put(_dbInstance!, jsonPointer);
+        final resultPointer = _putData(_dbInstance!, jsonPointer);
         final resultString = resultPointer.cast<Utf8>().toDartString();
 
         calloc.free(jsonPointer);
@@ -333,7 +341,7 @@ class NativeDatabase implements Database {
       final keyPointer = key.toNativeUtf8();
 
       try {
-        final resultPointer = _delete(_dbInstance!, keyPointer);
+        final resultPointer = _deleteData(_dbInstance!, keyPointer);
         final resultString = resultPointer.cast<Utf8>().toDartString();
 
         calloc.free(keyPointer);
@@ -371,7 +379,7 @@ class NativeDatabase implements Database {
     try {
       Log.d('NativeDatabase.getAll');
 
-      final resultPointer = _get(_dbInstance!);
+      final resultPointer = _getAllData(_dbInstance!);
 
       if (resultPointer == nullptr) {
         Log.w('GetAll returned null pointer');
@@ -492,87 +500,135 @@ class NativeDatabase implements Database {
   }
 
   /// Loads the native library for the current platform
+  /// 
+  /// Implements platform-specific library loading following Dart FFI best practices:
+  /// - Uses DynamicLibrary.process() for iOS (statically linked)
+  /// - Architecture-specific loading for macOS (ARM64/x86_64)
+  /// - Proper error handling and fallbacks
   Future<Result<DynamicLibrary, String>> _loadNativeLibrary() async {
     try {
-      if (Platform.isAndroid) {
-        Log.d('Loading Android library');
-        return Ok(DynamicLibrary.open(FFiNativeLibLocation.android.lib));
-      }
+      late final String libraryPath;
+      late final String platformName;
 
-      if (Platform.isMacOS) {
-        Log.d('Loading macOS library');
-        try {
-          final arch = await FFiNativeLibLocation.macos.toMacosArchPath();
-          return Ok(DynamicLibrary.open(arch));
-        } catch (e) {
-          Log.w(
-            'Failed to load architecture-specific library, trying default: $e',
-          );
-          return Ok(DynamicLibrary.open(FFiNativeLibLocation.macos.lib));
-        }
+      if (Platform.isAndroid) {
+        platformName = 'Android';
+        libraryPath = FFiNativeLibLocation.android.lib;
+        Log.d('Loading $platformName library: $libraryPath');
+        return Ok(DynamicLibrary.open(libraryPath));
       }
 
       if (Platform.isIOS) {
-        Log.d('Loading iOS library');
+        platformName = 'iOS';
+        Log.d('Loading $platformName library via process()');
         try {
+          // iOS uses static linking - library is embedded in the main executable
           return Ok(DynamicLibrary.process());
         } catch (e) {
-          return Ok(DynamicLibrary.open(FFiNativeLibLocation.ios.lib));
+          Log.w('DynamicLibrary.process() failed, trying explicit path: $e');
+          libraryPath = FFiNativeLibLocation.ios.lib;
+          return Ok(DynamicLibrary.open(libraryPath));
         }
       }
 
-      return Err("Unsupported platform: ${Platform.operatingSystem}");
-    } catch (e) {
-      return Err("Error loading library: $e");
+      if (Platform.isMacOS) {
+        platformName = 'macOS';
+        Log.d('Loading $platformName library with architecture detection');
+        try {
+          // Try architecture-specific library first (better practice)
+          final archPath = await FFiNativeLibLocation.macos.toMacosArchPath();
+          Log.d('Attempting architecture-specific library: $archPath');
+          return Ok(DynamicLibrary.open(archPath));
+        } catch (e) {
+          Log.w('Architecture-specific loading failed, using fallback: $e');
+          libraryPath = FFiNativeLibLocation.macos.lib;
+          return Ok(DynamicLibrary.open(libraryPath));
+        }
+      }
+
+      if (Platform.isLinux) {
+        platformName = 'Linux';
+        libraryPath = FFiNativeLibLocation.linux.lib;
+        Log.d('Loading $platformName library: $libraryPath');
+        return Ok(DynamicLibrary.open(libraryPath));
+      }
+
+      if (Platform.isWindows) {
+        platformName = 'Windows';
+        libraryPath = FFiNativeLibLocation.windows.lib;
+        Log.d('Loading $platformName library: $libraryPath');
+        return Ok(DynamicLibrary.open(libraryPath));
+      }
+
+      final unsupportedPlatform = Platform.operatingSystem;
+      Log.e('Unsupported platform detected: $unsupportedPlatform');
+      return Err("Unsupported platform: $unsupportedPlatform");
+      
+    } catch (e, stackTrace) {
+      final errorMsg = "Failed to load native library: $e";
+      Log.e(errorMsg, error: e, stackTrace: stackTrace);
+      return Err(errorMsg);
     }
   }
 
-  /// Binds FFI functions from the native library
+  /// Binds FFI functions from the native library using Dart FFI best practices
+  /// 
+  /// Separates native (C) and Dart function types for better type safety
+  /// and follows the recommended pattern from dart.dev/interop/c-interop
   void _bindFunctions() {
     if (_lib == null) {
-      throw StateError('Library not loaded');
+      throw StateError('Native library not loaded - cannot bind functions');
     }
 
     try {
+      Log.d('Binding FFI functions with proper type safety');
+
+      // Create Database
       _createDatabase = _lib!
-          .lookupFunction<PointerAppDbStateCallBack, PointerAppDbStateCallBack>(
+          .lookupFunction<_CreateDatabaseNative, _CreateDatabaseDart>(
             FFiFunctions.createDb.cName,
           );
 
-      _post = _lib!
-          .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+      // Post Data (Insert)
+      _postData = _lib!
+          .lookupFunction<_PostDataNative, _PostDataDart>(
             FFiFunctions.postData.cName,
           );
 
-      _get = _lib!
-          .lookupFunction<PointerListFFICallBack, PointerListFFICallBack>(
+      // Get All Data
+      _getAllData = _lib!
+          .lookupFunction<_GetAllNative, _GetAllDart>(
             FFiFunctions.getAll.cName,
           );
 
-      _getById = _lib!
-          .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+      // Get Data By ID
+      _getDataById = _lib!
+          .lookupFunction<_GetByIdNative, _GetByIdDart>(
             FFiFunctions.getById.cName,
           );
 
-      _put = _lib!
-          .lookupFunction<PointerStringFFICallBack, PointerStringFFICallBack>(
+      // Put Data (Update)
+      _putData = _lib!
+          .lookupFunction<_PutDataNative, _PutDataDart>(
             FFiFunctions.putData.cName,
           );
 
-      _delete = _lib!
-          .lookupFunction<PointerBoolFFICallBack, PointerBoolFFICallBack>(
+      // Delete Data
+      _deleteData = _lib!
+          .lookupFunction<_DeleteNative, _DeleteDart>(
             FFiFunctions.delete.cName,
           );
 
+      // Clear All Records
       _clearAllRecords = _lib!
-          .lookupFunction<
-            PointerBoolFFICallBackDirect,
-            PointerBoolFFICallBackDirect
-          >(FFiFunctions.clearAllRecords.cName);
+          .lookupFunction<_ClearAllNative, _ClearAllDart>(
+            FFiFunctions.clearAllRecords.cName,
+          );
 
-      Log.d('All FFI functions bound successfully');
-    } catch (e) {
-      throw Exception('Failed to bind FFI functions: $e');
+      Log.d('All ${FFiFunctions.values.length} FFI functions bound successfully');
+    } catch (e, stackTrace) {
+      final errorMsg = 'Failed to bind FFI functions: $e';
+      Log.e(errorMsg, error: e, stackTrace: stackTrace);
+      throw Exception(errorMsg);
     }
   }
 
@@ -683,7 +739,7 @@ class NativeDatabase implements Database {
     try {
       // Perform a lightweight operation to test FFI connection
       // We'll use get_all operation which doesn't modify data
-      final resultPointer = _get(_dbInstance!);
+      final resultPointer = _getAllData(_dbInstance!);
 
       if (resultPointer == nullptr) {
         Log.d('Connection test failed: null pointer returned');

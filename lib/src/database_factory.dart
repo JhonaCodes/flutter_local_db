@@ -36,21 +36,49 @@ class DatabaseFactory {
 
   /// Creates a database instance for the current platform
   ///
+  /// Parameters:
+  /// - [dbName]: Optional database name. If provided, database will be initialized
+  ///
   /// Returns:
-  /// - [NativeDatabase] on Android, iOS, macOS
-  /// - [WebDatabase] on web browsers
+  /// - [Database] if no name provided (requires manual initialization)
+  /// - [Future<Database>] if name provided (already initialized)
   ///
   /// Example:
   /// ```dart
+  /// // Manual initialization
   /// final db = DatabaseFactory.create();
   /// final config = DbConfig(name: 'my_database');
   /// await db.initialize(config);
+  ///
+  /// // Auto initialization
+  /// final db = await DatabaseFactory.create('my_app_db');
   /// ```
-  static Database create() {
+  static dynamic create([String? dbName]) {
     Log.i('DatabaseFactory.create - selecting platform implementation');
     final database = createDatabase();
     Log.d('Created database instance: ${database.runtimeType}');
+    
+    if (dbName != null) {
+      return _initializeDatabase(database, dbName);
+    }
+    
     return database;
+  }
+
+  static Future<Database> _initializeDatabase(Database database, String dbName) async {
+    final config = DbConfig(name: dbName);
+    final initResult = await database.initialize(config);
+    
+    return initResult.when(
+      ok: (_) {
+        Log.i('Database initialized successfully: $dbName');
+        return database;
+      },
+      err: (error) {
+        Log.e('Database initialization failed: ${error.message}');
+        throw Exception('Failed to initialize database "$dbName": ${error.message}');
+      },
+    );
   }
 
   /// Creates and initializes a database with the given configuration
@@ -79,7 +107,7 @@ class DatabaseFactory {
     try {
       Log.i('DatabaseFactory.createAndInitialize: ${config.name}');
 
-      final database = create();
+      final database = create() as Database;
       final initResult = await database.initialize(config);
 
       return initResult.when(

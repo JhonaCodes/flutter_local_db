@@ -34,12 +34,12 @@ enum FFiNativeLibLocation {
     try {
       final result = await Process.run('uname', ['-m']);
       final arch = result.stdout.toString().trim();
-      final archPath = 'macos/Frameworks/liboffline_first_core_$arch.dylib';
+      final archPath = 'liboffline_first_core_$arch.dylib';
       print('Architecture: $arch, Library path: $archPath');
       return archPath;
     } catch (e) {
       print('Error getting architecture: $e, falling back to default');
-      return 'macos/Frameworks/liboffline_first_core.dylib';
+      return 'liboffline_first_core.dylib';
     }
   }
 }

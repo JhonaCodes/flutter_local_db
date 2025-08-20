@@ -75,4 +75,5 @@ export 'src/service/local_db_result.dart'
 // Core types for advanced usage (preferred)
 export 'src/core/result.dart';
 export 'src/core/models.dart';
+export 'src/core/database.dart';
 export 'src/database_factory.dart';
