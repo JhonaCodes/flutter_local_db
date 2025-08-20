@@ -189,7 +189,7 @@ class LocalDB {
     // Validar key
     final keyValidation = _validateKey(key);
     if (keyValidation is Err) {
-      return keyValidation as Err<LocalDbModel, ErrorLocalDb>;
+      return Err((keyValidation as Err).error);
     }
     
     try {
@@ -241,7 +241,7 @@ class LocalDB {
     // Validar key
     final keyValidation = _validateKey(key);
     if (keyValidation is Err) {
-      return keyValidation as Err<LocalDbModel?, ErrorLocalDb>;
+      return Err((keyValidation as Err).error);
     }
     
     try {
