@@ -432,36 +432,92 @@ class LocalDB {
   // Métodos privados
   
   static LocalDbResult<DynamicLibrary, ErrorLocalDb> _loadLibrary() {
-    try {
-      final libPath = _getLibraryPath();
+    final possiblePaths = _getPossibleLibraryPaths();
+    final List<String> attemptedPaths = [];
+    
+    // Intentar cada ruta hasta encontrar una que funcione
+    for (final libPath in possiblePaths) {
+      attemptedPaths.add(libPath);
       
-      if (!File(libPath).existsSync()) {
-        return Err(ErrorLocalDb.databaseError('Library not found at: $libPath'));
+      try {
+        if (File(libPath).existsSync()) {
+          final lib = DynamicLibrary.open(libPath);
+          _logger.info('✅ Library loaded from: $libPath');
+          return Ok(lib);
+        }
+      } catch (e) {
+        // Continuar con la siguiente ruta
+        _logger.fine('Failed to load from $libPath: $e');
+        continue;
       }
-      
-      final lib = DynamicLibrary.open(libPath);
-      return Ok(lib);
-      
-    } catch (e) {
-      return Err(ErrorLocalDb.databaseError('Failed to load library: $e'));
-    }
-  }
-  
-  static String _getLibraryPath() {
-    // Seguir el patrón de my_app - ruta relativa simple
-    if (Platform.isMacOS) {
-      return 'plugins/binaries/macos/liboffline_first_core.dylib';
-    } else if (Platform.isLinux) {
-      return 'plugins/binaries/linux/liboffline_first_core.so';
-    } else if (Platform.isWindows) {
-      return 'plugins/binaries/windows/offline_first_core.dll';
-    } else if (Platform.isAndroid) {
-      return 'liboffline_first_core.so'; // Android maneja automáticamente
-    } else if (Platform.isIOS) {
-      return 'liboffline_first_core.dylib'; // iOS usa estática linkeada
     }
     
-    throw UnsupportedError('Platform not supported: ${Platform.operatingSystem}');
+    // Si llegamos aquí, no se pudo cargar ninguna librería
+    final errorMessage = '''
+Library not found. Attempted paths:
+${attemptedPaths.map((path) => '  - $path').join('\n')}
+
+To fix this issue, ensure that flutter_local_db binaries are available in one of the above locations.
+For development, run the build process or copy binaries manually.
+    ''';
+    
+    return Err(ErrorLocalDb.databaseError(errorMessage.trim()));
+  }
+  
+  static List<String> _getPossibleLibraryPaths() {
+    final List<String> paths = [];
+    
+    if (Platform.isMacOS) {
+      final libName = 'liboffline_first_core.dylib';
+      paths.addAll([
+        // Ruta relativa desde el directorio del proyecto (para desarrollo)
+        'plugins/binaries/macos/$libName',
+        // Ruta desde pub cache (para dependencias)
+        'packages/flutter_local_db/plugins/binaries/macos/$libName',
+        // Ruta desde .dart_tool
+        '.dart_tool/package_config_subset/flutter_local_db/plugins/binaries/macos/$libName',
+        // Ruta absoluta al paquete flutter_local_db
+        '/Volumes/Data/Private/04_Librarys/flutter_local_db/plugins/binaries/macos/$libName',
+        // Intenta encontrar flutter_local_db en el directorio padre
+        '../flutter_local_db/plugins/binaries/macos/$libName',
+        '../../flutter_local_db/plugins/binaries/macos/$libName',
+        '../../../flutter_local_db/plugins/binaries/macos/$libName',
+        // Búsqueda en cache de pub
+        '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dartlang.org/flutter_local_db/plugins/binaries/macos/$libName',
+      ]);
+    } else if (Platform.isLinux) {
+      final libName = 'liboffline_first_core.so';
+      paths.addAll([
+        'plugins/binaries/linux/$libName',
+        'packages/flutter_local_db/plugins/binaries/linux/$libName',
+        '.dart_tool/package_config_subset/flutter_local_db/plugins/binaries/linux/$libName',
+        '/Volumes/Data/Private/04_Librarys/flutter_local_db/plugins/binaries/linux/$libName',
+        '../flutter_local_db/plugins/binaries/linux/$libName',
+        '../../flutter_local_db/plugins/binaries/linux/$libName',
+        '../../../flutter_local_db/plugins/binaries/linux/$libName',
+        '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dartlang.org/flutter_local_db/plugins/binaries/linux/$libName',
+      ]);
+    } else if (Platform.isWindows) {
+      final libName = 'offline_first_core.dll';
+      paths.addAll([
+        'plugins/binaries/windows/$libName',
+        'packages/flutter_local_db/plugins/binaries/windows/$libName',
+        '.dart_tool/package_config_subset/flutter_local_db/plugins/binaries/windows/$libName',
+        '/Volumes/Data/Private/04_Librarys/flutter_local_db/plugins/binaries/windows/$libName',
+        '../flutter_local_db/plugins/binaries/windows/$libName',
+        '../../flutter_local_db/plugins/binaries/windows/$libName',
+        '../../../flutter_local_db/plugins/binaries/windows/$libName',
+        '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dartlang.org/flutter_local_db/plugins/binaries/windows/$libName',
+      ]);
+    } else if (Platform.isAndroid) {
+      paths.add('liboffline_first_core.so'); // Android maneja automáticamente
+    } else if (Platform.isIOS) {
+      paths.add('liboffline_first_core.dylib'); // iOS usa estática linkeada
+    } else {
+      throw UnsupportedError('Platform not supported: ${Platform.operatingSystem}');
+    }
+    
+    return paths;
   }
   
   void _loadFunctions(DynamicLibrary lib) {
