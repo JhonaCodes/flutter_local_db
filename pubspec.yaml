@@ -13,11 +13,9 @@ topics:
 
 environment:
   sdk: '>=3.8.1 <4.0.0'
-  flutter: ">=3.32.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
+
   # Path provider for native platforms
   path_provider: ^2.1.5
   # FFI for native Rust integration
@@ -27,8 +25,6 @@ dependencies:
   logging: ^1.3.0
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
   path_provider_platform_interface: ^2.1.2
 
 flutter:
