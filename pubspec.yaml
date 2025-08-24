@@ -26,5 +26,5 @@ dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6
 
-# Note: No Flutter dependencies - this is a pure Dart package
-# Compatible with both Dart APIs and Flutter applications
+# Note: Pure Dart package with FFI bindings
+# For Android, copy binaries manually to android/app/src/main/jniLibs/

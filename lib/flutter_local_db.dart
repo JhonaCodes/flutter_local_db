@@ -115,7 +115,8 @@ class ErrorLocalDb {
 
 /// Base de datos local con API compatible siguiendo el patrón de offline_first_core
 class LocalDB {
-  static final _logger = Logger('LocalDB');
+  static final _logger = Logger('LocalDB')
+    ..level = Level.ALL;
   static LocalDB? _instance;
   static DynamicLibrary? _lib;
   static Pointer<Void>? _dbState; // Puntero al estado de la base de datos de Rust
@@ -141,6 +142,11 @@ class LocalDB {
   /// Inicializar base de datos
   static Future<void> init([String? dbName]) async {
     try {
+      // Configurar logging
+      _logger.onRecord.listen((record) {
+        print('${record.level.name}: ${record.message}');
+      });
+      
       final db = instance;
       if (db._isInitialized) {
         return;
@@ -155,15 +161,51 @@ class LocalDB {
       _lib = (libResult as Ok<DynamicLibrary, ErrorLocalDb>).value;
       
       // Obtener funciones FFI
-      db._loadFunctions(_lib!);
+      try {
+        db._loadFunctions(_lib!);
+        _logger.info('✅ FFI functions loaded successfully');
+      } catch (e) {
+        throw Exception('Failed to load FFI functions: $e');
+      }
       
-      // Crear base de datos en Rust
-      final dbNamePtr = (dbName ?? 'flutter_local_db').toNativeUtf8();
-      _dbState = db._createDb(dbNamePtr);
+      // Crear base de datos en Rust  
+      final dbNameToUse = dbName ?? 'flutter_local_db';
+      _logger.info('Creating database with name: $dbNameToUse');
+      
+      final dbNamePtr = dbNameToUse.toNativeUtf8();
+      try {
+        _dbState = db._createDb(dbNamePtr);
+        _logger.info('create_db called, returned: ${_dbState?.address ?? 'nullptr'}');
+        
+        // Si es null, intentar obtener más información del estado actual
+        if (_dbState == nullptr) {
+          _logger.severe('create_db returned null pointer immediately');
+          _logger.info('Current working directory might not be writable');
+          _logger.info('Platform: ${Platform.operatingSystem}');
+          _logger.info('Database name attempted: $dbNameToUse');
+        }
+      } catch (e) {
+        malloc.free(dbNamePtr);
+        throw Exception('Failed to call create_db: $e');
+      }
       malloc.free(dbNamePtr);
       
       if (_dbState == nullptr) {
-        throw Exception('Failed to initialize database - null pointer returned');
+        final errorMsg = '''
+Failed to initialize database - create_db returned null pointer.
+
+Possible causes:
+1. LMDB initialization failed in Rust
+2. Database file permissions issue
+3. Invalid database path: ${dbName ?? 'flutter_local_db'}
+4. FFI function mismatch
+
+Platform: ${Platform.operatingSystem}
+Architecture: arm64 (detected from logs)
+
+Check Rust logs for more details.
+        ''';
+        throw Exception(errorMsg.trim());
       }
       
       db._isInitialized = true;
@@ -441,6 +483,21 @@ class LocalDB {
       attemptedPaths.add(libPath);
       
       try {
+        // Caso especial para iOS
+        if (libPath == '__Internal__') {
+          final lib = DynamicLibrary.process();
+          _logger.info('✅ Library loaded from iOS process');
+          return Ok(lib);
+        }
+        
+        // Android solo necesita el nombre
+        if (Platform.isAndroid && libPath == 'liboffline_first_core.so') {
+          final lib = DynamicLibrary.open(libPath);
+          _logger.info('✅ Library loaded from Android jniLibs');
+          return Ok(lib);
+        }
+        
+        // Desktop platforms - verificar que el archivo existe
         if (File(libPath).existsSync()) {
           final lib = DynamicLibrary.open(libPath);
           _logger.info('✅ Library loaded from: $libPath');
@@ -500,9 +557,11 @@ For development, run the build process or copy binaries manually.
         'assets/packages/flutter_local_db/plugins/binaries/windows/$libName',
       ]);
     } else if (Platform.isAndroid) {
-      paths.add('liboffline_first_core.so'); // Android maneja automáticamente
+      // Android carga automáticamente desde jniLibs - solo necesita el nombre
+      return ['liboffline_first_core.so'];
     } else if (Platform.isIOS) {
-      paths.add('liboffline_first_core.dylib'); // iOS usa estática linkeada
+      // iOS usa la biblioteca estática linkeada en el proceso principal
+      return ['__Internal__'];
     } else {
       throw UnsupportedError('Platform not supported: ${Platform.operatingSystem}');
     }
