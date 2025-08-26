@@ -503,11 +503,30 @@ Check Rust logs for more details.
           return Ok(lib);
         }
         
-        // Desktop platforms - verificar que el archivo existe
-        if (File(libPath).existsSync()) {
-          final lib = DynamicLibrary.open(libPath);
-          Log.i('✅ Library loaded from: $libPath');
-          return Ok(lib);
+        // macOS - usar DynamicLibrary.process() para librerías del bundle
+        if (Platform.isMacOS) {
+          try {
+            final lib = DynamicLibrary.process();
+            Log.i('✅ Library loaded from macOS process bundle: $libPath');
+            return Ok(lib);
+          } catch (e) {
+            Log.t('Failed to load from macOS process: $e');
+            // Intentar carga directa como fallback
+            try {
+              final lib = DynamicLibrary.open(libPath);
+              Log.i('✅ Library loaded directly from: $libPath');
+              return Ok(lib);
+            } catch (e2) {
+              Log.t('Failed direct load: $e2');
+            }
+          }
+        } else {
+          // Desktop platforms (Linux, Windows) - verificar que el archivo existe
+          if (File(libPath).existsSync()) {
+            final lib = DynamicLibrary.open(libPath);
+            Log.i('✅ Library loaded from: $libPath');
+            return Ok(lib);
+          }
         }
       } catch (e) {
         // Continuar con la siguiente ruta

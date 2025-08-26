@@ -14,9 +14,14 @@ A high-performance cross-platform local database for Flutter applications using 
   s.dependency 'FlutterMacOS'
 
   s.platform = :osx, '10.11'
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
   s.swift_version = '5.0'
 
   # Add the native libraries for different architectures
   s.vendored_libraries = ['liboffline_first_core_arm64.dylib', 'liboffline_first_core_x86_64.dylib']
+  
+  # Configure linking
+  s.pod_target_xcconfig = { 
+    'DEFINES_MODULE' => 'YES',
+    'OTHER_LDFLAGS' => '-loffline_first_core_arm64 -loffline_first_core_x86_64'
+  }
 end
