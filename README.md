@@ -2,6 +2,8 @@
 
 A high-performance cross-platform local database for Dart and Flutter applications using Rust + LMDB via FFI.
 
+![flutter_local_db](https://github.com/user-attachments/assets/09c97008-cfc6-4588-b54c-5737ad00e9e4)
+
 ## Features
 
 - 🚀 **High-performance**: LMDB backend with Rust implementation
@@ -129,6 +131,28 @@ result.when(
 - **Minimal overhead**: Single file, no complex abstractions
 - **Production ready**: Used in multiple production applications
 
+## Limitations
+
+- Data must be JSON-serializable
+- IDs must follow the format requirements
+- Platform-specific limitations may apply
+- Currently no support for complex queries or indexing
+- No automatic migration system
+- Database name is standardized (no custom naming allowed)
+
+## Contributing
+
+Contributions are welcome! The project uses a dual-language architecture:
+
+- Flutter/Dart for the high-level API and FFI bridge
+- Rust for the core database operations
+
+Please ensure you have both Rust and Flutter development environments set up before contributing.
+
 ## License
 
-MIT
+MIT License - see [LICENSE](https://github.com/JhonaCodes/flutter_local_db/LICENSE)
+
+## Author
+
+Made with ❤️ by [JhonaCode](https://github.com/JhonaCodes)

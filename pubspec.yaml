@@ -9,7 +9,6 @@ topics:
   - rust
   - storage
   - lmdb
-  - database
 
 environment:
   sdk: ^3.9.0
