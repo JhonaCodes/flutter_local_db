@@ -7,7 +7,7 @@ A high-performance cross-platform local database for Flutter applications using 
                        DESC
   s.homepage         = 'https://github.com/JhonaCodes/flutter_local_db'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'JhonaCode' => 'contact@jhonacode.com' }
+  s.author           = { 'JhonaCode' => 'info@jhonacode.com' }
 
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
