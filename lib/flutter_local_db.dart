@@ -537,8 +537,13 @@ For Desktop: Ensure binaries are in the project root or src/ folder.
       // iOS: La librería está linkada estáticamente via podspec
       return ['__Internal__'];
     } else if (Platform.isMacOS) {
-      // macOS: Cocoapods maneja la librería desde el podspec
-      return ['liboffline_first_core.dylib'];
+      // macOS: Detectar arquitectura y usar el binario apropiado
+      // Intentar ARM64 primero (Apple Silicon), luego x86_64 (Intel)
+      return [
+        'liboffline_first_core_arm64.dylib',
+        'liboffline_first_core_x86_64.dylib',
+        'liboffline_first_core.dylib' // fallback para compatibilidad
+      ];
     } else if (Platform.isLinux) {
       // Linux: CMake copia la librería al bundle
       return ['liboffline_first_core.so'];
