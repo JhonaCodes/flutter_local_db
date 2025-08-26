@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
-import 'package:logging/logging.dart';
+import 'package:logger_rs/logger_rs.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 // Definir las firmas de las funciones FFI basadas en el código Rust real
 typedef CreateDbNative = Pointer<Void> Function(Pointer<Utf8> name);
@@ -115,8 +117,6 @@ class ErrorLocalDb {
 
 /// Base de datos local con API compatible siguiendo el patrón de offline_first_core
 class LocalDB {
-  static final _logger = Logger('LocalDB')
-    ..level = Level.ALL;
   static LocalDB? _instance;
   static DynamicLibrary? _lib;
   static Pointer<Void>? _dbState; // Puntero al estado de la base de datos de Rust
@@ -142,11 +142,6 @@ class LocalDB {
   /// Inicializar base de datos
   static Future<void> init([String? dbName]) async {
     try {
-      // Configurar logging
-      _logger.onRecord.listen((record) {
-        print('${record.level.name}: ${record.message}');
-      });
-      
       final db = instance;
       if (db._isInitialized) {
         return;
@@ -163,32 +158,44 @@ class LocalDB {
       // Obtener funciones FFI
       try {
         db._loadFunctions(_lib!);
-        _logger.info('✅ FFI functions loaded successfully');
+        Log.i('✅ FFI functions loaded successfully');
       } catch (e) {
         throw Exception('Failed to load FFI functions: $e');
       }
       
-      // Crear base de datos en Rust  
+      // Crear base de datos en Rust con ruta apropiada para la plataforma
       final dbNameToUse = dbName ?? 'flutter_local_db';
-      _logger.info('Creating database with name: $dbNameToUse');
       
-      final dbNamePtr = dbNameToUse.toNativeUtf8();
+      // Obtener directorio apropiado según la plataforma
+      String dbPath;
+      if (Platform.isAndroid || Platform.isIOS) {
+        // En móviles, usar directorio de documentos de la aplicación
+        final appDocDir = await getApplicationDocumentsDirectory();
+        dbPath = path.join(appDocDir.path, dbNameToUse);
+      } else {
+        // En desktop, usar directorio actual o específico
+        dbPath = dbNameToUse;
+      }
+      
+      Log.i('Creating database with path: $dbPath');
+      
+      final dbPathPtr = dbPath.toNativeUtf8();
       try {
-        _dbState = db._createDb(dbNamePtr);
-        _logger.info('create_db called, returned: ${_dbState?.address ?? 'nullptr'}');
+        _dbState = db._createDb(dbPathPtr);
+        Log.i('create_db called, returned: ${_dbState?.address ?? 'nullptr'}');
         
         // Si es null, intentar obtener más información del estado actual
         if (_dbState == nullptr) {
-          _logger.severe('create_db returned null pointer immediately');
-          _logger.info('Current working directory might not be writable');
-          _logger.info('Platform: ${Platform.operatingSystem}');
-          _logger.info('Database name attempted: $dbNameToUse');
+          Log.e('create_db returned null pointer immediately');
+          Log.w('Database path might not be writable or accessible');
+          Log.i('Platform: ${Platform.operatingSystem}');
+          Log.i('Database path attempted: $dbPath');
         }
       } catch (e) {
-        malloc.free(dbNamePtr);
+        malloc.free(dbPathPtr);
         throw Exception('Failed to call create_db: $e');
       }
-      malloc.free(dbNamePtr);
+      malloc.free(dbPathPtr);
       
       if (_dbState == nullptr) {
         final errorMsg = '''
@@ -197,11 +204,10 @@ Failed to initialize database - create_db returned null pointer.
 Possible causes:
 1. LMDB initialization failed in Rust
 2. Database file permissions issue
-3. Invalid database path: ${dbName ?? 'flutter_local_db'}
+3. Invalid database path: $dbPath
 4. FFI function mismatch
 
 Platform: ${Platform.operatingSystem}
-Architecture: arm64 (detected from logs)
 
 Check Rust logs for more details.
         ''';
@@ -209,10 +215,10 @@ Check Rust logs for more details.
       }
       
       db._isInitialized = true;
-      _logger.info('LocalDB initialized successfully');
+      Log.i('LocalDB initialized successfully');
       
     } catch (e, stackTrace) {
-      _logger.severe('LocalDB initialization failed', e, stackTrace);
+      Log.e('LocalDB initialization failed', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -268,7 +274,7 @@ Check Rust logs for more details.
       );
       
     } catch (e) {
-      _logger.warning('Insert failed for key: $key', e);
+      Log.w('Insert failed for key: $key - $e');
       return Err(ErrorLocalDb.databaseError('Insert failed: $e'));
     }
   }
@@ -315,7 +321,7 @@ Check Rust logs for more details.
       );
       
     } catch (e) {
-      _logger.warning('Get failed for key: $key', e);
+      Log.w('Get failed for key: $key - $e');
       return Err(ErrorLocalDb.databaseError('Get failed: $e'));
     }
   }
@@ -389,7 +395,7 @@ Check Rust logs for more details.
       );
       
     } catch (e) {
-      _logger.warning('Delete failed for key: $key', e);
+      Log.w('Delete failed for key: $key - $e');
       return Err(ErrorLocalDb.databaseError('Delete failed: $e'));
     }
   }
@@ -421,7 +427,7 @@ Check Rust logs for more details.
       );
       
     } catch (e) {
-      _logger.warning('GetAll failed', e);
+      Log.w('GetAll failed - $e');
       return Err(ErrorLocalDb.databaseError('GetAll failed: $e'));
     }
   }
@@ -462,7 +468,7 @@ Check Rust logs for more details.
       try {
         db._closeDb(_dbState!);
       } catch (e) {
-        _logger.warning('Error closing database', e);
+        Log.w('Error closing database - $e');
       }
     }
     
@@ -486,26 +492,26 @@ Check Rust logs for more details.
         // Caso especial para iOS
         if (libPath == '__Internal__') {
           final lib = DynamicLibrary.process();
-          _logger.info('✅ Library loaded from iOS process');
+          Log.i('✅ Library loaded from iOS process');
           return Ok(lib);
         }
         
         // Android solo necesita el nombre
         if (Platform.isAndroid && libPath == 'liboffline_first_core.so') {
           final lib = DynamicLibrary.open(libPath);
-          _logger.info('✅ Library loaded from Android jniLibs');
+          Log.i('✅ Library loaded from Android jniLibs');
           return Ok(lib);
         }
         
         // Desktop platforms - verificar que el archivo existe
         if (File(libPath).existsSync()) {
           final lib = DynamicLibrary.open(libPath);
-          _logger.info('✅ Library loaded from: $libPath');
+          Log.i('✅ Library loaded from: $libPath');
           return Ok(lib);
         }
       } catch (e) {
         // Continuar con la siguiente ruta
-        _logger.fine('Failed to load from $libPath: $e');
+        Log.t('Failed to load from $libPath: $e');
         continue;
       }
     }
@@ -516,104 +522,32 @@ Library not found. Attempted paths:
 ${attemptedPaths.map((path) => '  - $path').join('\n')}
 
 To fix this issue, ensure that flutter_local_db binaries are available in one of the above locations.
-For development, run the build process or copy binaries manually.
+For Android: Copy src/android/[arch]/liboffline_first_core.so to android/app/src/main/jniLibs/[arch]/
+For Desktop: Ensure binaries are in the project root or src/ folder.
     ''';
     
     return Err(ErrorLocalDb.databaseError(errorMessage.trim()));
   }
   
   static List<String> _getPossibleLibraryPaths() {
-    final List<String> paths = [];
-    
-    // Función helper para encontrar la ruta del paquete
-    String? packagePath = _findPackagePath();
-    
-    if (Platform.isMacOS) {
-      final libName = 'liboffline_first_core.dylib';
-      paths.addAll([
-        // Ruta relativa desde el directorio del proyecto (para desarrollo)
-        'plugins/binaries/macos/$libName',
-        // Si encontramos la ruta del paquete, usarla
-        if (packagePath != null) '$packagePath/plugins/binaries/macos/$libName',
-        // Rutas estándar de pub
-        'packages/flutter_local_db/plugins/binaries/macos/$libName',
-        // Flutter asset path
-        'assets/packages/flutter_local_db/plugins/binaries/macos/$libName',
-      ]);
-    } else if (Platform.isLinux) {
-      final libName = 'liboffline_first_core.so';
-      paths.addAll([
-        'plugins/binaries/linux/$libName',
-        if (packagePath != null) '$packagePath/plugins/binaries/linux/$libName',
-        'packages/flutter_local_db/plugins/binaries/linux/$libName',
-        'assets/packages/flutter_local_db/plugins/binaries/linux/$libName',
-      ]);
-    } else if (Platform.isWindows) {
-      final libName = 'offline_first_core.dll';
-      paths.addAll([
-        'plugins/binaries/windows/$libName',
-        if (packagePath != null) '$packagePath/plugins/binaries/windows/$libName',
-        'packages/flutter_local_db/plugins/binaries/windows/$libName',
-        'assets/packages/flutter_local_db/plugins/binaries/windows/$libName',
-      ]);
-    } else if (Platform.isAndroid) {
-      // Android carga automáticamente desde jniLibs - solo necesita el nombre
+    if (Platform.isAndroid) {
+      // Android: El plugin FFI copia automáticamente los .so desde jniLibs/
       return ['liboffline_first_core.so'];
     } else if (Platform.isIOS) {
-      // iOS usa la biblioteca estática linkeada en el proceso principal
+      // iOS: La librería está linkada estáticamente via podspec
       return ['__Internal__'];
+    } else if (Platform.isMacOS) {
+      // macOS: Cocoapods maneja la librería desde el podspec
+      return ['liboffline_first_core.dylib'];
+    } else if (Platform.isLinux) {
+      // Linux: CMake copia la librería al bundle
+      return ['liboffline_first_core.so'];
+    } else if (Platform.isWindows) {
+      // Windows: La DLL debe estar en el directorio del ejecutable
+      return ['offline_first_core.dll'];
     } else {
       throw UnsupportedError('Platform not supported: ${Platform.operatingSystem}');
     }
-    
-    return paths;
-  }
-  
-  static String? _findPackagePath() {
-    try {
-      // Intentar encontrar package_config.json
-      final packageConfigFile = File('.dart_tool/package_config.json');
-      if (packageConfigFile.existsSync()) {
-        final content = packageConfigFile.readAsStringSync();
-        final config = jsonDecode(content) as Map<String, dynamic>;
-        final packages = config['packages'] as List<dynamic>?;
-        
-        if (packages != null) {
-          for (final package in packages) {
-            final packageMap = package as Map<String, dynamic>;
-            if (packageMap['name'] == 'flutter_local_db') {
-              final rootUri = packageMap['rootUri'] as String?;
-              if (rootUri != null) {
-                // Convertir URI relativa a ruta absoluta
-                if (rootUri.startsWith('../')) {
-                  return '${Directory.current.path}/$rootUri';
-                } else if (rootUri.startsWith('file://')) {
-                  return rootUri.substring(7);
-                }
-                return rootUri;
-              }
-            }
-          }
-        }
-      }
-      
-      // Fallback: buscar en directorios padre
-      Directory currentDir = Directory.current;
-      for (int i = 0; i < 5; i++) {
-        final possiblePath = '${currentDir.path}/flutter_local_db';
-        if (Directory(possiblePath).existsSync()) {
-          return possiblePath;
-        }
-        final parent = currentDir.parent;
-        if (parent.path == currentDir.path) break; // Llegamos a la raíz
-        currentDir = parent;
-      }
-      
-    } catch (e) {
-      _logger.fine('Could not find package path: $e');
-    }
-    
-    return null;
   }
   
   void _loadFunctions(DynamicLibrary lib) {
@@ -828,7 +762,7 @@ For development, run the build process or copy binaries manually.
         final model = _parseLocalDbModel(objStr);
         models.add(model);
       } catch (e) {
-        _logger.warning('Failed to parse model: $objStr', e);
+        Log.w('Failed to parse model: $objStr - $e');
       }
     }
     

@@ -16,15 +16,34 @@ environment:
 
 dependencies:
   # FFI for native Rust integration
-  ffi: ^2.1.3
+  ffi: ^2.1.4
   # Path utilities
-  path: ^1.9.0
-  # Logging for debugging
-  logging: ^1.3.0
+  path: ^1.9.1
+  # Path provider for mobile directories
+  path_provider: ^2.1.4
+  # Beautiful Rust-style logger
+  logger_rs: ^1.0.3
 
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6
 
-# Note: Pure Dart package with FFI bindings
-# For Android, copy binaries manually to android/app/src/main/jniLibs/
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.jhonacode.flutter_local_db
+        pluginClass: FlutterLocalDbPlugin
+        ffiPlugin: true
+      ios:
+        pluginClass: FlutterLocalDbPlugin
+        ffiPlugin: true  
+      linux:
+        pluginClass: FlutterLocalDbPlugin
+        ffiPlugin: true
+      macos:
+        pluginClass: FlutterLocalDbPlugin
+        ffiPlugin: true
+      windows:
+        pluginClass: FlutterLocalDbPlugin
+        ffiPlugin: true
