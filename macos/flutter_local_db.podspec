@@ -17,6 +17,6 @@ A high-performance cross-platform local database for Flutter applications using 
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
   s.swift_version = '5.0'
 
-  # Add the native library
-  s.vendored_libraries = 'liboffline_first_core.dylib'
+  # Add the native libraries for different architectures
+  s.vendored_libraries = ['liboffline_first_core_arm64.dylib', 'liboffline_first_core_x86_64.dylib']
 end
