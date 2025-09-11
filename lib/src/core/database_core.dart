@@ -27,7 +27,7 @@ import '../models/local_db_result.dart';
 import '../models/local_db_error.dart';
 import '../models/local_db_model.dart';
 import 'ffi_bindings.dart';
-import 'ffi_functions.dart';
+
 import 'package:logger_rs/logger_rs.dart';
 
 /// Core database operations engine
@@ -179,19 +179,14 @@ class DatabaseCore {
       // Parse the response from Rust
       try {
         final response = json.decode(responseStr) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           Log.d('Data stored successfully for key: $key');
           return Ok(model);
         } else {
           final errorMsg = response['message'] ?? 'Put operation failed';
           Log.e('Put operation failed: $errorMsg');
-          return Err(
-            ErrorLocalDb.databaseError(
-              errorMsg,
-              context: key,
-            ),
-          );
+          return Err(ErrorLocalDb.databaseError(errorMsg, context: key));
         }
       } catch (e) {
         Log.e('Failed to parse response: $e');
@@ -317,27 +312,19 @@ class DatabaseCore {
       // Parse the response from Rust
       try {
         final response = json.decode(responseStr) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           Log.d('Data updated successfully for key: $key');
           return Ok(model);
         } else if (response['status'] == 'not_found') {
           Log.e('Record not found for update: $key');
           return Err(
-            ErrorLocalDb.notFound(
-              'Record not found for update',
-              context: key,
-            ),
+            ErrorLocalDb.notFound('Record not found for update', context: key),
           );
         } else {
           final errorMsg = response['message'] ?? 'Update operation failed';
           Log.e('Update operation failed: $errorMsg');
-          return Err(
-            ErrorLocalDb.databaseError(
-              errorMsg,
-              context: key,
-            ),
-          );
+          return Err(ErrorLocalDb.databaseError(errorMsg, context: key));
         }
       } catch (e) {
         Log.e('Failed to parse response: $e');
@@ -413,14 +400,12 @@ class DatabaseCore {
 
       final responseStr = FfiUtils.fromCString(resultPtr);
       if (responseStr == null) {
-        return Err(
-          ErrorLocalDb.databaseError('Failed to convert response'),
-        );
+        return Err(ErrorLocalDb.databaseError('Failed to convert response'));
       }
 
       try {
         final response = json.decode(responseStr) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           Log.i('Database reset successfully');
           return const Ok(null);
@@ -432,10 +417,7 @@ class DatabaseCore {
       } catch (e) {
         Log.e('Failed to parse response: $e');
         return Err(
-          ErrorLocalDb.serializationError(
-            'Failed to parse response',
-            cause: e,
-          ),
+          ErrorLocalDb.serializationError('Failed to parse response', cause: e),
         );
       }
     } catch (e, stackTrace) {
@@ -498,7 +480,7 @@ class DatabaseCore {
       }
 
       final responseStr = FfiUtils.fromCString(resultPtr);
-      
+
       if (responseStr == null) {
         return Err(
           ErrorLocalDb.serializationError(
@@ -510,7 +492,7 @@ class DatabaseCore {
 
       try {
         final response = json.decode(responseStr) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           final jsonData = response['data'];
           if (jsonData != null) {
@@ -526,12 +508,7 @@ class DatabaseCore {
         } else {
           final errorMsg = response['message'] ?? 'Get operation failed';
           Log.e(' Get operation failed: $errorMsg');
-          return Err(
-            ErrorLocalDb.databaseError(
-              errorMsg,
-              context: key,
-            ),
-          );
+          return Err(ErrorLocalDb.databaseError(errorMsg, context: key));
         }
       } catch (e) {
         Log.e(' Failed to parse response for key $key: $e');
@@ -619,7 +596,7 @@ class DatabaseCore {
 
       try {
         final response = json.decode(responseStr) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           Log.d(' Data deleted successfully for key: $key');
           return const Ok(null);
@@ -630,12 +607,7 @@ class DatabaseCore {
         } else {
           final errorMsg = response['message'] ?? 'Delete operation failed';
           Log.e(' Delete operation failed: $errorMsg');
-          return Err(
-            ErrorLocalDb.databaseError(
-              errorMsg,
-              context: key,
-            ),
-          );
+          return Err(ErrorLocalDb.databaseError(errorMsg, context: key));
         }
       } catch (e) {
         Log.e('Failed to parse response: $e');
@@ -706,7 +678,7 @@ class DatabaseCore {
 
       try {
         final response = json.decode(jsonString) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           final data = response['data'];
           if (data is List) {
@@ -727,17 +699,12 @@ class DatabaseCore {
         } else {
           final errorMsg = response['message'] ?? 'GetAll operation failed';
           Log.e(' GetAll operation failed: $errorMsg');
-          return Err(
-            ErrorLocalDb.databaseError(errorMsg),
-          );
+          return Err(ErrorLocalDb.databaseError(errorMsg));
         }
       } catch (e) {
         Log.e('Failed to parse response: $e');
         return Err(
-          ErrorLocalDb.serializationError(
-            'Failed to parse response',
-            cause: e,
-          ),
+          ErrorLocalDb.serializationError('Failed to parse response', cause: e),
         );
       }
     } catch (e, stackTrace) {
@@ -787,14 +754,12 @@ class DatabaseCore {
 
       final responseStr = FfiUtils.fromCString(resultPtr);
       if (responseStr == null) {
-        return Err(
-          ErrorLocalDb.databaseError('Failed to convert response'),
-        );
+        return Err(ErrorLocalDb.databaseError('Failed to convert response'));
       }
 
       try {
         final response = json.decode(responseStr) as Map<String, dynamic>;
-        
+
         if (response['status'] == 'ok') {
           Log.i(' Database cleared successfully');
           return const Ok(null);
@@ -806,10 +771,7 @@ class DatabaseCore {
       } catch (e) {
         Log.e('Failed to parse response: $e');
         return Err(
-          ErrorLocalDb.serializationError(
-            'Failed to parse response',
-            cause: e,
-          ),
+          ErrorLocalDb.serializationError('Failed to parse response', cause: e),
         );
       }
     } catch (e, stackTrace) {
@@ -845,7 +807,7 @@ class DatabaseCore {
     try {
       // Call Rust's close_database function
       final resultPtr = _bindings.closeDatabase(_dbHandle);
-      
+
       if (FfiUtils.isNotNull(resultPtr)) {
         final responseStr = FfiUtils.fromCString(resultPtr);
         if (responseStr != null) {
@@ -861,7 +823,7 @@ class DatabaseCore {
           }
         }
       }
-      
+
       _isClosed = true;
     } catch (e) {
       Log.e(' Exception during database close: $e');

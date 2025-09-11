@@ -89,7 +89,8 @@ class LocalDbService {
   ///   err: (error) => print('Initialization failed: $error'),
   /// );
   /// ```
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initialize() async {
+  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>>
+  initialize() async {
     Log.i('Initializing LocalDbService with default settings');
 
     // Get default database path
@@ -122,7 +123,9 @@ class LocalDbService {
   ///   err: (error) => print('Failed: $error'),
   /// );
   /// ```
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(String path) async {
+  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(
+    String path,
+  ) async {
     Log.i('Initializing LocalDbService with path: $path');
 
     try {
@@ -348,7 +351,8 @@ class LocalDbService {
   ///   err: (error) => print('Failed to list data: $error'),
   /// );
   /// ```
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>> listAll() async {
+  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
+  listAll() async {
     _ensureInitialized();
     Log.d(' Listing all data');
 
@@ -411,7 +415,12 @@ class LocalDbService {
   ///   err: (error) => print('Batch operation failed: $error'),
   /// );
   /// ```
-  Future<LocalDbResult<Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
+  Future<
+    LocalDbResult<
+      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
+      ErrorLocalDb
+    >
+  >
   storeMultiple(Map<String, Map<String, dynamic>> entries) async {
     _ensureInitialized();
     Log.d(' Storing ${entries.length} entries in batch');
@@ -454,7 +463,12 @@ class LocalDbService {
   ///   err: (error) => print('Batch retrieve failed: $error'),
   /// );
   /// ```
-  Future<LocalDbResult<Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
+  Future<
+    LocalDbResult<
+      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
+      ErrorLocalDb
+    >
+  >
   retrieveMultiple(List<String> keys) async {
     _ensureInitialized();
     Log.d(' Retrieving ${keys.length} entries in batch');

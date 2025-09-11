@@ -41,29 +41,34 @@ typedef CreateDb = Pointer<Void> Function(Pointer<Utf8> path);
 ///
 /// Returns: JSON response string with result
 /// Parameters: [db] - Database handle, [json] - JSON data to insert
-typedef PushDataNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
+typedef PushDataNative =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
 typedef PushData = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
 
 /// Retrieve value by ID from database
 ///
 /// Returns: JSON response string with result
 /// Parameters: [db] - Database handle, [id] - Record ID to retrieve
-typedef GetByIdNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
+typedef GetByIdNative =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
 typedef GetById = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
 
 /// Delete record by ID from database
 ///
 /// Returns: JSON response string with result
 /// Parameters: [db] - Database handle, [id] - Record ID to delete
-typedef DeleteByIdNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
+typedef DeleteByIdNative =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
 typedef DeleteById = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
 
 /// Update existing record in database
 ///
 /// Returns: JSON response string with result
 /// Parameters: [db] - Database handle, [json] - JSON data with updated record
-typedef UpdateDataNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
-typedef UpdateData = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
+typedef UpdateDataNative =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
+typedef UpdateData =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
 
 /// Clear all records from database
 ///
@@ -83,8 +88,10 @@ typedef GetAll = Pointer<Utf8> Function(Pointer<Void> db);
 ///
 /// Returns: JSON response string with result
 /// Parameters: [db] - Database handle, [name] - New database name
-typedef ResetDatabaseNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> name);
-typedef ResetDatabase = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> name);
+typedef ResetDatabaseNative =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> name);
+typedef ResetDatabase =
+    Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> name);
 
 /// Close database connection
 ///
@@ -92,7 +99,6 @@ typedef ResetDatabase = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> n
 /// Parameters: [db] - Database handle
 typedef CloseDatabaseNative = Pointer<Utf8> Function(Pointer<Void> db);
 typedef CloseDatabase = Pointer<Utf8> Function(Pointer<Void> db);
-
 
 /// Container for all FFI function bindings
 ///
@@ -138,15 +144,32 @@ class LocalDbBindings {
   /// ```
   factory LocalDbBindings.fromLibrary(DynamicLibrary lib) {
     return LocalDbBindings(
-      createDb: lib.lookupFunction<CreateDbNative, CreateDb>(FfiFunction.createDb.fn),
-      closeDatabase: lib.lookupFunction<CloseDatabaseNative, CloseDatabase>(FfiFunction.closeDatabase.fn),
-      resetDatabase: lib.lookupFunction<ResetDatabaseNative, ResetDatabase>(FfiFunction.resetDatabase.fn),
-      pushData: lib.lookupFunction<PushDataNative, PushData>(FfiFunction.pushData.fn),
-      getById: lib.lookupFunction<GetByIdNative, GetById>(FfiFunction.getById.fn),
-      deleteById: lib.lookupFunction<DeleteByIdNative, DeleteById>(FfiFunction.deleteById.fn),
-      updateData: lib.lookupFunction<UpdateDataNative, UpdateData>(FfiFunction.updateData.fn),
+      createDb: lib.lookupFunction<CreateDbNative, CreateDb>(
+        FfiFunction.createDb.fn,
+      ),
+      closeDatabase: lib.lookupFunction<CloseDatabaseNative, CloseDatabase>(
+        FfiFunction.closeDatabase.fn,
+      ),
+      resetDatabase: lib.lookupFunction<ResetDatabaseNative, ResetDatabase>(
+        FfiFunction.resetDatabase.fn,
+      ),
+      pushData: lib.lookupFunction<PushDataNative, PushData>(
+        FfiFunction.pushData.fn,
+      ),
+      getById: lib.lookupFunction<GetByIdNative, GetById>(
+        FfiFunction.getById.fn,
+      ),
+      deleteById: lib.lookupFunction<DeleteByIdNative, DeleteById>(
+        FfiFunction.deleteById.fn,
+      ),
+      updateData: lib.lookupFunction<UpdateDataNative, UpdateData>(
+        FfiFunction.updateData.fn,
+      ),
       getAll: lib.lookupFunction<GetAllNative, GetAll>(FfiFunction.getAll.fn),
-      clearAllRecords: lib.lookupFunction<ClearAllRecordsNative, ClearAllRecords>(FfiFunction.clearAllRecords.fn),
+      clearAllRecords: lib
+          .lookupFunction<ClearAllRecordsNative, ClearAllRecords>(
+            FfiFunction.clearAllRecords.fn,
+          ),
     );
   }
 }

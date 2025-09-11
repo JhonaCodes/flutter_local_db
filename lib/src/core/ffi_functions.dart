@@ -53,10 +53,9 @@ enum FfiFunction {
   const FfiFunction(this.fn);
 
   /// Returns a list of all function names
-  static List<String> get allFunctionNames => 
+  static List<String> get allFunctionNames =>
       FfiFunction.values.map((f) => f.fn).toList();
 
   /// Validates if a function name exists
-  static bool isValidFunction(String name) => 
-      allFunctionNames.contains(name);
+  static bool isValidFunction(String name) => allFunctionNames.contains(name);
 }
