@@ -25,6 +25,7 @@ import 'dart:ffi';
 import 'dart:io';
 import '../models/local_db_result.dart';
 import '../models/local_db_error.dart';
+import 'ffi_functions.dart';
 import 'package:logger_rs/logger_rs.dart';
 
 /// Platform-specific library loader for native LMDB database
@@ -260,20 +261,7 @@ class LibraryLoader {
   ) {
     Log.i('🔍 Validating library functions...');
 
-    const requiredFunctions = [
-      'create_db',
-      'put',
-      'get',
-      'delete',
-      'exists',
-      'get_all_keys',
-      'get_all',
-      'get_stats',
-      'clear',
-      'close_db',
-      'free_string',
-    ];
-
+    final requiredFunctions = FfiFunction.allFunctionNames;
     final missingFunctions = <String>[];
 
     for (final functionName in requiredFunctions) {

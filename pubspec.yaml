@@ -1,6 +1,6 @@
 name: flutter_local_db
 description: "A high-performance cross-platform local database for Dart. Native platforms use Rust+LMDB via FFI, optimized for both Dart APIs and Flutter apps."
-version: 1.0.0
+version: 1.1.0
 repository: https://github.com/JhonaCodes/flutter_local_db.git
 
 topics:

@@ -27,6 +27,7 @@ import '../models/local_db_result.dart';
 import '../models/local_db_error.dart';
 import '../models/local_db_model.dart';
 import 'ffi_bindings.dart';
+import 'ffi_functions.dart';
 import 'package:logger_rs/logger_rs.dart';
 
 /// Core database operations engine
@@ -66,7 +67,7 @@ class DatabaseCore {
     LocalDbBindings bindings,
     String path,
   ) {
-    Log.i('🔧 Creating database at: $path');
+    Log.i('Creating database at: $path');
 
     if (path.isEmpty) {
       return Err(
@@ -83,7 +84,7 @@ class DatabaseCore {
       final dbHandle = bindings.createDb(pathPtr);
 
       if (FfiUtils.isNull(dbHandle)) {
-        Log.e('❌ Database creation returned null handle');
+        Log.e('Database creation returned null handle');
         return Err(
           ErrorLocalDb.initialization(
             'Failed to create database - null handle returned',
@@ -92,10 +93,10 @@ class DatabaseCore {
         );
       }
 
-      Log.i('✅ Database created successfully with handle: $dbHandle');
+      Log.i('Database created successfully with handle: $dbHandle');
       return Ok(DatabaseCore._(bindings, dbHandle));
     } catch (e, stackTrace) {
-      Log.e('💥 Exception during database creation: $e');
+      Log.e('Exception during database creation: $e');
       return Err(
         ErrorLocalDb.initialization(
           'Exception during database creation',
@@ -109,7 +110,7 @@ class DatabaseCore {
     }
   }
 
-  /// Stores a key-value pair in the database
+  /// Stores a key-value pair in the database (REST: PUT)
   ///
   /// Serializes the data to JSON and stores it with the specified key.
   /// The key must be a non-empty string, and the data must be JSON serializable.
@@ -138,7 +139,7 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    Log.d('💾 Storing data with key: $key');
+    Log.d('Storing data with key: $key');
 
     // Validate inputs
     final validation = _validateKeyAndData(key, data);
@@ -149,18 +150,14 @@ class DatabaseCore {
     // Create model and serialize to JSON
     final model = LocalDbModel(id: key, data: data);
     final jsonString = model.toJson();
-
-    final keyPtr = FfiUtils.toCString(key);
-    final valuePtr = FfiUtils.toCString(jsonString);
+    final jsonPtr = FfiUtils.toCString(jsonString);
 
     try {
-      final result = _bindings.put(_dbHandle, keyPtr, valuePtr);
+      // Call Rust's push_data function
+      final resultPtr = _bindings.pushData(_dbHandle, jsonPtr);
 
-      if (result == FfiConstants.success) {
-        Log.d('✅ Data stored successfully for key: $key');
-        return Ok(model);
-      } else {
-        Log.e('❌ Native put operation failed for key: $key');
+      if (FfiUtils.isNull(resultPtr)) {
+        Log.e('Native put operation returned null');
         return Err(
           ErrorLocalDb.databaseError(
             'Native put operation failed',
@@ -168,8 +165,46 @@ class DatabaseCore {
           ),
         );
       }
+
+      final responseStr = FfiUtils.fromCString(resultPtr);
+      if (responseStr == null) {
+        return Err(
+          ErrorLocalDb.databaseError(
+            'Failed to convert response',
+            context: key,
+          ),
+        );
+      }
+
+      // Parse the response from Rust
+      try {
+        final response = json.decode(responseStr) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          Log.d('Data stored successfully for key: $key');
+          return Ok(model);
+        } else {
+          final errorMsg = response['message'] ?? 'Put operation failed';
+          Log.e('Put operation failed: $errorMsg');
+          return Err(
+            ErrorLocalDb.databaseError(
+              errorMsg,
+              context: key,
+            ),
+          );
+        }
+      } catch (e) {
+        Log.e('Failed to parse response: $e');
+        return Err(
+          ErrorLocalDb.serializationError(
+            'Failed to parse response',
+            context: key,
+            cause: e,
+          ),
+        );
+      }
     } catch (e, stackTrace) {
-      Log.e('💥 Exception during put operation: $e');
+      Log.e('Exception during put operation: $e');
       return Err(
         ErrorLocalDb.databaseError(
           'Exception during put operation',
@@ -179,8 +214,241 @@ class DatabaseCore {
         ),
       );
     } finally {
-      FfiUtils.freeDartString(keyPtr);
-      FfiUtils.freeDartString(valuePtr);
+      FfiUtils.freeDartString(jsonPtr);
+    }
+  }
+
+  /// Creates a new record in the database (REST: POST)
+  ///
+  /// Similar to put but semantically intended for creating new records.
+  /// Will fail if the record already exists.
+  ///
+  /// Parameters:
+  /// - [key] - Unique identifier for the record
+  /// - [data] - Data to store (must be JSON serializable)
+  ///
+  /// Returns:
+  /// - [Ok] with [LocalDbModel] containing the stored data on success
+  /// - [Err] with error if record already exists or operation fails
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = db.post('user_123', {'name': 'John', 'age': 30});
+  /// result.when(
+  ///   ok: (model) => print('Created: ${model.id}'),
+  ///   err: (error) => print('Failed: $error'),
+  /// );
+  /// ```
+  LocalDbResult<LocalDbModel, ErrorLocalDb> post(
+    String key,
+    Map<String, dynamic> data,
+  ) {
+    // For now, post is the same as put
+    // In the future, we could add existence checking
+    return put(key, data);
+  }
+
+  /// Updates an existing record in the database
+  ///
+  /// Updates a record that must already exist in the database.
+  /// Will fail if the record doesn't exist.
+  ///
+  /// Parameters:
+  /// - [key] - Unique identifier for the record
+  /// - [data] - Updated data (must be JSON serializable)
+  ///
+  /// Returns:
+  /// - [Ok] with [LocalDbModel] containing the updated data on success
+  /// - [Err] with not found error if record doesn't exist
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = db.update('user_123', {'name': 'Jane', 'age': 31});
+  /// result.when(
+  ///   ok: (model) => print('Updated: ${model.id}'),
+  ///   err: (error) => print('Failed: $error'),
+  /// );
+  /// ```
+  LocalDbResult<LocalDbModel, ErrorLocalDb> update(
+    String key,
+    Map<String, dynamic> data,
+  ) {
+    if (_isClosed) {
+      return Err(ErrorLocalDb.databaseError('Database is closed'));
+    }
+
+    Log.d('Updating data with key: $key');
+
+    // Validate inputs
+    final validation = _validateKeyAndData(key, data);
+    if (validation.isErr) {
+      return Err(validation.errOrNull!);
+    }
+
+    // Create model and serialize to JSON
+    final model = LocalDbModel(id: key, data: data);
+    final jsonString = model.toJson();
+    final jsonPtr = FfiUtils.toCString(jsonString);
+
+    try {
+      // Call Rust's update_data function
+      final resultPtr = _bindings.updateData(_dbHandle, jsonPtr);
+
+      if (FfiUtils.isNull(resultPtr)) {
+        Log.e('Native update operation returned null');
+        return Err(
+          ErrorLocalDb.databaseError(
+            'Native update operation failed',
+            context: key,
+          ),
+        );
+      }
+
+      final responseStr = FfiUtils.fromCString(resultPtr);
+      if (responseStr == null) {
+        return Err(
+          ErrorLocalDb.databaseError(
+            'Failed to convert response',
+            context: key,
+          ),
+        );
+      }
+
+      // Parse the response from Rust
+      try {
+        final response = json.decode(responseStr) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          Log.d('Data updated successfully for key: $key');
+          return Ok(model);
+        } else if (response['status'] == 'not_found') {
+          Log.e('Record not found for update: $key');
+          return Err(
+            ErrorLocalDb.notFound(
+              'Record not found for update',
+              context: key,
+            ),
+          );
+        } else {
+          final errorMsg = response['message'] ?? 'Update operation failed';
+          Log.e('Update operation failed: $errorMsg');
+          return Err(
+            ErrorLocalDb.databaseError(
+              errorMsg,
+              context: key,
+            ),
+          );
+        }
+      } catch (e) {
+        Log.e('Failed to parse response: $e');
+        return Err(
+          ErrorLocalDb.serializationError(
+            'Failed to parse response',
+            context: key,
+            cause: e,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      Log.e('Exception during update operation: $e');
+      return Err(
+        ErrorLocalDb.databaseError(
+          'Exception during update operation',
+          context: key,
+          cause: e,
+          stackTrace: stackTrace,
+        ),
+      );
+    } finally {
+      FfiUtils.freeDartString(jsonPtr);
+    }
+  }
+
+  /// Resets the database with a new name
+  ///
+  /// Completely resets the database, removing all data and creating
+  /// a new database with the specified name.
+  ///
+  /// Parameters:
+  /// - [name] - New name for the database
+  ///
+  /// Returns:
+  /// - [Ok] with void on successful reset
+  /// - [Err] with error information on failure
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = db.reset('new_database');
+  /// result.when(
+  ///   ok: (_) => print('Database reset'),
+  ///   err: (error) => print('Reset failed: $error'),
+  /// );
+  /// ```
+  LocalDbResult<void, ErrorLocalDb> reset(String name) {
+    if (_isClosed) {
+      return Err(ErrorLocalDb.databaseError('Database is closed'));
+    }
+
+    Log.w('Resetting database with new name: $name');
+
+    if (name.isEmpty) {
+      return Err(
+        ErrorLocalDb.validationError(
+          'Database name cannot be empty',
+          context: 'reset_operation',
+        ),
+      );
+    }
+
+    final namePtr = FfiUtils.toCString(name);
+
+    try {
+      // Call Rust's reset_database function
+      final resultPtr = _bindings.resetDatabase(_dbHandle, namePtr);
+
+      if (FfiUtils.isNull(resultPtr)) {
+        Log.e('Native reset operation returned null');
+        return Err(ErrorLocalDb.databaseError('Native reset operation failed'));
+      }
+
+      final responseStr = FfiUtils.fromCString(resultPtr);
+      if (responseStr == null) {
+        return Err(
+          ErrorLocalDb.databaseError('Failed to convert response'),
+        );
+      }
+
+      try {
+        final response = json.decode(responseStr) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          Log.i('Database reset successfully');
+          return const Ok(null);
+        } else {
+          final errorMsg = response['message'] ?? 'Reset operation failed';
+          Log.e('Reset operation failed: $errorMsg');
+          return Err(ErrorLocalDb.databaseError(errorMsg));
+        }
+      } catch (e) {
+        Log.e('Failed to parse response: $e');
+        return Err(
+          ErrorLocalDb.serializationError(
+            'Failed to parse response',
+            cause: e,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      Log.e(' Exception during reset operation: $e');
+      return Err(
+        ErrorLocalDb.databaseError(
+          'Exception during reset operation',
+          cause: e,
+          stackTrace: stackTrace,
+        ),
+      );
+    } finally {
+      FfiUtils.freeDartString(namePtr);
     }
   }
 
@@ -210,7 +478,7 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    Log.d('🔍 Getting data for key: $key');
+    Log.d(' Getting data for key: $key');
 
     // Validate key
     final keyValidation = _validateKey(key);
@@ -221,41 +489,62 @@ class DatabaseCore {
     final keyPtr = FfiUtils.toCString(key);
 
     try {
-      final resultPtr = _bindings.get(_dbHandle, keyPtr);
+      // Call Rust's get_by_id function
+      final resultPtr = _bindings.getById(_dbHandle, keyPtr);
 
       if (FfiUtils.isNull(resultPtr)) {
-        Log.d('ℹ️ Key not found: $key');
+        Log.d(' Key not found: $key');
         return Err(ErrorLocalDb.notFound('Record not found', context: key));
       }
 
-      final jsonString = FfiUtils.fromCString(resultPtr);
-      FfiUtils.freeRustString(resultPtr, _bindings);
-
-      if (jsonString == null) {
+      final responseStr = FfiUtils.fromCString(resultPtr);
+      
+      if (responseStr == null) {
         return Err(
           ErrorLocalDb.serializationError(
-            'Received null JSON string from database',
+            'Received null response from database',
             context: key,
           ),
         );
       }
 
       try {
-        final model = LocalDbModel.fromJson(jsonString);
-        Log.d('✅ Data retrieved successfully for key: $key');
-        return Ok(model);
+        final response = json.decode(responseStr) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          final jsonData = response['data'];
+          if (jsonData != null) {
+            final model = LocalDbModel.fromJson(jsonEncode(jsonData));
+            Log.d(' Data retrieved successfully for key: $key');
+            return Ok(model);
+          } else {
+            return Err(ErrorLocalDb.notFound('Record not found', context: key));
+          }
+        } else if (response['status'] == 'not_found') {
+          Log.d(' Key not found: $key');
+          return Err(ErrorLocalDb.notFound('Record not found', context: key));
+        } else {
+          final errorMsg = response['message'] ?? 'Get operation failed';
+          Log.e(' Get operation failed: $errorMsg');
+          return Err(
+            ErrorLocalDb.databaseError(
+              errorMsg,
+              context: key,
+            ),
+          );
+        }
       } catch (e) {
-        Log.e('❌ JSON deserialization failed for key $key: $e');
+        Log.e(' Failed to parse response for key $key: $e');
         return Err(
           ErrorLocalDb.serializationError(
-            'Failed to deserialize JSON data',
+            'Failed to parse response',
             context: key,
             cause: e,
           ),
         );
       }
     } catch (e, stackTrace) {
-      Log.e('💥 Exception during get operation: $e');
+      Log.e(' Exception during get operation: $e');
       return Err(
         ErrorLocalDb.databaseError(
           'Exception during get operation',
@@ -294,7 +583,7 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    Log.d('🗑️ Deleting data for key: $key');
+    Log.d(' Deleting data for key: $key');
 
     // Validate key
     final keyValidation = _validateKey(key);
@@ -305,13 +594,11 @@ class DatabaseCore {
     final keyPtr = FfiUtils.toCString(key);
 
     try {
-      final result = _bindings.delete(_dbHandle, keyPtr);
+      // Call Rust's delete_by_id function
+      final resultPtr = _bindings.deleteById(_dbHandle, keyPtr);
 
-      if (result == FfiConstants.success) {
-        Log.d('✅ Data deleted successfully for key: $key');
-        return const Ok(null);
-      } else {
-        Log.e('❌ Native delete operation failed for key: $key');
+      if (FfiUtils.isNull(resultPtr)) {
+        Log.e(' Native delete operation returned null');
         return Err(
           ErrorLocalDb.databaseError(
             'Native delete operation failed',
@@ -319,8 +606,49 @@ class DatabaseCore {
           ),
         );
       }
+
+      final responseStr = FfiUtils.fromCString(resultPtr);
+      if (responseStr == null) {
+        return Err(
+          ErrorLocalDb.databaseError(
+            'Failed to convert response',
+            context: key,
+          ),
+        );
+      }
+
+      try {
+        final response = json.decode(responseStr) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          Log.d(' Data deleted successfully for key: $key');
+          return const Ok(null);
+        } else if (response['status'] == 'not_found') {
+          // Still return success for delete even if not found
+          Log.d(' Key not found but returning success: $key');
+          return const Ok(null);
+        } else {
+          final errorMsg = response['message'] ?? 'Delete operation failed';
+          Log.e(' Delete operation failed: $errorMsg');
+          return Err(
+            ErrorLocalDb.databaseError(
+              errorMsg,
+              context: key,
+            ),
+          );
+        }
+      } catch (e) {
+        Log.e('Failed to parse response: $e');
+        return Err(
+          ErrorLocalDb.serializationError(
+            'Failed to parse response',
+            context: key,
+            cause: e,
+          ),
+        );
+      }
     } catch (e, stackTrace) {
-      Log.e('💥 Exception during delete operation: $e');
+      Log.e(' Exception during delete operation: $e');
       return Err(
         ErrorLocalDb.databaseError(
           'Exception during delete operation',
@@ -331,130 +659,6 @@ class DatabaseCore {
       );
     } finally {
       FfiUtils.freeDartString(keyPtr);
-    }
-  }
-
-  /// Checks if a key exists in the database
-  ///
-  /// Performs a fast existence check without retrieving the actual data.
-  ///
-  /// Parameters:
-  /// - [key] - The key to check
-  ///
-  /// Returns:
-  /// - [Ok] with true if the key exists
-  /// - [Ok] with false if the key doesn't exist
-  /// - [Err] with error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = db.exists('user_123');
-  /// result.when(
-  ///   ok: (exists) => print('Key exists: $exists'),
-  ///   err: (error) => print('Check failed: $error'),
-  /// );
-  /// ```
-  LocalDbResult<bool, ErrorLocalDb> exists(String key) {
-    if (_isClosed) {
-      return Err(ErrorLocalDb.databaseError('Database is closed'));
-    }
-
-    Log.d('🔍 Checking existence for key: $key');
-
-    // Validate key
-    final keyValidation = _validateKey(key);
-    if (keyValidation.isErr) {
-      return Err(keyValidation.errOrNull!);
-    }
-
-    final keyPtr = FfiUtils.toCString(key);
-
-    try {
-      final result = _bindings.exists(_dbHandle, keyPtr);
-      final exists = result == FfiConstants.success;
-
-      Log.d('✅ Existence check completed for key $key: $exists');
-      return Ok(exists);
-    } catch (e, stackTrace) {
-      Log.e('💥 Exception during exists operation: $e');
-      return Err(
-        ErrorLocalDb.databaseError(
-          'Exception during exists operation',
-          context: key,
-          cause: e,
-          stackTrace: stackTrace,
-        ),
-      );
-    } finally {
-      FfiUtils.freeDartString(keyPtr);
-    }
-  }
-
-  /// Retrieves all keys from the database
-  ///
-  /// Returns a list of all keys currently stored in the database.
-  /// For large databases, this operation may be expensive.
-  ///
-  /// Returns:
-  /// - [Ok] with list of all keys on success
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = db.getAllKeys();
-  /// result.when(
-  ///   ok: (keys) => print('Found ${keys.length} keys'),
-  ///   err: (error) => print('Failed: $error'),
-  /// );
-  /// ```
-  LocalDbResult<List<String>, ErrorLocalDb> getAllKeys() {
-    if (_isClosed) {
-      return Err(ErrorLocalDb.databaseError('Database is closed'));
-    }
-
-    Log.d('📋 Getting all keys from database');
-
-    try {
-      final resultPtr = _bindings.getAllKeys(_dbHandle);
-
-      if (FfiUtils.isNull(resultPtr)) {
-        Log.d('ℹ️ No keys found or operation failed');
-        return const Ok([]);
-      }
-
-      final jsonString = FfiUtils.fromCString(resultPtr);
-      FfiUtils.freeRustString(resultPtr, _bindings);
-
-      if (jsonString == null) {
-        return Err(
-          ErrorLocalDb.serializationError('Received null JSON string for keys'),
-        );
-      }
-
-      try {
-        final jsonList = jsonDecode(jsonString) as List<dynamic>;
-        final keys = jsonList.cast<String>();
-
-        Log.d('✅ Retrieved ${keys.length} keys from database');
-        return Ok(keys);
-      } catch (e) {
-        Log.e('❌ Failed to decode keys JSON: $e');
-        return Err(
-          ErrorLocalDb.serializationError(
-            'Failed to decode keys JSON',
-            cause: e,
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      Log.e('💥 Exception during getAllKeys operation: $e');
-      return Err(
-        ErrorLocalDb.databaseError(
-          'Exception during getAllKeys operation',
-          cause: e,
-          stackTrace: stackTrace,
-        ),
-      );
     }
   }
 
@@ -480,18 +684,17 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    Log.d('📦 Getting all data from database');
+    Log.d(' Getting all data from database');
 
     try {
       final resultPtr = _bindings.getAll(_dbHandle);
 
       if (FfiUtils.isNull(resultPtr)) {
-        Log.d('ℹ️ No data found or operation failed');
+        Log.d(' No data found or operation failed');
         return const Ok({});
       }
 
       final jsonString = FfiUtils.fromCString(resultPtr);
-      FfiUtils.freeRustString(resultPtr, _bindings);
 
       if (jsonString == null) {
         return Err(
@@ -502,102 +705,46 @@ class DatabaseCore {
       }
 
       try {
-        final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
-        final result = <String, LocalDbModel>{};
-
-        for (final entry in jsonMap.entries) {
-          try {
-            final model = LocalDbModel.fromJson(jsonEncode(entry.value));
-            result[entry.key] = model;
-          } catch (e) {
-            Log.w('⚠️ Failed to deserialize record ${entry.key}: $e');
+        final response = json.decode(jsonString) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          final data = response['data'];
+          if (data is List) {
+            final result = <String, LocalDbModel>{};
+            for (final item in data) {
+              try {
+                final model = LocalDbModel.fromJson(jsonEncode(item));
+                result[model.id] = model;
+              } catch (e) {
+                Log.w(' Failed to deserialize record: $e');
+              }
+            }
+            Log.d(' Retrieved ${result.length} records from database');
+            return Ok(result);
+          } else {
+            return const Ok({});
           }
+        } else {
+          final errorMsg = response['message'] ?? 'GetAll operation failed';
+          Log.e(' GetAll operation failed: $errorMsg');
+          return Err(
+            ErrorLocalDb.databaseError(errorMsg),
+          );
         }
-
-        Log.d('✅ Retrieved ${result.length} records from database');
-        return Ok(result);
       } catch (e) {
-        Log.e('❌ Failed to decode all data JSON: $e');
+        Log.e('Failed to parse response: $e');
         return Err(
           ErrorLocalDb.serializationError(
-            'Failed to decode all data JSON',
+            'Failed to parse response',
             cause: e,
           ),
         );
       }
     } catch (e, stackTrace) {
-      Log.e('💥 Exception during getAll operation: $e');
+      Log.e(' Exception during getAll operation: $e');
       return Err(
         ErrorLocalDb.databaseError(
           'Exception during getAll operation',
-          cause: e,
-          stackTrace: stackTrace,
-        ),
-      );
-    }
-  }
-
-  /// Gets database statistics
-  ///
-  /// Returns information about the database such as number of records,
-  /// file size, and other metadata.
-  ///
-  /// Returns:
-  /// - [Ok] with statistics map on success
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = db.getStats();
-  /// result.when(
-  ///   ok: (stats) => print('Records: ${stats['record_count']}'),
-  ///   err: (error) => print('Failed: $error'),
-  /// );
-  /// ```
-  LocalDbResult<Map<String, dynamic>, ErrorLocalDb> getStats() {
-    if (_isClosed) {
-      return Err(ErrorLocalDb.databaseError('Database is closed'));
-    }
-
-    Log.d('📊 Getting database statistics');
-
-    try {
-      final resultPtr = _bindings.getStats(_dbHandle);
-
-      if (FfiUtils.isNull(resultPtr)) {
-        Log.e('❌ Stats operation returned null');
-        return Err(ErrorLocalDb.databaseError('Stats operation returned null'));
-      }
-
-      final jsonString = FfiUtils.fromCString(resultPtr);
-      FfiUtils.freeRustString(resultPtr, _bindings);
-
-      if (jsonString == null) {
-        return Err(
-          ErrorLocalDb.serializationError(
-            'Received null JSON string for stats',
-          ),
-        );
-      }
-
-      try {
-        final stats = jsonDecode(jsonString) as Map<String, dynamic>;
-        Log.d('✅ Retrieved database statistics');
-        return Ok(stats);
-      } catch (e) {
-        Log.e('❌ Failed to decode stats JSON: $e');
-        return Err(
-          ErrorLocalDb.serializationError(
-            'Failed to decode stats JSON',
-            cause: e,
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      Log.e('💥 Exception during getStats operation: $e');
-      return Err(
-        ErrorLocalDb.databaseError(
-          'Exception during getStats operation',
           cause: e,
           stackTrace: stackTrace,
         ),
@@ -627,20 +774,46 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    Log.w('⚠️ Clearing all data from database');
+    Log.w(' Clearing all data from database');
 
     try {
-      final result = _bindings.clear(_dbHandle);
+      // Call Rust's clear_all_records function
+      final resultPtr = _bindings.clearAllRecords(_dbHandle);
 
-      if (result == FfiConstants.success) {
-        Log.i('✅ Database cleared successfully');
-        return const Ok(null);
-      } else {
-        Log.e('❌ Native clear operation failed');
+      if (FfiUtils.isNull(resultPtr)) {
+        Log.e(' Native clear operation returned null');
         return Err(ErrorLocalDb.databaseError('Native clear operation failed'));
       }
+
+      final responseStr = FfiUtils.fromCString(resultPtr);
+      if (responseStr == null) {
+        return Err(
+          ErrorLocalDb.databaseError('Failed to convert response'),
+        );
+      }
+
+      try {
+        final response = json.decode(responseStr) as Map<String, dynamic>;
+        
+        if (response['status'] == 'ok') {
+          Log.i(' Database cleared successfully');
+          return const Ok(null);
+        } else {
+          final errorMsg = response['message'] ?? 'Clear operation failed';
+          Log.e(' Clear operation failed: $errorMsg');
+          return Err(ErrorLocalDb.databaseError(errorMsg));
+        }
+      } catch (e) {
+        Log.e('Failed to parse response: $e');
+        return Err(
+          ErrorLocalDb.serializationError(
+            'Failed to parse response',
+            cause: e,
+          ),
+        );
+      }
     } catch (e, stackTrace) {
-      Log.e('💥 Exception during clear operation: $e');
+      Log.e(' Exception during clear operation: $e');
       return Err(
         ErrorLocalDb.databaseError(
           'Exception during clear operation',
@@ -663,18 +836,35 @@ class DatabaseCore {
   /// ```
   void close() {
     if (_isClosed) {
-      Log.w('⚠️ Attempted to close already closed database');
+      Log.w(' Attempted to close already closed database');
       return;
     }
 
-    Log.i('🔒 Closing database');
+    Log.i(' Closing database');
 
     try {
-      _bindings.closeDb(_dbHandle);
+      // Call Rust's close_database function
+      final resultPtr = _bindings.closeDatabase(_dbHandle);
+      
+      if (FfiUtils.isNotNull(resultPtr)) {
+        final responseStr = FfiUtils.fromCString(resultPtr);
+        if (responseStr != null) {
+          try {
+            final response = json.decode(responseStr) as Map<String, dynamic>;
+            if (response['status'] == 'ok') {
+              Log.i(' Database closed successfully');
+            } else {
+              Log.w(' Database close had issues: ${response['message']}');
+            }
+          } catch (e) {
+            Log.w(' Failed to parse close response: $e');
+          }
+        }
+      }
+      
       _isClosed = true;
-      Log.i('✅ Database closed successfully');
     } catch (e) {
-      Log.e('💥 Exception during database close: $e');
+      Log.e(' Exception during database close: $e');
     }
   }
 

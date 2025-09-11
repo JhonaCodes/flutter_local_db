@@ -3,3 +3,5 @@
 .dart_tool/
 /example_db.lmdb/
 /test_db.lmdb/
+/.idea/
+/test_plugin_db.lmdb/

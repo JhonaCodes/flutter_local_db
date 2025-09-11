@@ -23,6 +23,7 @@
 
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
+import 'ffi_functions.dart';
 
 /// FFI type definitions for database operations
 ///
@@ -36,42 +37,40 @@ import 'package:ffi/ffi.dart';
 typedef CreateDbNative = Pointer<Void> Function(Pointer<Utf8> path);
 typedef CreateDb = Pointer<Void> Function(Pointer<Utf8> path);
 
-/// Store key-value pair in database
+/// Push data to database (insert new record)
 ///
-/// Returns: 1 for success, 0 for failure
-/// Parameters: [db] - Database handle, [key] - Record key, [value] - JSON data
-typedef PutNative =
-    Int32 Function(Pointer<Void> db, Pointer<Utf8> key, Pointer<Utf8> value);
-typedef Put =
-    int Function(Pointer<Void> db, Pointer<Utf8> key, Pointer<Utf8> value);
+/// Returns: JSON response string with result
+/// Parameters: [db] - Database handle, [json] - JSON data to insert
+typedef PushDataNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
+typedef PushData = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
 
-/// Retrieve value by key from database
+/// Retrieve value by ID from database
 ///
-/// Returns: JSON string pointer or null if not found
-/// Parameters: [db] - Database handle, [key] - Record key to retrieve
-typedef GetNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> key);
-typedef Get = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> key);
+/// Returns: JSON response string with result
+/// Parameters: [db] - Database handle, [id] - Record ID to retrieve
+typedef GetByIdNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
+typedef GetById = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
 
-/// Delete record by key from database
+/// Delete record by ID from database
 ///
-/// Returns: 1 for success, 0 for failure
-/// Parameters: [db] - Database handle, [key] - Record key to delete
-typedef DeleteNative = Int32 Function(Pointer<Void> db, Pointer<Utf8> key);
-typedef Delete = int Function(Pointer<Void> db, Pointer<Utf8> key);
+/// Returns: JSON response string with result
+/// Parameters: [db] - Database handle, [id] - Record ID to delete
+typedef DeleteByIdNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
+typedef DeleteById = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> id);
 
-/// Check if key exists in database
+/// Update existing record in database
 ///
-/// Returns: 1 if exists, 0 if not found
-/// Parameters: [db] - Database handle, [key] - Record key to check
-typedef ExistsNative = Int32 Function(Pointer<Void> db, Pointer<Utf8> key);
-typedef Exists = int Function(Pointer<Void> db, Pointer<Utf8> key);
+/// Returns: JSON response string with result
+/// Parameters: [db] - Database handle, [json] - JSON data with updated record
+typedef UpdateDataNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
+typedef UpdateData = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> json);
 
-/// Get all keys from database
+/// Clear all records from database
 ///
-/// Returns: JSON array string of all keys or null on failure
+/// Returns: JSON response string with result
 /// Parameters: [db] - Database handle
-typedef GetAllKeysNative = Pointer<Utf8> Function(Pointer<Void> db);
-typedef GetAllKeys = Pointer<Utf8> Function(Pointer<Void> db);
+typedef ClearAllRecordsNative = Pointer<Utf8> Function(Pointer<Void> db);
+typedef ClearAllRecords = Pointer<Utf8> Function(Pointer<Void> db);
 
 /// Get all key-value pairs from database
 ///
@@ -80,33 +79,20 @@ typedef GetAllKeys = Pointer<Utf8> Function(Pointer<Void> db);
 typedef GetAllNative = Pointer<Utf8> Function(Pointer<Void> db);
 typedef GetAll = Pointer<Utf8> Function(Pointer<Void> db);
 
-/// Get database statistics
+/// Reset database to clean state with new name
 ///
-/// Returns: JSON string with database stats or null on failure
+/// Returns: JSON response string with result
+/// Parameters: [db] - Database handle, [name] - New database name
+typedef ResetDatabaseNative = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> name);
+typedef ResetDatabase = Pointer<Utf8> Function(Pointer<Void> db, Pointer<Utf8> name);
+
+/// Close database connection
+///
+/// Returns: JSON response string with result
 /// Parameters: [db] - Database handle
-typedef GetStatsNative = Pointer<Utf8> Function(Pointer<Void> db);
-typedef GetStats = Pointer<Utf8> Function(Pointer<Void> db);
+typedef CloseDatabaseNative = Pointer<Utf8> Function(Pointer<Void> db);
+typedef CloseDatabase = Pointer<Utf8> Function(Pointer<Void> db);
 
-/// Clear all data from database
-///
-/// Returns: 1 for success, 0 for failure
-/// Parameters: [db] - Database handle
-typedef ClearNative = Int32 Function(Pointer<Void> db);
-typedef Clear = int Function(Pointer<Void> db);
-
-/// Close database and free resources
-///
-/// Returns: void
-/// Parameters: [db] - Database handle to close
-typedef CloseDbNative = Void Function(Pointer<Void> db);
-typedef CloseDb = void Function(Pointer<Void> db);
-
-/// Free string memory allocated by Rust
-///
-/// Returns: void
-/// Parameters: [ptr] - String pointer to free
-typedef FreeStringNative = Void Function(Pointer<Utf8> ptr);
-typedef FreeString = void Function(Pointer<Utf8> ptr);
 
 /// Container for all FFI function bindings
 ///
@@ -115,35 +101,29 @@ typedef FreeString = void Function(Pointer<Utf8> ptr);
 class LocalDbBindings {
   /// Database creation and management functions
   final CreateDb createDb;
-  final CloseDb closeDb;
-  final Clear clear;
-  final GetStats getStats;
+  final CloseDatabase closeDatabase;
+  final ResetDatabase resetDatabase;
 
   /// Data manipulation functions
-  final Put put;
-  final Get get;
-  final Delete delete;
-  final Exists exists;
+  final PushData pushData;
+  final GetById getById;
+  final DeleteById deleteById;
+  final UpdateData updateData;
 
   /// Bulk operations
-  final GetAllKeys getAllKeys;
   final GetAll getAll;
-
-  /// Memory management
-  final FreeString freeString;
+  final ClearAllRecords clearAllRecords;
 
   const LocalDbBindings({
     required this.createDb,
-    required this.closeDb,
-    required this.clear,
-    required this.getStats,
-    required this.put,
-    required this.get,
-    required this.delete,
-    required this.exists,
-    required this.getAllKeys,
+    required this.closeDatabase,
+    required this.resetDatabase,
+    required this.pushData,
+    required this.getById,
+    required this.deleteById,
+    required this.updateData,
     required this.getAll,
-    required this.freeString,
+    required this.clearAllRecords,
   });
 
   /// Creates bindings from a dynamic library
@@ -158,21 +138,15 @@ class LocalDbBindings {
   /// ```
   factory LocalDbBindings.fromLibrary(DynamicLibrary lib) {
     return LocalDbBindings(
-      createDb: lib.lookupFunction<CreateDbNative, CreateDb>('create_db'),
-      closeDb: lib.lookupFunction<CloseDbNative, CloseDb>('close_db'),
-      clear: lib.lookupFunction<ClearNative, Clear>('clear'),
-      getStats: lib.lookupFunction<GetStatsNative, GetStats>('get_stats'),
-      put: lib.lookupFunction<PutNative, Put>('put'),
-      get: lib.lookupFunction<GetNative, Get>('get'),
-      delete: lib.lookupFunction<DeleteNative, Delete>('delete'),
-      exists: lib.lookupFunction<ExistsNative, Exists>('exists'),
-      getAllKeys: lib.lookupFunction<GetAllKeysNative, GetAllKeys>(
-        'get_all_keys',
-      ),
-      getAll: lib.lookupFunction<GetAllNative, GetAll>('get_all'),
-      freeString: lib.lookupFunction<FreeStringNative, FreeString>(
-        'free_string',
-      ),
+      createDb: lib.lookupFunction<CreateDbNative, CreateDb>(FfiFunction.createDb.fn),
+      closeDatabase: lib.lookupFunction<CloseDatabaseNative, CloseDatabase>(FfiFunction.closeDatabase.fn),
+      resetDatabase: lib.lookupFunction<ResetDatabaseNative, ResetDatabase>(FfiFunction.resetDatabase.fn),
+      pushData: lib.lookupFunction<PushDataNative, PushData>(FfiFunction.pushData.fn),
+      getById: lib.lookupFunction<GetByIdNative, GetById>(FfiFunction.getById.fn),
+      deleteById: lib.lookupFunction<DeleteByIdNative, DeleteById>(FfiFunction.deleteById.fn),
+      updateData: lib.lookupFunction<UpdateDataNative, UpdateData>(FfiFunction.updateData.fn),
+      getAll: lib.lookupFunction<GetAllNative, GetAll>(FfiFunction.getAll.fn),
+      clearAllRecords: lib.lookupFunction<ClearAllRecordsNative, ClearAllRecords>(FfiFunction.clearAllRecords.fn),
     );
   }
 }
@@ -226,21 +200,20 @@ class FfiUtils {
     }
   }
 
-  /// Frees a Rust-allocated UTF-8 string
+  /// Converts a Rust response string and frees memory
   ///
   /// Use this for strings returned by Rust functions.
-  /// Requires the bindings to call the Rust free_string function.
+  /// The Rust side automatically handles memory management.
   ///
   /// Example:
   /// ```dart
-  /// final ptr = bindings.get(db, keyPtr);
-  /// final str = FfiUtils.fromCString(ptr);
-  /// FfiUtils.freeRustString(ptr, bindings);
+  /// final ptr = bindings.pushData(db, jsonPtr);
+  /// final response = FfiUtils.fromCString(ptr);
+  /// // No need to free - Rust handles it
   /// ```
-  static void freeRustString(Pointer<Utf8> ptr, LocalDbBindings bindings) {
-    if (ptr != nullptr) {
-      bindings.freeString(ptr);
-    }
+  static String? convertRustResponse(Pointer<Utf8> ptr) {
+    if (ptr == nullptr) return null;
+    return ptr.toDartString();
   }
 
   /// Checks if a pointer is null

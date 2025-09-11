@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.0
+
+### Added
+- **New FFI Architecture**: Introduced centralized FFI function management through `FfiFunction` enum
+- **REST-like API**: Added HTTP-inspired methods (POST, PUT, UPDATE) for more intuitive database operations
+- **Enhanced Error Handling**: Improved response parsing with JSON-based communication between Dart and Rust
+- **Logger Integration**: Added `logger_rs` for better debugging and monitoring capabilities
+- **Path Provider Support**: Integrated `path_provider` for cross-platform file system access
+
+### Changed
+- **Refactored FFI Bindings**: Migrated from direct FFI calls to a more maintainable architecture using `FfiFunction` enum
+- **Improved Database Core**: Enhanced `DatabaseCore` with better error handling and response parsing
+- **Updated Dependencies**: Added Flutter SDK dependency and latest platform-specific packages
+- **Rust Communication**: Standardized all Rust function responses to JSON format for consistency
+
+### Improved
+- **Type Safety**: Enhanced type safety in FFI layer with centralized function names
+- **Error Messages**: More descriptive error messages with contextual information
+- **Code Organization**: Better separation of concerns with dedicated FFI functions module
+- **Platform Support**: Enhanced cross-platform compatibility with path_provider integration
+
 ## 1.0.0
 
 ### Added

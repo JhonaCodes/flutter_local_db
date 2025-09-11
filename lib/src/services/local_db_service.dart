@@ -89,9 +89,8 @@ class LocalDbService {
   ///   err: (error) => print('Initialization failed: $error'),
   /// );
   /// ```
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>>
-  initialize() async {
-    Log.i('🚀 Initializing LocalDbService with default settings');
+  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initialize() async {
+    Log.i('Initializing LocalDbService with default settings');
 
     // Get default database path
     final pathResult = await PathHelper.getDefaultDatabasePath();
@@ -123,16 +122,14 @@ class LocalDbService {
   ///   err: (error) => print('Failed: $error'),
   /// );
   /// ```
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(
-    String path,
-  ) async {
-    Log.i('🚀 Initializing LocalDbService with path: $path');
+  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(String path) async {
+    Log.i('Initializing LocalDbService with path: $path');
 
     try {
       // Load the native library
       final libraryResult = LibraryLoader.loadLibrary();
       if (libraryResult.isErr) {
-        Log.e('❌ Failed to load native library');
+        Log.e('Failed to load native library');
         return Err(libraryResult.errOrNull!);
       }
 
@@ -141,7 +138,7 @@ class LocalDbService {
       // Validate the library contains required functions
       final validationResult = LibraryLoader.validateLibrary(library);
       if (validationResult.isErr) {
-        Log.e('❌ Library validation failed');
+        Log.e('Library validation failed');
         return Err(validationResult.errOrNull!);
       }
 
@@ -157,17 +154,17 @@ class LocalDbService {
       // Create database core
       final coreResult = DatabaseCore.create(bindings, path);
       if (coreResult.isErr) {
-        Log.e('❌ Failed to create database core');
+        Log.e('Failed to create database core');
         return Err(coreResult.errOrNull!);
       }
 
       final core = coreResult.okOrNull!;
       final service = LocalDbService._(core);
 
-      Log.i('✅ LocalDbService initialized successfully');
+      Log.i('LocalDbService initialized successfully');
       return Ok(service);
     } catch (e, stackTrace) {
-      Log.e('💥 Unexpected error during initialization: $e');
+      Log.e('Unexpected error during initialization: $e');
       return Err(
         ErrorLocalDb.initialization(
           'Unexpected error during service initialization',
@@ -210,7 +207,7 @@ class LocalDbService {
     Map<String, dynamic> data,
   ) async {
     _ensureInitialized();
-    Log.d('💾 Storing data with key: $key');
+    Log.d('Storing data with key: $key');
 
     return _core.put(key, data);
   }
@@ -244,7 +241,7 @@ class LocalDbService {
   /// ```
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> retrieve(String key) async {
     _ensureInitialized();
-    Log.d('🔍 Retrieving data for key: $key');
+    Log.d('Retrieving data for key: $key');
 
     return _core.get(key);
   }
@@ -279,7 +276,7 @@ class LocalDbService {
     Map<String, dynamic> updates,
   ) async {
     _ensureInitialized();
-    Log.d('🔄 Updating data for key: $key');
+    Log.d('Updating data for key: $key');
 
     // Try to get existing data
     final existingResult = await retrieve(key);
@@ -324,69 +321,9 @@ class LocalDbService {
   /// ```
   Future<LocalDbResult<void, ErrorLocalDb>> remove(String key) async {
     _ensureInitialized();
-    Log.d('🗑️ Removing data for key: $key');
+    Log.d(' Removing data for key: $key');
 
     return _core.delete(key);
-  }
-
-  /// Checks if a key exists in the database
-  ///
-  /// Performs a fast existence check without retrieving the actual data.
-  /// Useful for conditional operations and validation.
-  ///
-  /// Parameters:
-  /// - [key] - The key to check
-  ///
-  /// Returns:
-  /// - [Ok] with true if the key exists, false otherwise
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.exists('user_preferences');
-  /// result.when(
-  ///   ok: (exists) => {
-  ///     if (exists) {
-  ///       print('Preferences found')
-  ///     } else {
-  ///       print('Using default preferences')
-  ///     }
-  ///   },
-  ///   err: (error) => print('Check failed: $error'),
-  /// );
-  /// ```
-  Future<LocalDbResult<bool, ErrorLocalDb>> exists(String key) async {
-    _ensureInitialized();
-    Log.d('🔍 Checking existence for key: $key');
-
-    return _core.exists(key);
-  }
-
-  /// Retrieves all keys from the database
-  ///
-  /// Returns a list of all keys currently stored in the database.
-  /// For large databases, this operation may be expensive.
-  ///
-  /// Returns:
-  /// - [Ok] with list of all keys
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.listKeys();
-  /// result.when(
-  ///   ok: (keys) => {
-  ///     print('Found ${keys.length} records:'),
-  ///     for (final key in keys) print('  - $key'),
-  ///   },
-  ///   err: (error) => print('Failed to list keys: $error'),
-  /// );
-  /// ```
-  Future<LocalDbResult<List<String>, ErrorLocalDb>> listKeys() async {
-    _ensureInitialized();
-    Log.d('📋 Listing all keys');
-
-    return _core.getAllKeys();
   }
 
   /// Retrieves all data from the database
@@ -411,40 +348,11 @@ class LocalDbService {
   ///   err: (error) => print('Failed to list data: $error'),
   /// );
   /// ```
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
-  listAll() async {
+  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>> listAll() async {
     _ensureInitialized();
-    Log.d('📦 Listing all data');
+    Log.d(' Listing all data');
 
     return _core.getAll();
-  }
-
-  /// Gets database statistics and metadata
-  ///
-  /// Returns information about the database such as number of records,
-  /// file size, and other metadata useful for monitoring and debugging.
-  ///
-  /// Returns:
-  /// - [Ok] with statistics map
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.getStatistics();
-  /// result.when(
-  ///   ok: (stats) => {
-  ///     print('Records: ${stats['record_count']}'),
-  ///     print('Size: ${stats['file_size']} bytes'),
-  ///   },
-  ///   err: (error) => print('Failed to get stats: $error'),
-  /// );
-  /// ```
-  Future<LocalDbResult<Map<String, dynamic>, ErrorLocalDb>>
-  getStatistics() async {
-    _ensureInitialized();
-    Log.d('📊 Getting database statistics');
-
-    return _core.getStats();
   }
 
   /// Clears all data from the database
@@ -466,7 +374,7 @@ class LocalDbService {
   /// ```
   Future<LocalDbResult<void, ErrorLocalDb>> clearAll() async {
     _ensureInitialized();
-    Log.w('⚠️ Clearing all database data');
+    Log.w(' Clearing all database data');
 
     return _core.clear();
   }
@@ -503,15 +411,10 @@ class LocalDbService {
   ///   err: (error) => print('Batch operation failed: $error'),
   /// );
   /// ```
-  Future<
-    LocalDbResult<
-      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
-      ErrorLocalDb
-    >
-  >
+  Future<LocalDbResult<Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
   storeMultiple(Map<String, Map<String, dynamic>> entries) async {
     _ensureInitialized();
-    Log.d('📦 Storing ${entries.length} entries in batch');
+    Log.d(' Storing ${entries.length} entries in batch');
 
     final results = <String, LocalDbResult<LocalDbModel, ErrorLocalDb>>{};
 
@@ -520,7 +423,7 @@ class LocalDbService {
       results[entry.key] = result;
     }
 
-    Log.d('✅ Batch store completed: ${entries.length} operations');
+    Log.d(' Batch store completed: ${entries.length} operations');
     return Ok(results);
   }
 
@@ -551,15 +454,10 @@ class LocalDbService {
   ///   err: (error) => print('Batch retrieve failed: $error'),
   /// );
   /// ```
-  Future<
-    LocalDbResult<
-      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
-      ErrorLocalDb
-    >
-  >
+  Future<LocalDbResult<Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
   retrieveMultiple(List<String> keys) async {
     _ensureInitialized();
-    Log.d('🔍 Retrieving ${keys.length} entries in batch');
+    Log.d(' Retrieving ${keys.length} entries in batch');
 
     final results = <String, LocalDbResult<LocalDbModel, ErrorLocalDb>>{};
 
@@ -568,7 +466,7 @@ class LocalDbService {
       results[key] = result;
     }
 
-    Log.d('✅ Batch retrieve completed: ${keys.length} operations');
+    Log.d(' Batch retrieve completed: ${keys.length} operations');
     return Ok(results);
   }
 
@@ -587,14 +485,14 @@ class LocalDbService {
   /// ```
   void close() {
     if (!_isInitialized) {
-      Log.w('⚠️ Attempted to close non-initialized service');
+      Log.w(' Attempted to close non-initialized service');
       return;
     }
 
-    Log.i('🔒 Closing LocalDbService');
+    Log.i(' Closing LocalDbService');
     _core.close();
     _isInitialized = false;
-    Log.i('✅ LocalDbService closed successfully');
+    Log.i(' LocalDbService closed successfully');
   }
 
   /// Checks if the service is properly initialized and ready for use
