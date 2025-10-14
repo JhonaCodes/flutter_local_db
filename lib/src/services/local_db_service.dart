@@ -21,6 +21,8 @@
 // ║                                                                              ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝
 
+import 'package:flutter_local_db/flutter_local_db.dart';
+
 import '../models/local_db_result.dart';
 import '../models/local_db_error.dart';
 import '../models/local_db_model.dart';
@@ -89,8 +91,7 @@ class LocalDbService {
   ///   err: (error) => print('Initialization failed: $error'),
   /// );
   /// ```
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>>
-  initialize() async {
+  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initialize() async {
     Log.i('Initializing LocalDbService with default settings');
 
     // Get default database path
@@ -123,9 +124,7 @@ class LocalDbService {
   ///   err: (error) => print('Failed: $error'),
   /// );
   /// ```
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(
-    String path,
-  ) async {
+  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(String path) async {
     Log.i('Initializing LocalDbService with path: $path');
 
     try {
@@ -207,12 +206,17 @@ class LocalDbService {
   /// ```
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> store(
     String key,
+    LocalMethod method,
     Map<String, dynamic> data,
   ) async {
     _ensureInitialized();
     Log.d('Storing data with key: $key');
 
-    return _core.put(key, data);
+    return switch (method) {
+      LocalMethod.post => _core.post(key, data),
+      LocalMethod.put => _core.put(key, data),
+      LocalMethod.update => _core.update(key, data),
+    };
   }
 
   /// Retrieves data by key
@@ -299,7 +303,7 @@ class LocalDbService {
       return Err(existingResult.errOrNull!);
     }
 
-    return store(key, finalData);
+    return store(key,LocalMethod.update, finalData);
   }
 
   /// Removes a record by key
@@ -351,8 +355,7 @@ class LocalDbService {
   ///   err: (error) => print('Failed to list data: $error'),
   /// );
   /// ```
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
-  listAll() async {
+  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>> listAll() async {
     _ensureInitialized();
     Log.d(' Listing all data');
 
@@ -415,12 +418,7 @@ class LocalDbService {
   ///   err: (error) => print('Batch operation failed: $error'),
   /// );
   /// ```
-  Future<
-    LocalDbResult<
-      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
-      ErrorLocalDb
-    >
-  >
+  Future<LocalDbResult<Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
   storeMultiple(Map<String, Map<String, dynamic>> entries) async {
     _ensureInitialized();
     Log.d(' Storing ${entries.length} entries in batch');
@@ -428,7 +426,7 @@ class LocalDbService {
     final results = <String, LocalDbResult<LocalDbModel, ErrorLocalDb>>{};
 
     for (final entry in entries.entries) {
-      final result = await store(entry.key, entry.value);
+      final result = await store(entry.key, LocalMethod.post, entry.value);
       results[entry.key] = result;
     }
 
@@ -463,12 +461,7 @@ class LocalDbService {
   ///   err: (error) => print('Batch retrieve failed: $error'),
   /// );
   /// ```
-  Future<
-    LocalDbResult<
-      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
-      ErrorLocalDb
-    >
-  >
+  Future<LocalDbResult<Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
   retrieveMultiple(List<String> keys) async {
     _ensureInitialized();
     Log.d(' Retrieving ${keys.length} entries in batch');

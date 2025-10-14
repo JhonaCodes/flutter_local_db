@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0
+- **Fix Method**: Update post and put method.
+
 ## 1.1.0
 
 ### Added
