@@ -47,11 +47,11 @@ void main() {
     });
 
     test('should POST (create) data', () async {
-      final result = await service.store(
-        'user-001',
-        LocalMethod.post,
-        {'name': 'Alice', 'age': 25, 'email': 'alice@test.com'},
-      );
+      final result = await service.store('user-001', LocalMethod.post, {
+        'name': 'Alice',
+        'age': 25,
+        'email': 'alice@test.com',
+      });
 
       expect(result.isOk, isTrue);
       result.when(
@@ -80,11 +80,11 @@ void main() {
     });
 
     test('should PUT (update) data', () async {
-      final result = await service.store(
-        'user-001',
-        LocalMethod.put,
-        {'name': 'Alice Updated', 'age': 26, 'status': 'active'},
-      );
+      final result = await service.store('user-001', LocalMethod.put, {
+        'name': 'Alice Updated',
+        'age': 26,
+        'status': 'active',
+      });
 
       expect(result.isOk, isTrue);
       result.when(
@@ -165,7 +165,10 @@ void main() {
       getResult.when(
         ok: (model) {
           expect(model.data['user']['profile']['name'], equals('John Doe'));
-          expect(model.data['user']['profile']['settings']['theme'], equals('dark'));
+          expect(
+            model.data['user']['profile']['settings']['theme'],
+            equals('dark'),
+          );
           print('Complex data OK: Nested structure preserved');
         },
         err: (e) => fail('Complex data failed: ${e.message}'),

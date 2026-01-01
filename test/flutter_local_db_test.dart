@@ -51,7 +51,9 @@ void main() {
     test('should serialize to Map and back', () {
       final original = LocalDbModel(
         id: 'map-test',
-        data: {'nested': {'deep': 'value'}},
+        data: {
+          'nested': {'deep': 'value'},
+        },
       );
 
       final map = original.toMap();
@@ -62,10 +64,7 @@ void main() {
     });
 
     test('should create copy with updated data', () {
-      final original = LocalDbModel(
-        id: 'copy-test',
-        data: {'original': true},
-      );
+      final original = LocalDbModel(id: 'copy-test', data: {'original': true});
 
       final updated = original.copyWith(data: {'updated': true});
 
@@ -75,10 +74,7 @@ void main() {
     });
 
     test('should merge data correctly', () {
-      final original = LocalDbModel(
-        id: 'merge-test',
-        data: {'a': 1, 'b': 2},
-      );
+      final original = LocalDbModel(id: 'merge-test', data: {'a': 1, 'b': 2});
 
       final merged = original.mergeData({'b': 3, 'c': 4});
 
@@ -103,10 +99,7 @@ void main() {
     });
 
     test('should validate content hash', () {
-      final model = LocalDbModel(
-        id: 'hash-test',
-        data: {'value': 'test'},
-      );
+      final model = LocalDbModel(id: 'hash-test', data: {'value': 'test'});
 
       expect(model.isContentHashValid, isTrue);
     });

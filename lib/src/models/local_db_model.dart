@@ -135,7 +135,8 @@ class LocalDbModel {
           ? DateTime.parse(map['updatedAt'] as String)
           : null,
       // Support both 'hash' (Rust) and 'contentHash' (Dart)
-      contentHash: (map['hash'] as String?) ??
+      contentHash:
+          (map['hash'] as String?) ??
           (map['contentHash'] as String?) ??
           _calculateHash(dataMap),
     );

@@ -40,7 +40,10 @@ Map<String, dynamic> _parseRustResponse(Map<String, dynamic> response) {
     {'NotFound': final msg} => {'status': 'not_found', 'message': msg},
     {'DatabaseError': final msg} => {'status': 'error', 'message': msg},
     {'SerializationError': final msg} => {'status': 'error', 'message': msg},
-    {'ValidationError': final msg} => {'status': 'validation_error', 'message': msg},
+    {'ValidationError': final msg} => {
+      'status': 'validation_error',
+      'message': msg,
+    },
     {'BadRequest': final msg} => {'status': 'bad_request', 'message': msg},
     _ => response, // Already in expected format or unknown
   };
@@ -517,7 +520,9 @@ class DatabaseCore {
           final jsonData = response['data'];
           if (jsonData != null) {
             // Data from Rust is already a JSON string, use it directly
-            final jsonString = jsonData is String ? jsonData : jsonEncode(jsonData);
+            final jsonString = jsonData is String
+                ? jsonData
+                : jsonEncode(jsonData);
             final model = LocalDbModel.fromJson(jsonString);
             Log.d(' Data retrieved successfully for key: $key');
             return Ok(model);
@@ -840,8 +845,9 @@ class DatabaseCore {
         final responseStr = FfiUtils.fromCString(resultPtr);
         if (responseStr != null) {
           try {
-            final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
-        final response = _parseRustResponse(rawResponse);
+            final rawResponse =
+                json.decode(responseStr) as Map<String, dynamic>;
+            final response = _parseRustResponse(rawResponse);
             if (response['status'] == 'ok') {
               Log.i(' Database closed successfully');
             } else {
