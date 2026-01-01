@@ -30,6 +30,22 @@ import 'ffi_bindings.dart';
 
 import 'package:logger_rs/logger_rs.dart';
 
+/// Parses Rust AppResponse format into normalized response map.
+///
+/// Rust returns responses in format: {"Ok": "data"} or {"DatabaseError": "msg"}
+/// This converts them to: {"status": "ok", "data": ...} or {"status": "error", "message": ...}
+Map<String, dynamic> _parseRustResponse(Map<String, dynamic> response) {
+  return switch (response) {
+    {'Ok': final data} => {'status': 'ok', 'data': data},
+    {'NotFound': final msg} => {'status': 'not_found', 'message': msg},
+    {'DatabaseError': final msg} => {'status': 'error', 'message': msg},
+    {'SerializationError': final msg} => {'status': 'error', 'message': msg},
+    {'ValidationError': final msg} => {'status': 'validation_error', 'message': msg},
+    {'BadRequest': final msg} => {'status': 'bad_request', 'message': msg},
+    _ => response, // Already in expected format or unknown
+  };
+}
+
 /// Core database operations engine
 ///
 /// Provides low-level database operations using FFI to interact with
@@ -178,7 +194,8 @@ class DatabaseCore {
 
       // Parse the response from Rust
       try {
-        final response = json.decode(responseStr) as Map<String, dynamic>;
+        final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           Log.d('Data stored successfully for key: $key');
@@ -311,7 +328,8 @@ class DatabaseCore {
 
       // Parse the response from Rust
       try {
-        final response = json.decode(responseStr) as Map<String, dynamic>;
+        final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           Log.d('Data updated successfully for key: $key');
@@ -404,7 +422,8 @@ class DatabaseCore {
       }
 
       try {
-        final response = json.decode(responseStr) as Map<String, dynamic>;
+        final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           Log.i('Database reset successfully');
@@ -491,12 +510,15 @@ class DatabaseCore {
       }
 
       try {
-        final response = json.decode(responseStr) as Map<String, dynamic>;
+        final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           final jsonData = response['data'];
           if (jsonData != null) {
-            final model = LocalDbModel.fromJson(jsonEncode(jsonData));
+            // Data from Rust is already a JSON string, use it directly
+            final jsonString = jsonData is String ? jsonData : jsonEncode(jsonData);
+            final model = LocalDbModel.fromJson(jsonString);
             Log.d(' Data retrieved successfully for key: $key');
             return Ok(model);
           } else {
@@ -595,7 +617,8 @@ class DatabaseCore {
       }
 
       try {
-        final response = json.decode(responseStr) as Map<String, dynamic>;
+        final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           Log.d(' Data deleted successfully for key: $key');
@@ -677,25 +700,29 @@ class DatabaseCore {
       }
 
       try {
-        final response = json.decode(jsonString) as Map<String, dynamic>;
+        final rawResponse = json.decode(jsonString) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           final data = response['data'];
-          if (data is List) {
-            final result = <String, LocalDbModel>{};
-            for (final item in data) {
-              try {
-                final model = LocalDbModel.fromJson(jsonEncode(item));
-                result[model.id] = model;
-              } catch (e) {
-                Log.w(' Failed to deserialize record: $e');
-              }
+          // Data from Rust is a JSON string containing the array
+          final List<dynamic> items = data is String
+              ? json.decode(data) as List<dynamic>
+              : (data is List ? data : []);
+
+          final result = <String, LocalDbModel>{};
+          for (final item in items) {
+            try {
+              // Each item might be a Map or a JSON string
+              final jsonString = item is String ? item : jsonEncode(item);
+              final model = LocalDbModel.fromJson(jsonString);
+              result[model.id] = model;
+            } catch (e) {
+              Log.w(' Failed to deserialize record: $e');
             }
-            Log.d(' Retrieved ${result.length} records from database');
-            return Ok(result);
-          } else {
-            return const Ok({});
           }
+          Log.d(' Retrieved ${result.length} records from database');
+          return Ok(result);
         } else {
           final errorMsg = response['message'] ?? 'GetAll operation failed';
           Log.e(' GetAll operation failed: $errorMsg');
@@ -758,7 +785,8 @@ class DatabaseCore {
       }
 
       try {
-        final response = json.decode(responseStr) as Map<String, dynamic>;
+        final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
 
         if (response['status'] == 'ok') {
           Log.i(' Database cleared successfully');
@@ -812,7 +840,8 @@ class DatabaseCore {
         final responseStr = FfiUtils.fromCString(resultPtr);
         if (responseStr != null) {
           try {
-            final response = json.decode(responseStr) as Map<String, dynamic>;
+            final rawResponse = json.decode(responseStr) as Map<String, dynamic>;
+        final response = _parseRustResponse(rawResponse);
             if (response['status'] == 'ok') {
               Log.i(' Database closed successfully');
             } else {

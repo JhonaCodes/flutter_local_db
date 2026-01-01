@@ -23,7 +23,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_local_db: ^1.3.0
+  flutter_local_db: ^1.4.0
 ```
 
 ## Usage

@@ -108,25 +108,36 @@ class LocalDbModel {
   /// Creates a model from a Map
   ///
   /// Used for deserializing models from parsed JSON data.
+  /// Supports both Dart format (contentHash) and Rust format (hash).
   ///
   /// Example:
   /// ```dart
   /// final map = {
   ///   'id': 'user_123',
   ///   'data': {'name': 'John'},
-  ///   'createdAt': '2024-01-01T00:00:00.000Z',
+  ///   'hash': 'abc123',
   /// };
   /// final model = LocalDbModel.fromMap(map);
   /// ```
   factory LocalDbModel.fromMap(Map<String, dynamic> map) {
+    final dataMap = map['data'] is Map
+        ? Map<String, dynamic>.from(map['data'] as Map)
+        : <String, dynamic>{};
+
     return LocalDbModel(
       id: map['id'] as String,
-      data: Map<String, dynamic>.from(map['data'] as Map),
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
-      contentHash:
-          map['contentHash'] as String? ??
-          _calculateHash(map['data'] as Map<String, dynamic>),
+      data: dataMap,
+      // Support optional timestamps (Rust doesn't send them)
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'] as String)
+          : null,
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'] as String)
+          : null,
+      // Support both 'hash' (Rust) and 'contentHash' (Dart)
+      contentHash: (map['hash'] as String?) ??
+          (map['contentHash'] as String?) ??
+          _calculateHash(dataMap),
     );
   }
 
@@ -144,6 +155,7 @@ class LocalDbModel {
   /// Converts the model to a Map
   ///
   /// Used for serializing models to JSON-compatible format.
+  /// Uses 'hash' as field name for Rust compatibility.
   ///
   /// Example:
   /// ```dart
@@ -153,10 +165,8 @@ class LocalDbModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'hash': contentHash, // Rust expects 'hash' not 'contentHash'
       'data': data,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'contentHash': contentHash,
     };
   }
 

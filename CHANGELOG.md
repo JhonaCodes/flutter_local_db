@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.4.0
+
+### Fixed
+- **Rust-Dart Response Parsing**: Fixed response format mismatch between Rust backend and Dart frontend
+  - Rust `AppResponse` enum (`{"Ok": "..."}`) now correctly parsed in Dart
+  - Added `_parseRustResponse()` helper using Dart 3 pattern matching
+- **Model Serialization**: Fixed `LocalDbModel` serialization for Rust compatibility
+  - Changed `contentHash` to `hash` in JSON serialization to match Rust model
+  - `fromMap()` now supports both formats for backwards compatibility
+- **GetAll Operation**: Fixed JSON parsing for list responses from Rust backend
+- **Get Operation**: Fixed data parsing when Rust returns JSON string in `Ok` response
+
+### Added
+- **Integration Tests**: Added comprehensive integration tests that run with `flutter test`
+  - Tests load native library directly from project directory
+  - Test output stored in `.test_output/` (gitignored)
+  - Full CRUD test coverage: POST, GET, PUT, DELETE, GET ALL, CLEAR
+- **Unit Tests**: Added 16 unit tests for `LocalDbModel`, `LocalDbResult`, and `ErrorLocalDb`
+
+### Changed
+- Improved test structure: separate unit tests and integration tests
+- Updated `flutter_test` and `integration_test` as dev dependencies
+
 ## 1.3.0
 
 ### Fixed

@@ -1,233 +1,214 @@
 import 'package:flutter_local_db/flutter_local_db.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
+/// Unit tests for LocalDB components that don't require FFI.
+///
+/// For full integration tests that test the actual database operations,
+/// use the integration tests in the integration_test directory:
+///
+/// ```bash
+/// # Run on macOS
+/// flutter test integration_test/local_db_test.dart -d macos
+///
+/// # Run on iOS simulator
+/// flutter test integration_test/local_db_test.dart -d <ios-simulator-id>
+///
+/// # Run on Android emulator
+/// flutter test integration_test/local_db_test.dart -d <android-emulator-id>
+/// ```
 void main() {
-  group('LocalDB Tests', () {
-    setUp(() async {
-      // Initialize database for each test
-      await LocalDB.init('test_db');
-      await LocalDB.ClearData(); // Start with clean state
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('LocalDbModel Unit Tests', () {
+    test('should create model with required fields', () {
+      final model = LocalDbModel(
+        id: 'test-id',
+        data: {'name': 'Test', 'value': 123},
+      );
+
+      expect(model.id, equals('test-id'));
+      expect(model.data['name'], equals('Test'));
+      expect(model.data['value'], equals(123));
+      expect(model.createdAt, isNotNull);
+      expect(model.updatedAt, isNotNull);
+      expect(model.contentHash, isNotNull);
     });
 
-    tearDown(() async {
-      // Clean up after each test
-      await LocalDB.ClearData();
-      await LocalDB.close();
+    test('should serialize to JSON and back', () {
+      final original = LocalDbModel(
+        id: 'json-test',
+        data: {'key': 'value', 'number': 42},
+      );
+
+      final json = original.toJson();
+      final restored = LocalDbModel.fromJson(json);
+
+      expect(restored.id, equals(original.id));
+      expect(restored.data['key'], equals(original.data['key']));
+      expect(restored.data['number'], equals(original.data['number']));
     });
 
-    test('should initialize database successfully', () async {
-      await LocalDB.init('init_test_db');
-      expect(LocalDB.isInitialized, isTrue);
-      await LocalDB.close();
+    test('should serialize to Map and back', () {
+      final original = LocalDbModel(
+        id: 'map-test',
+        data: {'nested': {'deep': 'value'}},
+      );
+
+      final map = original.toMap();
+      final restored = LocalDbModel.fromMap(map);
+
+      expect(restored.id, equals(original.id));
+      expect(restored.data['nested']['deep'], equals('value'));
     });
 
-    test('should insert and retrieve data', () async {
-      const testKey = 'test-key-001';
-      final testData = {'name': 'Test User', 'age': 25};
-
-      // Insert data
-      final insertResult = await LocalDB.Post(testKey, testData);
-      insertResult.when(
-        ok: (insertedEntry) {
-          expect(insertedEntry.id, equals(testKey));
-          expect(insertedEntry.data['name'], equals('Test User'));
-        },
-        err: (error) => fail('Insert failed: $error'),
+    test('should create copy with updated data', () {
+      final original = LocalDbModel(
+        id: 'copy-test',
+        data: {'original': true},
       );
 
-      // Retrieve data
-      final getResult = await LocalDB.GetById(testKey);
-      getResult.when(
-        ok: (retrievedEntry) {
-          expect(retrievedEntry, isNotNull);
-          expect(retrievedEntry!.id, equals(testKey));
-          expect(retrievedEntry.data['name'], equals('Test User'));
-        },
-        err: (error) => fail('Get failed: $error'),
-      );
+      final updated = original.copyWith(data: {'updated': true});
+
+      expect(updated.id, equals(original.id));
+      expect(updated.data['updated'], isTrue);
+      expect(original.data['original'], isTrue);
     });
 
-    test('should update existing data', () async {
-      const testKey = 'update-test-key';
-      final originalData = {'status': 'pending', 'count': 1};
-      final updatedData = {'status': 'completed', 'count': 5};
-
-      // Insert original data
-      await LocalDB.Post(testKey, originalData);
-
-      // Update data
-      final updateResult = await LocalDB.Put(testKey, updatedData);
-      updateResult.when(
-        ok: (entry) => expect(entry.data['status'], equals('completed')),
-        err: (error) => fail('Update failed: $error'),
+    test('should merge data correctly', () {
+      final original = LocalDbModel(
+        id: 'merge-test',
+        data: {'a': 1, 'b': 2},
       );
 
-      // Verify update
-      final getResult = await LocalDB.GetById(testKey);
-      getResult.when(
-        ok: (entry) {
-          expect(entry, isNotNull);
-          expect(entry!.data['status'], equals('completed'));
-          expect(entry.data['count'], equals(5));
-        },
-        err: (error) => fail('Get failed: $error'),
-      );
+      final merged = original.mergeData({'b': 3, 'c': 4});
+
+      expect(merged.data['a'], equals(1));
+      expect(merged.data['b'], equals(3));
+      expect(merged.data['c'], equals(4));
     });
 
-    test('should delete data', () async {
-      const testKey = 'delete-test-key';
-      final testData = {'temp': 'data'};
-
-      // Insert data
-      await LocalDB.Post(testKey, testData);
-
-      // Verify it exists
-      final beforeDelete = await LocalDB.GetById(testKey);
-      beforeDelete.when(
-        ok: (entry) => expect(entry, isNotNull),
-        err: (error) => fail('Get before delete failed: $error'),
-      );
-
-      // Delete data
-      final deleteResult = await LocalDB.Delete(testKey);
-      deleteResult.when(
-        ok: (success) => expect(success, isTrue),
-        err: (error) => fail('Delete failed: $error'),
-      );
-
-      // Verify it's gone
-      final afterDelete = await LocalDB.GetById(testKey);
-      afterDelete.when(
-        ok: (entry) => expect(entry, isNull),
-        err: (error) => fail('Get after delete failed: $error'),
-      );
-    });
-
-    test('should get all entries', () async {
-      final testEntries = {
-        'key-1': {'type': 'user', 'name': 'Alice'},
-        'key-2': {'type': 'user', 'name': 'Bob'},
-        'key-3': {'type': 'admin', 'name': 'Carol'},
-      };
-
-      // Insert multiple entries
-      for (final entry in testEntries.entries) {
-        await LocalDB.Post(entry.key, entry.value);
-      }
-
-      // Get all entries
-      final getAllResult = await LocalDB.GetAll();
-      getAllResult.when(
-        ok: (allEntries) {
-          expect(allEntries.length, equals(3));
-
-          // Verify all entries are present
-          final retrievedIds = allEntries.map((e) => e.id).toSet();
-          expect(retrievedIds, containsAll(['key-1', 'key-2', 'key-3']));
-        },
-        err: (error) => fail('GetAll failed: $error'),
-      );
-    });
-
-    test('should clear all data', () async {
-      // Insert some test data
-      await LocalDB.Post('clear-test-1', {'data': 'test1'});
-      await LocalDB.Post('clear-test-2', {'data': 'test2'});
-
-      // Verify data exists
-      final beforeClear = await LocalDB.GetAll();
-      beforeClear.when(
-        ok: (entries) => expect(entries.length, greaterThan(0)),
-        err: (error) => fail('GetAll before clear failed: $error'),
-      );
-
-      // Clear all data
-      final clearResult = await LocalDB.ClearData();
-      clearResult.when(
-        ok: (success) => expect(success, isTrue),
-        err: (error) => fail('Clear failed: $error'),
-      );
-
-      // Verify database is empty
-      final afterClear = await LocalDB.GetAll();
-      afterClear.when(
-        ok: (entries) => expect(entries.length, equals(0)),
-        err: (error) => fail('GetAll after clear failed: $error'),
-      );
-    });
-
-    test('should handle non-existent key', () async {
-      const nonExistentKey = 'non-existent-key-12345';
-
-      final getResult = await LocalDB.GetById(nonExistentKey);
-      getResult.when(
-        ok: (entry) => expect(entry, isNull),
-        err: (error) => fail('Get non-existent failed: $error'),
-      );
-    });
-
-    test('should handle invalid key validation', () async {
-      var errorReceived = false;
-
-      // Test short key (less than 3 characters)
-      final shortKeyResult = await LocalDB.Post('ab', {'data': 'test'});
-      shortKeyResult.when(
-        ok: (entry) => fail('Short key should not succeed'),
-        err: (error) => errorReceived = true,
-      );
-      expect(errorReceived, isTrue);
-
-      // Test key with invalid characters
-      errorReceived = false;
-      final invalidKeyResult = await LocalDB.Post('test@key!', {
-        'data': 'test',
-      });
-      invalidKeyResult.when(
-        ok: (entry) => fail('Invalid key should not succeed'),
-        err: (error) => errorReceived = true,
-      );
-      expect(errorReceived, isTrue);
-    });
-
-    test('should handle complex nested data', () async {
-      const testKey = 'complex-data-key';
-      final complexData = {
-        'user': {
-          'id': 123,
-          'profile': {
-            'name': 'John Doe',
-            'settings': {'theme': 'dark', 'notifications': true},
+    test('should get nested field safely', () {
+      final model = LocalDbModel(
+        id: 'field-test',
+        data: {
+          'user': {
+            'profile': {'name': 'John'},
           },
         },
-        'metadata': {
-          'created': '2024-01-01',
-          'tags':
-              'test,complex,nested', // Use string instead of array for compatibility
-        },
-      };
-
-      // Insert complex data
-      final insertResult = await LocalDB.Post(testKey, complexData);
-      insertResult.when(
-        ok: (entry) =>
-            expect(entry.data['user']['profile']['name'], equals('John Doe')),
-        err: (error) => fail('Insert complex data failed: $error'),
       );
 
-      // Retrieve and verify complex data
-      final getResult = await LocalDB.GetById(testKey);
-      getResult.when(
-        ok: (entry) {
-          expect(entry, isNotNull);
-          expect(entry!.data['user']['profile']['name'], equals('John Doe'));
-          expect(entry.data['metadata']['tags'], equals('test,complex,nested'));
-          expect(
-            entry.data['user']['profile']['settings']['theme'],
-            equals('dark'),
-          );
-        },
-        err: (error) => fail('Get complex data failed: $error'),
+      expect(model.getField<String>('user.profile.name'), equals('John'));
+      expect(model.getField<String>('user.missing.path'), isNull);
+      expect(model.getField<String>('nonexistent'), isNull);
+    });
+
+    test('should validate content hash', () {
+      final model = LocalDbModel(
+        id: 'hash-test',
+        data: {'value': 'test'},
       );
+
+      expect(model.isContentHashValid, isTrue);
+    });
+  });
+
+  group('LocalDbResult Unit Tests', () {
+    test('Ok should contain success value', () {
+      final result = Ok<String, String>('success');
+
+      expect(result.isOk, isTrue);
+      expect(result.isErr, isFalse);
+      expect(result.okOrNull, equals('success'));
+      expect(result.errOrNull, isNull);
+    });
+
+    test('Err should contain error value', () {
+      final result = Err<String, String>('error');
+
+      expect(result.isOk, isFalse);
+      expect(result.isErr, isTrue);
+      expect(result.okOrNull, isNull);
+      expect(result.errOrNull, equals('error'));
+    });
+
+    test('when should call correct callback', () {
+      var okCalled = false;
+      var errCalled = false;
+
+      final okResult = Ok<int, String>(42);
+      okResult.when(
+        ok: (value) {
+          okCalled = true;
+          expect(value, equals(42));
+        },
+        err: (_) => errCalled = true,
+      );
+
+      expect(okCalled, isTrue);
+      expect(errCalled, isFalse);
+
+      okCalled = false;
+      errCalled = false;
+
+      final errResult = Err<int, String>('error');
+      errResult.when(
+        ok: (_) => okCalled = true,
+        err: (error) {
+          errCalled = true;
+          expect(error, equals('error'));
+        },
+      );
+
+      expect(okCalled, isFalse);
+      expect(errCalled, isTrue);
+    });
+
+    test('map should transform success values', () {
+      final result = Ok<int, String>(10);
+      final mapped = result.map((value) => value * 2);
+
+      expect(mapped.isOk, isTrue);
+      expect(mapped.okOrNull, equals(20));
+    });
+
+    test('mapErr should transform error values', () {
+      final result = Err<int, String>('error');
+      final mapped = result.mapErr((error) => 'mapped: $error');
+
+      expect(mapped.isErr, isTrue);
+      expect(mapped.errOrNull, equals('mapped: error'));
+    });
+  });
+
+  group('ErrorLocalDb Unit Tests', () {
+    test('should create database error', () {
+      final error = ErrorLocalDb.databaseError('Test error', context: 'test');
+
+      expect(error.type, equals(LocalDbErrorType.database));
+      expect(error.message, equals('Test error'));
+      expect(error.context, equals('test'));
+    });
+
+    test('should create not found error', () {
+      final error = ErrorLocalDb.notFound('Not found', context: 'key123');
+
+      expect(error.type, equals(LocalDbErrorType.notFound));
+      expect(error.message, equals('Not found'));
+    });
+
+    test('should create validation error', () {
+      final error = ErrorLocalDb.validationError('Invalid input');
+
+      expect(error.type, equals(LocalDbErrorType.validation));
+      expect(error.message, equals('Invalid input'));
+    });
+
+    test('should format to string correctly', () {
+      final error = ErrorLocalDb.databaseError('Test', context: 'ctx');
+      final str = error.toString();
+
+      expect(str, contains('database'));
+      expect(str, contains('Test'));
     });
   });
 }
