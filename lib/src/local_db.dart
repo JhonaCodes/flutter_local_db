@@ -96,7 +96,7 @@ class LocalDB {
       return Err(ErrorLocalDb.databaseError('Database not initialized'));
     }
 
-    return await _service!.store(key,LocalMethod.post, data);
+    return await _service!.store(key, LocalMethod.post, data);
   }
 
   /// Get record by ID (backward compatible API)
@@ -142,7 +142,7 @@ class LocalDB {
       return Err(ErrorLocalDb.databaseError('Database not initialized'));
     }
 
-    return await _service!.store(key,LocalMethod.put, data);
+    return await _service!.store(key, LocalMethod.put, data);
   }
 
   /// Delete record (backward compatible API)
@@ -206,5 +206,4 @@ class LocalDB {
   }
 }
 
-
-enum LocalMethod {post, put, update}
+enum LocalMethod { post, put, update }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0
+
+### Fixed
+- **Android 15 Compatibility**: Fixed 16 KB page size alignment issue for Android 15+ devices
+  - Native libraries now compiled with `-Wl,-z,max-page-size=16384` flag
+  - Resolves "ELF alignment check failed" and "LOAD segment not aligned" errors
+  - All architectures (arm64-v8a, armeabi-v7a, x86, x86_64) now properly aligned
+
+### Changed
+- Updated native library compilation to use NDK 28
+- Code cleanup: removed unnecessary imports in service layer
+
 ## 1.2.0
 - **Fix Method**: Update post and put method.
 
