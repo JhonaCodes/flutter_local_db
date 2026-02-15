@@ -50,7 +50,9 @@ class DatabaseCore {
       final db = request.result as web.IDBDatabase;
       if (!db.objectStoreNames.contains(storeName)) {
         db.createObjectStore(
-            storeName, web.IDBObjectStoreParameters(keyPath: 'id'.toJS));
+          storeName,
+          web.IDBObjectStoreParameters(keyPath: 'id'.toJS),
+        );
       }
     }.toJS;
 
@@ -167,7 +169,8 @@ class DatabaseCore {
 
     request.onerror = (web.Event e) {
       completer.complete(
-          Err(ErrorLocalDb.databaseError('Failed to delete database')));
+        Err(ErrorLocalDb.databaseError('Failed to delete database')),
+      );
     }.toJS;
 
     return completer.future;
@@ -216,7 +219,8 @@ class DatabaseCore {
 
       request.onerror = (web.Event e) {
         completer.complete(
-            Err(ErrorLocalDb.databaseError('Get failed', context: key)));
+          Err(ErrorLocalDb.databaseError('Get failed', context: key)),
+        );
       }.toJS;
 
       return completer.future;
@@ -248,13 +252,15 @@ class DatabaseCore {
 
       request.onerror = (web.Event e) {
         completer.complete(
-            Err(ErrorLocalDb.databaseError('Delete failed', context: key)));
+          Err(ErrorLocalDb.databaseError('Delete failed', context: key)),
+        );
       }.toJS;
 
       return completer.future;
     } catch (e) {
       return Err(
-          ErrorLocalDb.databaseError('Exception during delete', cause: e));
+        ErrorLocalDb.databaseError('Exception during delete', cause: e),
+      );
     }
   }
 
@@ -302,7 +308,8 @@ class DatabaseCore {
       return completer.future;
     } catch (e) {
       return Err(
-          ErrorLocalDb.databaseError('Exception during getAll', cause: e));
+        ErrorLocalDb.databaseError('Exception during getAll', cause: e),
+      );
     }
   }
 
@@ -328,7 +335,9 @@ class DatabaseCore {
 
       return completer.future;
     } catch (e) {
-      return Err(ErrorLocalDb.databaseError('Exception during clear', cause: e));
+      return Err(
+        ErrorLocalDb.databaseError('Exception during clear', cause: e),
+      );
     }
   }
 

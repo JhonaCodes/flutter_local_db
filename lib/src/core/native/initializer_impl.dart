@@ -16,7 +16,7 @@ class Initializer {
   /// Loads the dynamic library and creates FFI bindings.
   static LocalDbResult<Object, ErrorLocalDb> init() {
     Log.d('🔄 Initializing native environment');
-    
+
     // Load the native library
     final libraryResult = LibraryLoader.loadLibrary();
     if (libraryResult.isErr) {
@@ -38,7 +38,9 @@ class Initializer {
       final bindings = LocalDbBindings.fromLibrary(library);
       return Ok(bindings);
     } catch (e) {
-      return Err(ErrorLocalDb.initialization('Failed to create bindings', cause: e));
+      return Err(
+        ErrorLocalDb.initialization('Failed to create bindings', cause: e),
+      );
     }
   }
 }

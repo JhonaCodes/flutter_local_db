@@ -9,7 +9,7 @@ import '../../models/local_db_result.dart';
 import '../../models/local_db_error.dart';
 import '../../models/local_db_model.dart';
 import '../ffi_bindings.dart';
-import '../ffi_functions.dart'; 
+import '../ffi_functions.dart';
 
 import 'package:logger_rs/logger_rs.dart';
 
@@ -45,7 +45,7 @@ class DatabaseCore {
     Log.i('Creating native database at: $path');
 
     if (bindings == null || bindings is! LocalDbBindings) {
-       return Err(
+      return Err(
         ErrorLocalDb.initialization(
           'Invalid bindings provided for native implementation',
           context: path,
@@ -452,7 +452,8 @@ class DatabaseCore {
     }
   }
 
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>> getAll() async {
+  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
+  getAll() async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
@@ -567,7 +568,7 @@ class DatabaseCore {
       final resultPtr = _bindings.closeDatabase(_dbHandle);
 
       if (FfiUtils.isNotNull(resultPtr)) {
-         // Optionally parse response
+        // Optionally parse response
       }
 
       _isClosed = true;

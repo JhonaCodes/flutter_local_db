@@ -43,7 +43,7 @@ class PathHelper {
 
   static Future<LocalDbResult<Map<String, dynamic>, ErrorLocalDb>>
   getStorageInfo(String databasePath) async {
-    // Web Storage Manager API could be used here in future, 
+    // Web Storage Manager API could be used here in future,
     // but for now return basic info
     return const Ok({
       'type': 'IndexedDB',

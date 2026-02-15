@@ -67,7 +67,7 @@ class LocalDbService {
       if (initResult.isErr) {
         return Err(initResult.errOrNull!);
       }
-      
+
       final bindings = initResult.okOrNull;
 
       // Ensure database directory exists (Handled by PathHelper agnostic)
