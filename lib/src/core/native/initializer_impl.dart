@@ -3,7 +3,6 @@
 // ║               Native Platform Initialization Logic                           ║
 // ║══════════════════════════════════════════════════════════════════════════════║
 
-import 'dart:ffi';
 import '../../models/local_db_result.dart';
 import '../../models/local_db_error.dart';
 import '../ffi_bindings.dart';

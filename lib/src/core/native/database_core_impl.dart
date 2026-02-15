@@ -9,7 +9,6 @@ import '../../models/local_db_result.dart';
 import '../../models/local_db_error.dart';
 import '../../models/local_db_model.dart';
 import '../ffi_bindings.dart';
-import '../ffi_functions.dart';
 
 import 'package:logger_rs/logger_rs.dart';
 
