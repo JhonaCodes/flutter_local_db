@@ -39,17 +39,23 @@ flutter:
         package: com.jhonacode.flutter_local_db
         pluginClass: FlutterLocalDbPlugin
         ffiPlugin: true
+        fileName: flutter_local_db.dart
       ios:
         pluginClass: FlutterLocalDbPlugin
-        ffiPlugin: true  
+        ffiPlugin: true
+        fileName: flutter_local_db.dart
       linux:
         pluginClass: FlutterLocalDbPlugin
         ffiPlugin: true
+        fileName: flutter_local_db.dart
       macos:
         pluginClass: FlutterLocalDbPlugin
         ffiPlugin: true
+        fileName: flutter_local_db.dart
       windows:
         pluginClass: FlutterLocalDbPlugin
         ffiPlugin: true
+        fileName: flutter_local_db.dart
       web:
         pluginClass: none
+        fileName: flutter_local_db.dart
