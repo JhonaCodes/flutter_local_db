@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.0
+
+### Added
+- **Web Platform Support**: Full IndexedDB backend via `package:web` and `dart:js_interop`
+  - New `DatabaseCore` web implementation with complete CRUD operations
+  - New `Initializer` web implementation (no-op, no native bindings needed)
+  - New `PathHelper` web implementation (database names instead of file paths)
+  - Platform-agnostic factory files using `if (dart.library.js_interop)` conditional imports
+- **Web platform declaration** in `pubspec.yaml` (`pluginClass: none`)
+
+### Fixed
+- **Web `contentHash` persistence**: `_serializeModel` now includes `contentHash` so data integrity hashes survive read/write cycles
+- **Web input validation**: Added `_validateKey` and `_validateKeyAndData` to web `DatabaseCore`, matching native validation (max key length, max value size)
+- **Web `getAll` null safety**: Added null/undefined checks on `request.result` before casting to `JSArray`, with per-record try/catch for resilience
+- **Web `_deserializeModel` robustness**: Timestamps are now parsed optionally (matching `LocalDbModel.fromMap` behavior)
+
 ## 1.4.0
 
 ### Fixed

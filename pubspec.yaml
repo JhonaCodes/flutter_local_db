@@ -1,6 +1,6 @@
 name: flutter_local_db
 description: "A high-performance cross-platform local database for Dart. Native platforms use Rust+LMDB via FFI, optimized for both Dart APIs and Flutter apps."
-version: 1.4.0
+version: 1.5.0
 repository: https://github.com/JhonaCodes/flutter_local_db.git
 
 topics:
@@ -16,13 +16,14 @@ environment:
 
 dependencies:
   # FFI for native Rust integration
-  ffi: ^2.1.4
+  ffi: ^2.2.0
   # Path utilities
   path: ^1.9.1
   # Path provider for mobile directories
   path_provider: ^2.1.5
   # Beautiful Rust-style logger
-  logger_rs: ^1.0.3
+  logger_rs: ^2.1.1
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -50,3 +51,5 @@ flutter:
       windows:
         pluginClass: FlutterLocalDbPlugin
         ffiPlugin: true
+      web:
+        pluginClass: none

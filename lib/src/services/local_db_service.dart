@@ -24,8 +24,7 @@
 import 'package:flutter_local_db/flutter_local_db.dart';
 import 'package:logger_rs/logger_rs.dart';
 
-import '../core/ffi_bindings.dart';
-import '../core/library_loader.dart';
+import '../core/initializer.dart';
 import '../core/database_core.dart';
 
 /// High-level database service for managing local data storage
@@ -33,35 +32,6 @@ import '../core/database_core.dart';
 /// This service provides a convenient, high-level API for all database
 /// operations. It handles initialization, connection management, and
 /// provides type-safe operations with comprehensive error handling.
-///
-/// Example usage:
-/// ```dart
-/// // Initialize the service
-/// final result = await LocalDbService.initialize();
-/// if (result.isErr) {
-///   print('Failed to initialize: ${result.errOrNull}');
-///   return;
-/// }
-///
-/// final db = result.okOrNull!;
-///
-/// // Store some data
-/// final storeResult = await db.store('user_123', {
-///   'name': 'John Doe',
-///   'email': 'john@example.com',
-///   'age': 30,
-/// });
-///
-/// // Retrieve the data
-/// final getResult = await db.retrieve('user_123');
-/// getResult.when(
-///   ok: (model) => print('Name: ${model.data['name']}'),
-///   err: (error) => print('Error: $error'),
-/// );
-///
-/// // Clean up
-/// db.close();
-/// ```
 class LocalDbService {
   final DatabaseCore _core;
   bool _isInitialized = false;
@@ -71,27 +41,11 @@ class LocalDbService {
   }
 
   /// Initializes the database service with default settings
-  ///
-  /// Creates a new database instance using the default application data directory.
-  /// This is the most common way to initialize the service for typical use cases.
-  ///
-  /// Returns:
-  /// - [Ok] with [LocalDbService] instance on successful initialization
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await LocalDbService.initialize();
-  /// result.when(
-  ///   ok: (service) => print('Service ready'),
-  ///   err: (error) => print('Initialization failed: $error'),
-  /// );
-  /// ```
   static Future<LocalDbResult<LocalDbService, ErrorLocalDb>>
   initialize() async {
     Log.i('Initializing LocalDbService with default settings');
 
-    // Get default database path
+    // Get default database path (Platform agnostic)
     final pathResult = await PathHelper.getDefaultDatabasePath();
     if (pathResult.isErr) {
       return Err(pathResult.errOrNull!);
@@ -102,58 +56,29 @@ class LocalDbService {
   }
 
   /// Initializes the database service with a custom path
-  ///
-  /// Creates a new database instance at the specified path. Use this method
-  /// when you need to control exactly where the database file is stored.
-  ///
-  /// Parameters:
-  /// - [path] - Full file system path where the database should be created
-  ///
-  /// Returns:
-  /// - [Ok] with [LocalDbService] instance on successful initialization
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await LocalDbService.initializeWithPath('/custom/path/db');
-  /// result.when(
-  ///   ok: (service) => print('Service ready at custom path'),
-  ///   err: (error) => print('Failed: $error'),
-  /// );
-  /// ```
   static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(
     String path,
   ) async {
     Log.i('Initializing LocalDbService with path: $path');
 
     try {
-      // Load the native library
-      final libraryResult = LibraryLoader.loadLibrary();
-      if (libraryResult.isErr) {
-        Log.e('Failed to load native library');
-        return Err(libraryResult.errOrNull!);
+      // Initialize environment (Load library/create bindings if Native, do nothing if Web)
+      final initResult = Initializer.init();
+      if (initResult.isErr) {
+        return Err(initResult.errOrNull!);
       }
+      
+      final bindings = initResult.okOrNull;
 
-      final library = libraryResult.okOrNull!;
-
-      // Validate the library contains required functions
-      final validationResult = LibraryLoader.validateLibrary(library);
-      if (validationResult.isErr) {
-        Log.e('Library validation failed');
-        return Err(validationResult.errOrNull!);
-      }
-
-      // Create FFI bindings
-      final bindings = LocalDbBindings.fromLibrary(library);
-
-      // Ensure database directory exists
+      // Ensure database directory exists (Handled by PathHelper agnostic)
       final dirResult = await PathHelper.ensureDirectoryExists(path);
       if (dirResult.isErr) {
         return Err(dirResult.errOrNull!);
       }
 
-      // Create database core
-      final coreResult = DatabaseCore.create(bindings, path);
+      // Create database core (Agnostic factory)
+      // Note: bindings will be null on Web, which is expected/handled by Web Core.
+      final coreResult = await DatabaseCore.create(bindings, path);
       if (coreResult.isErr) {
         Log.e('Failed to create database core');
         return Err(coreResult.errOrNull!);
@@ -178,31 +103,6 @@ class LocalDbService {
   }
 
   /// Stores data with the specified key
-  ///
-  /// Creates a new record or updates an existing one with the provided data.
-  /// The data must be JSON serializable (Map, List, String, num, bool, null).
-  ///
-  /// Parameters:
-  /// - [key] - Unique identifier for the record
-  /// - [data] - Data to store (must be JSON serializable)
-  ///
-  /// Returns:
-  /// - [Ok] with [LocalDbModel] containing the stored data and metadata
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.store('settings', {
-  ///   'theme': 'dark',
-  ///   'notifications': true,
-  ///   'language': 'en',
-  /// });
-  ///
-  /// result.when(
-  ///   ok: (model) => print('Stored at: ${model.createdAt}'),
-  ///   err: (error) => print('Storage failed: $error'),
-  /// );
-  /// ```
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> store(
     String key,
     LocalMethod method,
@@ -212,71 +112,21 @@ class LocalDbService {
     Log.d('Storing data with key: $key');
 
     return switch (method) {
-      LocalMethod.post => _core.post(key, data),
-      LocalMethod.put => _core.put(key, data),
-      LocalMethod.update => _core.update(key, data),
+      LocalMethod.post => await _core.post(key, data),
+      LocalMethod.put => await _core.put(key, data),
+      LocalMethod.update => await _core.update(key, data),
     };
   }
 
   /// Retrieves data by key
-  ///
-  /// Looks up and returns the record with the specified key.
-  /// Returns a not found error if the key doesn't exist.
-  ///
-  /// Parameters:
-  /// - [key] - The key to retrieve
-  ///
-  /// Returns:
-  /// - [Ok] with [LocalDbModel] if the record exists
-  /// - [Err] with not found error if the key doesn't exist
-  /// - [Err] with other error types for various failures
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.retrieve('settings');
-  /// result.when(
-  ///   ok: (model) => print('Theme: ${model.data['theme']}'),
-  ///   err: (error) => {
-  ///     if (error.type == LocalDbErrorType.notFound) {
-  ///       print('Settings not found, using defaults')
-  ///     } else {
-  ///       print('Error: $error')
-  ///     }
-  ///   },
-  /// );
-  /// ```
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> retrieve(String key) async {
     _ensureInitialized();
     Log.d('Retrieving data for key: $key');
 
-    return _core.get(key);
+    return await _core.get(key);
   }
 
   /// Updates existing data with new values
-  ///
-  /// Retrieves the existing record, merges it with the provided data,
-  /// and stores the updated version. Creates a new record if the key doesn't exist.
-  ///
-  /// Parameters:
-  /// - [key] - The key to update
-  /// - [updates] - Data to merge with existing data
-  ///
-  /// Returns:
-  /// - [Ok] with updated [LocalDbModel]
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.update('settings', {
-  ///   'theme': 'light',  // This will update the theme
-  ///   'newFeature': true, // This will be added
-  /// });
-  ///
-  /// result.when(
-  ///   ok: (model) => print('Updated: ${model.updatedAt}'),
-  ///   err: (error) => print('Update failed: $error'),
-  /// );
-  /// ```
   Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> update(
     String key,
     Map<String, dynamic> updates,
@@ -306,118 +156,31 @@ class LocalDbService {
   }
 
   /// Removes a record by key
-  ///
-  /// Deletes the record with the specified key from the database.
-  /// Returns success even if the key doesn't exist.
-  ///
-  /// Parameters:
-  /// - [key] - The key to remove
-  ///
-  /// Returns:
-  /// - [Ok] with void on successful removal
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.remove('temp_data');
-  /// result.when(
-  ///   ok: (_) => print('Removed successfully'),
-  ///   err: (error) => print('Removal failed: $error'),
-  /// );
-  /// ```
   Future<LocalDbResult<void, ErrorLocalDb>> remove(String key) async {
     _ensureInitialized();
     Log.d(' Removing data for key: $key');
 
-    return _core.delete(key);
+    return await _core.delete(key);
   }
 
   /// Retrieves all data from the database
-  ///
-  /// Returns a map containing all key-value pairs currently stored.
-  /// For large databases, this operation may be expensive.
-  ///
-  /// Returns:
-  /// - [Ok] with map of all data
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.listAll();
-  /// result.when(
-  ///   ok: (allData) => {
-  ///     print('Found ${allData.length} records'),
-  ///     allData.forEach((key, model) => {
-  ///       print('$key: ${model.data}'),
-  ///     }),
-  ///   },
-  ///   err: (error) => print('Failed to list data: $error'),
-  /// );
-  /// ```
   Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
   listAll() async {
     _ensureInitialized();
     Log.d(' Listing all data');
 
-    return _core.getAll();
+    return await _core.getAll();
   }
 
   /// Clears all data from the database
-  ///
-  /// Removes all records from the database. This operation cannot be undone.
-  /// Use with extreme caution, especially in production environments.
-  ///
-  /// Returns:
-  /// - [Ok] with void on successful clear
-  /// - [Err] with detailed error information on failure
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.clearAll();
-  /// result.when(
-  ///   ok: (_) => print('Database cleared completely'),
-  ///   err: (error) => print('Clear failed: $error'),
-  /// );
-  /// ```
   Future<LocalDbResult<void, ErrorLocalDb>> clearAll() async {
     _ensureInitialized();
     Log.w(' Clearing all database data');
 
-    return _core.clear();
+    return await _core.clear();
   }
 
   /// Performs multiple store operations in sequence
-  ///
-  /// Stores multiple key-value pairs. If any operation fails, the remaining
-  /// operations are still attempted. Returns results for all operations.
-  ///
-  /// Parameters:
-  /// - [entries] - Map of key-value pairs to store
-  ///
-  /// Returns:
-  /// - [Ok] with map of results for each key
-  /// - [Err] should not occur at this level (individual results contain errors)
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.storeMultiple({
-  ///   'user_1': {'name': 'Alice', 'role': 'admin'},
-  ///   'user_2': {'name': 'Bob', 'role': 'user'},
-  ///   'settings': {'theme': 'dark'},
-  /// });
-  ///
-  /// result.when(
-  ///   ok: (results) => {
-  ///     results.forEach((key, result) => {
-  ///       result.when(
-  ///         ok: (model) => print('$key stored successfully'),
-  ///         err: (error) => print('$key failed: $error'),
-  ///       ),
-  ///     }),
-  ///   },
-  ///   err: (error) => print('Batch operation failed: $error'),
-  /// );
-  /// ```
   Future<
     LocalDbResult<
       Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
@@ -440,32 +203,6 @@ class LocalDbService {
   }
 
   /// Performs multiple retrieve operations in sequence
-  ///
-  /// Retrieves multiple records by their keys. Returns results for all
-  /// requested keys, including not found errors for missing keys.
-  ///
-  /// Parameters:
-  /// - [keys] - List of keys to retrieve
-  ///
-  /// Returns:
-  /// - [Ok] with map of results for each key
-  /// - [Err] should not occur at this level (individual results contain errors)
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = await service.retrieveMultiple(['user_1', 'user_2', 'settings']);
-  /// result.when(
-  ///   ok: (results) => {
-  ///     results.forEach((key, result) => {
-  ///       result.when(
-  ///         ok: (model) => print('$key: ${model.data}'),
-  ///         err: (error) => print('$key not found or error'),
-  ///       ),
-  ///     }),
-  ///   },
-  ///   err: (error) => print('Batch retrieve failed: $error'),
-  /// );
-  /// ```
   Future<
     LocalDbResult<
       Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
@@ -488,18 +225,6 @@ class LocalDbService {
   }
 
   /// Closes the database service and releases all resources
-  ///
-  /// Properly shuts down the database connection and releases all associated
-  /// resources. After calling this method, the service instance cannot be used.
-  /// Always call this method when you're done with the service to prevent
-  /// resource leaks.
-  ///
-  /// Example:
-  /// ```dart
-  /// // When done with the service
-  /// service.close();
-  /// print('Service closed and resources released');
-  /// ```
   void close() {
     if (!_isInitialized) {
       Log.w(' Attempted to close non-initialized service');

@@ -1,7 +1,7 @@
 // ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║                             PATH HELPER                                      ║
-// ║                  Platform-Agnostic Path Helper Factory                       ║
+// ║                             INITIALIZER                                      ║
+// ║                  Platform-Agnostic Initializer Factory                       ║
 // ║══════════════════════════════════════════════════════════════════════════════║
 
-export 'native/path_helper_impl.dart'
-    if (dart.library.js_interop) 'web/path_helper_impl.dart';
+export 'native/initializer_impl.dart'
+    if (dart.library.js_interop) 'web/initializer_impl.dart';

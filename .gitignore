@@ -10,3 +10,5 @@
 /example_db.lmdb/
 /test_db.lmdb/
 /test_plugin_db.lmdb/
+/.claude/
+/.serena/
