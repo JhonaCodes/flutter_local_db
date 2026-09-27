@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.2
+- **Android: builds with AGP 9 and Kotlin 2.2+.** The Android Gradle file no
+  longer sets `targetSdk` (removed from library modules in AGP 9) and uses
+  `kotlin { compilerOptions }` instead of `kotlinOptions` (an error since
+  Kotlin 2.2). Apps on the current Flutter template (AGP 9.1, Kotlin 2.4)
+  failed with "Unresolved reference 'targetSdk'".
+- **Android: ready for Built-in Kotlin.** The plugin no longer applies the
+  Kotlin Gradle Plugin itself; AGP 9's built-in Kotlin or Flutter provides
+  it. This removes Flutter's warning that such plugins will stop building.
+- **Web:** await the IndexedDB futures inside their `try` blocks.
+
 ## 1.5.1
 - Fix include file name on `yaml`.
 
