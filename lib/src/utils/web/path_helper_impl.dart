@@ -64,4 +64,12 @@ class PathHelper {
     }
     return Ok(databasePath);
   }
+
+  /// Browsers keep 1.x data readable (IndexedDB did not change): there is
+  /// nothing to move aside.
+  static Future<LocalDbResult<String, ErrorLocalDb>> moveAside(
+    String databasePath,
+  ) async {
+    return Err(ErrorLocalDb.platformError('Nothing to migrate on the web'));
+  }
 }

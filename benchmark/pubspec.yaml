@@ -1,0 +1,31 @@
+name: flutter_local_db_benchmark
+description: "Benchmarks of flutter_local_db against other local databases for Flutter."
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.10.0
+  flutter: ">=3.35.0"
+
+dependencies:
+  drift: ^2.35.0
+  flutter:
+    sdk: flutter
+  flutter_local_db:
+    path: ../
+  hive_ce: ^2.20.1
+  path_provider: ^2.1.5
+  sembast: ^3.8.11
+  sqlite3: ^3.7.0
+
+dev_dependencies:
+  flutter_driver:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

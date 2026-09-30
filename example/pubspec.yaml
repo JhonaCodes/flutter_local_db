@@ -1,0 +1,24 @@
+name: flutter_local_db_example
+description: "Example app of flutter_local_db: a task list on the Diesel-style API."
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_local_db:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  path_provider: ^2.1.5
+
+flutter:
+  uses-material-design: true

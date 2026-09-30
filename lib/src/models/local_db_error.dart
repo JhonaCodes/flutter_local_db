@@ -47,6 +47,10 @@ enum LocalDbErrorType {
   /// Platform-specific operation failed
   platform,
 
+  /// The database was written by flutter_local_db 1.x (LMDB 0.9), which
+  /// 2.x (LMDB 1.0) cannot read; migrate it with `LocalDB.importAll`.
+  legacyFormat,
+
   /// Unknown or unexpected error occurred
   unknown,
 }
@@ -67,7 +71,7 @@ enum LocalDbErrorType {
 ///   }
 /// }
 /// ```
-class ErrorLocalDb {
+class ErrorLocalDb implements Exception {
   /// The type of error that occurred
   final LocalDbErrorType type;
 
@@ -229,7 +233,7 @@ class ErrorLocalDb {
   /// ```dart
   /// return Err(ErrorLocalDb.ffiError(
   ///   'Failed to load native library',
-  ///   context: libraryPath,
+  ///   context: 'offline_first_core',
   /// ));
   /// ```
   factory ErrorLocalDb.ffiError(
@@ -270,6 +274,15 @@ class ErrorLocalDb {
       context: context,
       cause: cause,
       stackTrace: stackTrace,
+    );
+  }
+
+  /// Creates an error for a database written by flutter_local_db 1.x.
+  factory ErrorLocalDb.legacyFormat(String message, {String? context}) {
+    return ErrorLocalDb(
+      type: LocalDbErrorType.legacyFormat,
+      message: message,
+      context: context,
     );
   }
 
@@ -318,6 +331,8 @@ class ErrorLocalDb {
         return 'Native library interaction failed. Check that the native library is properly installed.';
       case LocalDbErrorType.platform:
         return 'Platform-specific operation failed. This may be due to permissions or platform limitations.';
+      case LocalDbErrorType.legacyFormat:
+        return 'The database was written by flutter_local_db 1.x. Export it with 1.6 (LocalDB.exportAll) and import it with LocalDB.importAll.';
       case LocalDbErrorType.unknown:
         return 'An unexpected error occurred. Check the cause and stack trace for more details.';
     }

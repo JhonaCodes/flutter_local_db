@@ -25,7 +25,6 @@ class DatabaseCore {
 
   /// Creates a new database instance (Web)
   static Future<LocalDbResult<DatabaseCore, ErrorLocalDb>> create(
-    Object? bindings,
     String path,
   ) async {
     Log.i('Initializing Web Database (IndexedDB): $path');

@@ -1,0 +1,16 @@
+# The rules of .gitignore (pub reads this file instead of it)...
+.dart_tool/
+build/
+pubspec.lock
+.idea/
+*.iml
+.DS_Store
+/.claude/
+/.serena/
+/TASKS/
+
+# ...and what users of the package do not need.
+/.github/
+/benchmark/
+/tool/
+/CLAUDE.md
