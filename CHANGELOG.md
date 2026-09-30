@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0
+
+### Added
+- `LocalDB.exportAll()` exports every record as a portable JSON document
+  (`LocalDbExport`). flutter_local_db 2.0 stores data with LMDB 1.0, which
+  cannot read the files written by 1.x: call `exportAll()` from a 1.x version
+  of your app and keep the result, then import it after upgrading with
+  `LocalDB.importAll(json)`.
+
 ## 1.5.2
 - **Android: builds with AGP 9 and Kotlin 2.2+.** The Android Gradle file no
   longer sets `targetSdk` (removed from library modules in AGP 9) and uses

@@ -169,6 +169,21 @@ Contributions are welcome! The project uses a dual-language architecture:
 
 Please ensure you have both Rust and Flutter development environments set up before contributing.
 
+## Preparing the upgrade to 2.0
+
+flutter_local_db 2.0 moves to LMDB 1.0, which cannot read the files written
+by 1.x. Ship a 1.6 version of your app that exports the data first:
+
+```dart
+final export = await LocalDB.exportAll();
+export.when(
+  ok: (json) => File('${dir.path}/local_db_export.json').writeAsStringSync(json),
+  err: (error) => debugPrint('Export failed: $error'),
+);
+```
+
+After upgrading to 2.0, `LocalDB.importAll(json)` restores the records.
+
 ## License
 
 MIT License - see [LICENSE](https://github.com/JhonaCodes/flutter_local_db/blob/main/LICENSE)
