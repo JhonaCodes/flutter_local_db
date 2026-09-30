@@ -393,4 +393,29 @@ class PathHelper {
       return false;
     }
   }
+
+  /// Renames the files of the database at [databasePath] (`<path>.lmdb`) to
+  /// `<path>.lmdb.1x-backup-<timestamp>` and returns the new location, so that
+  /// a new database can be created there without losing the old files.
+  static Future<LocalDbResult<String, ErrorLocalDb>> moveAside(
+    String databasePath,
+  ) async {
+    final directory = Directory('$databasePath.lmdb');
+    if (!directory.existsSync()) {
+      return Err(ErrorLocalDb.notFound('No database at ${directory.path}'));
+    }
+    final backup =
+        '${directory.path}.1x-backup-${DateTime.now().millisecondsSinceEpoch}';
+    try {
+      await directory.rename(backup);
+      return Ok(backup);
+    } on FileSystemException catch (e) {
+      return Err(
+        ErrorLocalDb.platformError(
+          'Cannot move ${directory.path} aside',
+          cause: e,
+        ),
+      );
+    }
+  }
 }

@@ -27,6 +27,7 @@ import 'models/local_db_result.dart';
 import 'models/local_db_error.dart';
 import 'models/local_db_model.dart';
 import 'utils/local_db_export.dart';
+import 'utils/path_helper.dart';
 
 /// Legacy API compatibility layer
 ///
@@ -49,13 +50,13 @@ class LocalDB {
   /// Private constructor to prevent instantiation
   LocalDB._();
 
-  /// Initialize database with backward compatibility
+  /// Opens the key-value database at the default path of the platform.
   ///
-  /// Parameters:
-  /// - [dbName] - Optional custom database name (defaults to 'flutter_local_db')
+  /// [dbName] is accepted for compatibility and ignored, as in 1.x: the
+  /// database always lives at [PathHelper.getDefaultDatabasePath].
   ///
-  /// This method maintains backward compatibility while using the new
-  /// [LocalDbService] underneath for improved functionality.
+  /// Throws the [ErrorLocalDb] of a failed open; a database written by 1.x has
+  /// the type [LocalDbErrorType.legacyFormat] (see [moveLegacyDatabaseAside]).
   static Future<void> init([String? dbName]) async {
     if (_isInitialized) {
       return;
@@ -70,7 +71,9 @@ class LocalDB {
           _isInitialized = true;
         },
         err: (error) {
-          throw Exception('LocalDB initialization failed: ${error.message}');
+          // A 1.x database has `type == LocalDbErrorType.legacyFormat`: see
+          // [moveLegacyDatabaseAside] and [importAll].
+          throw error;
         },
       );
     } catch (e) {
@@ -204,6 +207,54 @@ class LocalDB {
       ok: (models) => Ok(LocalDbExport.encode(models)),
       err: (error) => Err(error),
     );
+  }
+
+  /// Restores the records of a document written by [exportAll] (for
+  /// example by the 1.6 version of the app), replacing records with the same
+  /// id. Returns how many records were imported.
+  static Future<LocalDbResult<int, ErrorLocalDb>> importAll(String json) async {
+    if (!_isInitialized || _service == null) {
+      return Err(ErrorLocalDb.databaseError('Database not initialized'));
+    }
+    final decoded = LocalDbExport.decode(json);
+    if (decoded.isErr) {
+      return Err(decoded.errOrNull!);
+    }
+    final records = decoded.okOrNull!;
+    for (final record in records) {
+      final stored = await _service!.store(
+        record.id,
+        LocalMethod.put,
+        record.data,
+      );
+      if (stored.isErr) {
+        return Err(stored.errOrNull!);
+      }
+    }
+    return Ok(records.length);
+  }
+
+  /// Moves the files of a 1.x database (which 2.x cannot read, see
+  /// [LocalDbErrorType.legacyFormat]) to a backup directory next to them, so
+  /// that [init] creates a new database. Returns the backup location.
+  ///
+  /// ```dart
+  /// try {
+  ///   await LocalDB.init();
+  /// } on ErrorLocalDb catch (e) {
+  ///   if (e.type != LocalDbErrorType.legacyFormat) rethrow;
+  ///   await LocalDB.moveLegacyDatabaseAside();
+  ///   await LocalDB.init();
+  ///   await LocalDB.importAll(exportSavedByVersion16);
+  /// }
+  /// ```
+  static Future<LocalDbResult<String, ErrorLocalDb>>
+  moveLegacyDatabaseAside() async {
+    final pathResult = await PathHelper.getDefaultDatabasePath();
+    if (pathResult.isErr) {
+      return Err(pathResult.errOrNull!);
+    }
+    return PathHelper.moveAside(pathResult.okOrNull!);
   }
 
   /// Check if database is initialized

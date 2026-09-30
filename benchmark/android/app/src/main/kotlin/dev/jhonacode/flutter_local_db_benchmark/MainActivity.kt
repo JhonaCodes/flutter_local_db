@@ -1,0 +1,5 @@
+package dev.jhonacode.flutter_local_db_benchmark
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

@@ -8,7 +8,14 @@ void main() {
     test('round-trips records with their ids, hashes and data', () {
       final records = [
         LocalDbModel(id: 'user-1', data: {'name': 'Ada', 'age': 36}),
-        LocalDbModel(id: 'ñandú', data: {'nested': {'list': [1, 2, 3]}}),
+        LocalDbModel(
+          id: 'ñandú',
+          data: {
+            'nested': {
+              'list': [1, 2, 3],
+            },
+          },
+        ),
       ];
 
       final decoded = LocalDbExport.decode(LocalDbExport.encode(records));
@@ -23,7 +30,11 @@ void main() {
     });
 
     test('rejects documents of another format or version', () {
-      final wrongFormat = jsonEncode({'format': 'x', 'version': 1, 'records': []});
+      final wrongFormat = jsonEncode({
+        'format': 'x',
+        'version': 1,
+        'records': [],
+      });
       final wrongVersion = jsonEncode({
         'format': LocalDbExport.format,
         'version': 99,

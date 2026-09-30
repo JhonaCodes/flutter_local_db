@@ -1,71 +1,45 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) in this repository.
 
-## Project Overview
+## Project
 
-`flutter_local_db` is a cross-platform local database library for Flutter/Dart. Native platforms (Android, iOS, macOS, Linux, Windows) use **Rust + LMDB via FFI**. Web uses **IndexedDB**. The library exposes a REST-like API (Post/Get/Put/Delete) with Rust-style `Result<T, E>` error handling.
+`flutter_local_db` is an embedded database for Flutter. Native platforms
+(Android, iOS, macOS, Linux, Windows) call the Rust engine
+[offline_first_core](https://github.com/JhonaCodes/offline_first_core) (LMDB
+1.0.2 through natdb) over `dart:ffi`; the web has only the key-value API, on
+IndexedDB.
 
 ## Commands
 
 ```bash
-# Install dependencies
 flutter pub get
-
-# Run unit tests
-flutter test test/flutter_local_db_test.dart
-
-# Run integration tests (requires a device/platform)
-flutter test integration_test/ -d macos    # or: ios, android, linux, windows, chrome
-
-# Lint
-dart analyze
-
-# Format
-dart format lib/ test/
+flutter analyze
+dart format lib test hook example/lib example/integration_test benchmark/lib
+flutter test                                        # host tests, real engine
+(cd example && flutter test integration_test -d macos)  # any device
 ```
 
 ## Architecture
 
-### Two API Layers
+- **Query API** (`lib/src/dsl/`, `lib/src/database/`): `Table<T>` with typed
+  `Column`s builds JSON statements of the engine's wire protocol;
+  `LocalDatabase` runs them, adds transactions, savepoints, `watch` and a
+  write lock that keeps the worker isolate from deadlocking.
+- **Key-value API** (`LocalDB`, `LocalDbService`, `lib/src/core/`): the 1.x
+  API, with conditional imports for native (`core/native/`) and web
+  (`core/web/`).
+- **Native layer** (`lib/src/native/`): `bindings.dart` declares the C ABI
+  with `@Native`, resolved against the code asset of `hook/build.dart`;
+  `NativeWorker` runs every call on one worker isolate.
+- **Native libraries** (`native/<os>/<architecture>/`): prebuilt, from an
+  offline_first_core release. Replace them with `tool/update_native.sh
+  <version>`, never by hand; the hook picks the file of the build target.
 
-1. **`LocalDB`** (`lib/src/local_db.dart`) — Legacy static API. Wraps `LocalDbService` for backward compatibility. Methods use PascalCase: `Post()`, `GetById()`, `Put()`, `Delete()`, `GetAll()`, `ClearData()`.
-2. **`LocalDbService`** (`lib/src/services/local_db_service.dart`) — Modern service API. Created via `LocalDbService.initialize()`. Preferred for new code.
+## Conventions
 
-Both return `LocalDbResult<T, E>` (sealed Ok/Err type) from `lib/src/models/local_db_result.dart`.
-
-### Platform Abstraction (Conditional Imports)
-
-Platform-specific code uses Dart conditional imports (`if (dart.library.js_interop)`). Each abstraction has three files:
-
-| Concern | Factory (entry point) | Native impl | Web impl |
-|---|---|---|---|
-| Database operations | `core/database_core.dart` | `core/native/database_core_impl.dart` | `core/web/database_core_impl.dart` |
-| Initialization | `core/initializer.dart` | `core/native/initializer_impl.dart` | `core/web/initializer_impl.dart` |
-| Path resolution | `utils/path_helper.dart` | `utils/native/path_helper_impl.dart` | `utils/web/path_helper_impl.dart` |
-
-The factory files export platform-specific implementations and should not contain logic themselves.
-
-### FFI Layer (Native only)
-
-- **`core/ffi_functions.dart`** — `FfiFunction` enum mapping Rust function names
-- **`core/ffi_bindings.dart`** — Type-safe function pointer bindings (`LocalDbBindings`)
-- **`core/library_loader.dart`** — Platform-specific native library (.so/.dylib/.dll) loading
-
-The Rust backend crate is `offline_first_core`. Communication between Dart and Rust is JSON-based via `Pointer<Utf8>`.
-
-### Data Model
-
-`LocalDbModel` stores: `id`, `data` (Map<String, dynamic>), `createdAt`, `updatedAt`, `contentHash`.
-
-### Error Handling
-
-`LocalDbResult<T, E>` is a sealed class with `Ok` and `Err` subtypes. Use `when()` for pattern matching or `isOk`/`isErr` for checks. `ErrorLocalDb` has typed variants: initialization, notFound, validation, database, serialization, ffi, platform, unknown.
-
-## Key Conventions
-
-- The library is a **Flutter FFI plugin** — `pubspec.yaml` declares `ffiPlugin: true` for all native platforms
-- Web platform is **not** declared in pubspec flutter plugin section (uses conditional imports only)
-- Dart SDK `^3.10.0`, Flutter `>=3.35.0`
-- Uses `package:logger_rs` for logging (Rust-style `Log.i()`, `Log.e()`, etc.)
-- Current branch `web_local_db` is adding web (IndexedDB) support
+- No top-level functions or variables in `lib/`: `abstract final class` with
+  static members. Entry points (`main` of the hook) are the exception.
+- Everything committed is in English.
+- Tests run against the real engine (the hook bundles the host library); do
+  not mock the native layer.

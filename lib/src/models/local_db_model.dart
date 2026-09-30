@@ -56,16 +56,16 @@ class LocalDbModel {
   /// arrays, strings, numbers, and booleans.
   final Map<String, dynamic> data;
 
-  /// Timestamp when this record was created
+  /// When this model object was created.
   ///
-  /// Automatically set when the model is created. Used for tracking
-  /// when records were first inserted into the database.
+  /// The key-value store does not persist it: a model read from the database
+  /// carries the time of the read. Keep your own timestamps in [data], or use
+  /// a `DateTimeColumn` of the query API.
   final DateTime createdAt;
 
-  /// Timestamp when this record was last updated
+  /// When this model object was last changed.
   ///
-  /// Updated whenever the record is modified. Useful for tracking
-  /// data freshness and implementing synchronization logic.
+  /// Not persisted either; see [createdAt].
   final DateTime updatedAt;
 
   /// Content hash for data integrity verification

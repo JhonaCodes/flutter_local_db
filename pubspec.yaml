@@ -1,61 +1,42 @@
 name: flutter_local_db
-description: "A high-performance cross-platform local database for Dart. Native platforms use Rust+LMDB via FFI, optimized for both Dart APIs and Flutter apps."
-version: 1.6.0
-repository: https://github.com/JhonaCodes/flutter_local_db.git
+description: "Diesel-style local database for Flutter on Rust and LMDB 1.0: typed tables, indexed queries, transactions and streams on Android, iOS, macOS, Linux and Windows."
+version: 2.0.0
+repository: https://github.com/JhonaCodes/flutter_local_db
+issue_tracker: https://github.com/JhonaCodes/flutter_local_db/issues
 
 topics:
-  - nosql
-  - ffi
-  - rust
+  - database
   - storage
+  - offline-first
   - lmdb
+  - rust
+
+# The native platforms get the prebuilt offline_first_core library through
+# the build hook (hook/build.dart); the web gets the IndexedDB key-value API.
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  web:
+  windows:
 
 environment:
   sdk: ^3.10.0
-  flutter: ">=3.35.0"
+  flutter: ">=3.38.0"
 
 dependencies:
-  # FFI for native Rust integration
+  code_assets: ">=1.0.0 <3.0.0"
   ffi: ^2.2.0
-  # Path utilities
-  path: ^1.9.1
-  # Path provider for mobile directories
-  path_provider: ^2.1.5
-  # Beautiful Rust-style logger
+  flutter:
+    sdk: flutter
+  hooks: ">=1.0.0 <3.0.0"
   logger_rs: ^2.1.1
+  path: ^1.9.1
+  path_provider: ^2.1.5
   web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
   lints: ^6.0.0
-
-flutter:
-  plugin:
-    platforms:
-      android:
-        package: com.jhonacode.flutter_local_db
-        pluginClass: FlutterLocalDbPlugin
-        ffiPlugin: true
-        fileName: flutter_local_db.dart
-      ios:
-        pluginClass: FlutterLocalDbPlugin
-        ffiPlugin: true
-        fileName: flutter_local_db.dart
-      linux:
-        pluginClass: FlutterLocalDbPlugin
-        ffiPlugin: true
-        fileName: flutter_local_db.dart
-      macos:
-        pluginClass: FlutterLocalDbPlugin
-        ffiPlugin: true
-        fileName: flutter_local_db.dart
-      windows:
-        pluginClass: FlutterLocalDbPlugin
-        ffiPlugin: true
-        fileName: flutter_local_db.dart
-      web:
-        pluginClass: none
-        fileName: flutter_local_db.dart

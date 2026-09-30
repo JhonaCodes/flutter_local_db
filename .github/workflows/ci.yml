@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Analyze and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Dependencies of the package, the example and the benchmark
+        shell: bash
+        run: |
+          flutter pub get
+          (cd example && flutter pub get)
+          (cd benchmark && flutter pub get)
+      - run: dart format --output=none --set-exit-if-changed lib test hook example/lib example/integration_test benchmark/lib benchmark/integration_test benchmark/test_driver
+      # Analyzes the package together with the example and the benchmark.
+      - run: flutter analyze
+      # The build hook bundles the native library of the runner's platform, so
+      # the host tests exercise the real engine.
+      - run: flutter test
+
+  desktop-integration:
+    name: Example app (${{ matrix.device }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            device: linux
+          - os: macos-latest
+            device: macos
+          - os: windows-latest
+            device: windows
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev xvfb
+      - name: Integration tests on the bundled library
+        working-directory: example
+        shell: bash
+        run: |
+          flutter pub get
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a flutter test integration_test -d linux
+          else
+            flutter test integration_test -d ${{ matrix.device }}
+          fi
+
+  mobile-build:
+    name: Mobile builds (Android, iOS simulator)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build
+        working-directory: example
+        run: |
+          flutter pub get
+          flutter build apk --debug
+          flutter build ios --simulator --debug

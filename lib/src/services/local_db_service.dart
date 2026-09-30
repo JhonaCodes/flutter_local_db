@@ -24,7 +24,6 @@
 import 'package:flutter_local_db/flutter_local_db.dart';
 import 'package:logger_rs/logger_rs.dart';
 
-import '../core/initializer.dart';
 import '../core/database_core.dart';
 
 /// High-level database service for managing local data storage
@@ -62,23 +61,14 @@ class LocalDbService {
     Log.i('Initializing LocalDbService with path: $path');
 
     try {
-      // Initialize environment (Load library/create bindings if Native, do nothing if Web)
-      final initResult = Initializer.init();
-      if (initResult.isErr) {
-        return Err(initResult.errOrNull!);
-      }
-
-      final bindings = initResult.okOrNull;
-
       // Ensure database directory exists (Handled by PathHelper agnostic)
       final dirResult = await PathHelper.ensureDirectoryExists(path);
       if (dirResult.isErr) {
         return Err(dirResult.errOrNull!);
       }
 
-      // Create database core (Agnostic factory)
-      // Note: bindings will be null on Web, which is expected/handled by Web Core.
-      final coreResult = await DatabaseCore.create(bindings, path);
+      // Create database core (native worker or IndexedDB)
+      final coreResult = await DatabaseCore.create(path);
       if (coreResult.isErr) {
         Log.e('Failed to create database core');
         return Err(coreResult.errOrNull!);

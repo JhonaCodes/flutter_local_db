@@ -1,5 +1,54 @@
 # Changelog
 
+## 2.0.0
+
+A Diesel-style query API on a new engine, and Windows support. Migrating from
+1.x needs an export from 1.6: see [MIGRATION.md](MIGRATION.md).
+
+### Added
+- `LocalDatabase`: tables (`Table<T>` with typed columns, primary key,
+  optional auto-increment), single, composite and unique indexes, and
+  Diesel-style statements: `filter`, `orFilter`, `order`, `thenOrderBy`,
+  `limit`, `offset`, `load`, `first`, `find`, `count`, `sum`, `avg`, `min`,
+  `max`, `insert` (`onConflictDoNothing`, `onConflictReplace`, `getResults`),
+  `update().set()`, `delete`, `expectAffectedRows`. Operators `eq`, `ne`,
+  `gt`, `ge`, `lt`, `le`, `eqAny`, `neAll`, `between`, `notBetween`,
+  `isNull`, `isNotNull`, `like`, `ilike`, combined with `&`, `|` and `~`.
+- Transactions: `transaction` (commit on success, rollback on error),
+  `Transaction.savepoint`, `readTransaction` (snapshot), `atomicBatch`. A
+  failed write makes its transaction rollback-only; using the database inside
+  its own transaction fails with `transactionReentrancy`.
+- `watch` (a query's rows after every committed write to its table),
+  `changes`, `explain` (index, order and whether the index alone decides the
+  filter), `info`.
+- `Durability` (`full`, `noMetaSync`, `noSync`) and `LocalDbOptions`.
+- `LocalDbException` with typed `LocalDbErrorCode`s.
+- **Windows** (x64, arm64), **Linux arm64** and the **iOS simulator**.
+- `LocalDB.importAll` restores a `LocalDB.exportAll` document from 1.6;
+  `LocalDB.moveLegacyDatabaseAside` sets a 1.x database aside.
+- A benchmark app (`benchmark/`) against SQLite, drift, Hive CE and Sembast.
+
+### Changed
+- Engine: offline_first_core 0.6.2 on **LMDB 1.0.2** (natdb). LMDB 1.0 cannot
+  read 1.x files: `LocalDB.init` throws `ErrorLocalDb` with type
+  `legacyFormat` and leaves them untouched.
+- The native library is bundled by a build hook (native assets): no
+  CocoaPods, Swift Package Manager, Gradle or CMake setup. Requires Flutter
+  3.38.
+- Every native call runs on a database isolate; the UI isolate never blocks.
+- `LocalDB.init` throws the `ErrorLocalDb` itself instead of wrapping it in
+  an `Exception`; `ErrorLocalDb` implements `Exception`.
+- The database map starts at 64 MiB of address space and grows up to 16 GiB
+  (it was fixed at 1 GiB).
+
+### Fixed
+- Native responses are freed (every call leaked its response string).
+- A Rust panic no longer aborts the app; it fails the call.
+
+### Removed
+- `JsonSerializer` (use `dart:convert`).
+- The platform plugin classes (Kotlin, Swift, C++): they registered nothing.
+
 ## 1.6.0
 
 ### Added

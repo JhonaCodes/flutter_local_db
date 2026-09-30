@@ -1,19 +1,14 @@
 # https://dart.dev/guides/libraries/private-files
-# Created by `dart pub`
 .dart_tool/
-/.idea/
+build/
+pubspec.lock
+.idea/
+*.iml
+.DS_Store
 
-# Test output - check this folder to see DB files created by tests
-.test_output/
-
-# Example databases
-/example_db.lmdb/
-/test_db.lmdb/
-/test_plugin_db.lmdb/
+# Local tooling
 /.claude/
 /.serena/
 
 # Local work roadmap (keel-ui), never committed
 /TASKS/
-.DS_Store
-/build/
