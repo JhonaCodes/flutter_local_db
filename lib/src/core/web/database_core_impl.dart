@@ -117,7 +117,7 @@ class DatabaseCore {
         );
       }.toJS;
 
-      return completer.future;
+      return await completer.future;
     } catch (e, s) {
       return Err(
         ErrorLocalDb.databaseError(
@@ -223,7 +223,7 @@ class DatabaseCore {
         );
       }.toJS;
 
-      return completer.future;
+      return await completer.future;
     } catch (e) {
       return Err(ErrorLocalDb.databaseError('Exception during get', cause: e));
     }
@@ -256,7 +256,7 @@ class DatabaseCore {
         );
       }.toJS;
 
-      return completer.future;
+      return await completer.future;
     } catch (e) {
       return Err(
         ErrorLocalDb.databaseError('Exception during delete', cause: e),
@@ -305,7 +305,7 @@ class DatabaseCore {
         completer.complete(Err(ErrorLocalDb.databaseError('GetAll failed')));
       }.toJS;
 
-      return completer.future;
+      return await completer.future;
     } catch (e) {
       return Err(
         ErrorLocalDb.databaseError('Exception during getAll', cause: e),
@@ -333,7 +333,7 @@ class DatabaseCore {
         completer.complete(Err(ErrorLocalDb.databaseError('Clear failed')));
       }.toJS;
 
-      return completer.future;
+      return await completer.future;
     } catch (e) {
       return Err(
         ErrorLocalDb.databaseError('Exception during clear', cause: e),

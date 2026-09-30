@@ -1,6 +1,25 @@
+// Kotlin comes from the app: AGP 9's built-in Kotlin, or the Kotlin Gradle
+// Plugin that Flutter applies when built-in Kotlin is off. The plugin only
+// needs KGP on the classpath to configure the compiler.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
+    }
+}
+
 plugins {
     id("com.android.library")
-    id("kotlin-android")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+    }
 }
 
 android {
@@ -12,17 +31,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
-
-    sourceSets {
-        getByName("main").java.srcDirs("src/main/kotlin")
-    }
-
+    // Libraries have no targetSdk since AGP 9: the app sets its own.
     defaultConfig {
         minSdk = 21
-        targetSdk = 34
     }
-
 }
