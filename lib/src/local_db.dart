@@ -26,6 +26,7 @@ import 'services/local_db_service.dart';
 import 'models/local_db_result.dart';
 import 'models/local_db_error.dart';
 import 'models/local_db_model.dart';
+import 'utils/local_db_export.dart';
 
 /// Legacy API compatibility layer
 ///
@@ -189,6 +190,20 @@ class LocalDB {
 
     final result = await _service!.clearAll();
     return result.when(ok: (_) => const Ok(true), err: (error) => Err(error));
+  }
+
+  /// Exports every record as a portable JSON document (see
+  /// [LocalDbExport]).
+  ///
+  /// Call it from a 1.x version of the app and keep the result before
+  /// upgrading to flutter_local_db 2.0, which cannot read 1.x files and
+  /// imports the document with `LocalDB.importAll`.
+  static Future<LocalDbResult<String, ErrorLocalDb>> exportAll() async {
+    final records = await GetAll();
+    return records.when(
+      ok: (models) => Ok(LocalDbExport.encode(models)),
+      err: (error) => Err(error),
+    );
   }
 
   /// Check if database is initialized

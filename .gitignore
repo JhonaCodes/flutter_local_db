@@ -12,3 +12,8 @@
 /test_plugin_db.lmdb/
 /.claude/
 /.serena/
+
+# Local work roadmap (keel-ui), never committed
+/TASKS/
+.DS_Store
+/build/
