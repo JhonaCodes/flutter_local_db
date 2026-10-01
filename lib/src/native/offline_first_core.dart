@@ -21,6 +21,13 @@ abstract final class OfflineFirstCore {
     execute: Native.addressOf(Bindings.execute),
     freeString: Native.addressOf(Bindings.freeString),
     close: Native.addressOf(Bindings.close),
+    abiV2: AbiV2Symbols(
+      open: Native.addressOf(Bindings.ldbOpen),
+      execute: Native.addressOf(Bindings.ldbExecute),
+      bufferView: Native.addressOf(Bindings.ldbBufferView),
+      bufferRelease: Native.addressOf(Bindings.ldbBufferRelease),
+      close: Native.addressOf(Bindings.ldbClose),
+    ),
     keyValue: KeyValueSymbols(
       push: Native.addressOf(Bindings.push),
       update: Native.addressOf(Bindings.update),

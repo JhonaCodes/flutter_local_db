@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.6
+
+### Changed
+- Tables and `LocalDB.sync` run on the C ABI v2 of offline_first_core: `u64` handles the library validates, so a handle used after it was closed answers an error instead of undefined behaviour, and requests travel as bytes with a length. The records of `LocalDB` stay on the ABI v1. db_dsl `^0.2.7`.
+
 ## 3.0.5
 
 ### Fixed

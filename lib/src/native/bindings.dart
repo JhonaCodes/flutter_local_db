@@ -77,4 +77,55 @@ abstract final class Bindings {
   /// `clear_all_records(handle)` of the key-value API.
   @Native<Pointer<Utf8> Function(Pointer<Void>)>(symbol: 'clear_all_records')
   external static Pointer<Utf8> clear(Pointer<Void> handle);
+
+  /// `ldb_open(path, path_len, options, options_len, out, response)` of the
+  /// ABI v2: opens `<path>.lmdb`; writes a `u64` handle and a response
+  /// buffer; answers a status.
+  @Native<
+    Int32 Function(
+      Pointer<Uint8>,
+      Size,
+      Pointer<Uint8>,
+      Size,
+      Pointer<Uint64>,
+      Pointer<Uint64>,
+    )
+  >(symbol: 'ldb_open')
+  external static int ldbOpen(
+    Pointer<Uint8> path,
+    int pathLength,
+    Pointer<Uint8> options,
+    int optionsLength,
+    Pointer<Uint64> out,
+    Pointer<Uint64> response,
+  );
+
+  /// `ldb_execute(database, request, request_len, response)` of the ABI v2.
+  @Native<Int32 Function(Uint64, Pointer<Uint8>, Size, Pointer<Uint64>)>(
+    symbol: 'ldb_execute',
+  )
+  external static int ldbExecute(
+    int database,
+    Pointer<Uint8> request,
+    int requestLength,
+    Pointer<Uint64> response,
+  );
+
+  /// `ldb_buffer_view(buffer, data, len)` of the ABI v2.
+  @Native<Int32 Function(Uint64, Pointer<Pointer<Uint8>>, Pointer<Size>)>(
+    symbol: 'ldb_buffer_view',
+  )
+  external static int ldbBufferView(
+    int buffer,
+    Pointer<Pointer<Uint8>> data,
+    Pointer<Size> length,
+  );
+
+  /// `ldb_buffer_release(buffer)` of the ABI v2.
+  @Native<Int32 Function(Uint64)>(symbol: 'ldb_buffer_release')
+  external static int ldbBufferRelease(int buffer);
+
+  /// `ldb_close(database)` of the ABI v2.
+  @Native<Int32 Function(Uint64)>(symbol: 'ldb_close')
+  external static int ldbClose(int database);
 }
