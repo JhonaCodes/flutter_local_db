@@ -15,9 +15,10 @@ IndexedDB.
 ```bash
 flutter pub get
 flutter analyze
-dart format lib test hook example/lib example/integration_test benchmark/lib
+dart format lib test hook example/lib example/integration_test example/test_driver benchmark/lib
 flutter test                                        # host tests, real engine
-(cd example && flutter test integration_test -d macos)  # any device
+(cd example && flutter test integration_test/app_test.dart -d macos)  # any device, one file per run
+(cd example && flutter drive --profile -d macos --driver test_driver/integration_test.dart --target integration_test/aot_bindings_test.dart)  # ahead of time
 ```
 
 ## Architecture

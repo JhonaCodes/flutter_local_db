@@ -69,10 +69,12 @@ jobs:
         shell: bash
         run: |
           flutter pub get
+          # One file per run: a second app launched by the same run loses its
+          # debug connection on desktop.
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a flutter test integration_test -d linux
+            xvfb-run -a flutter test integration_test/app_test.dart -d linux
           else
-            flutter test integration_test -d ${{ matrix.device }}
+            flutter test integration_test/app_test.dart -d ${{ matrix.device }}
           fi
       # Ahead of time, as the app ships: a profile build compiles like a
       # release one.

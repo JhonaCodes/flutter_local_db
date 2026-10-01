@@ -20,8 +20,18 @@ flutter run -d macos   # or ios, android, linux, windows
 not report plugin diagnostics yet).
 
 `integration_test/app_test.dart` runs the tables and the key-value records
-against the library bundled in the app, on any device:
+against the library bundled in the app, on any device (one file per run: a
+second app launched by the same run loses its debug connection on desktop):
 
 ```sh
-flutter test integration_test -d macos
+flutter test integration_test/app_test.dart -d macos
+```
+
+`integration_test/aot_bindings_test.dart` checks that every binding resolves
+in an ahead-of-time build of a program that only takes their addresses;
+run it, and the app, as they ship:
+
+```sh
+flutter drive --profile -d macos --driver test_driver/integration_test.dart --target integration_test/aot_bindings_test.dart
+flutter drive --profile -d macos --driver test_driver/integration_test.dart --target integration_test/app_test.dart
 ```
