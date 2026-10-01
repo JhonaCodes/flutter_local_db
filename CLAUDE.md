@@ -22,16 +22,23 @@ flutter test                                        # host tests, real engine
 
 ## Architecture
 
-- **Query API** (`lib/src/dsl/`, `lib/src/database/`): `Table<T>` with typed
-  `Column`s builds JSON statements of the engine's wire protocol;
-  `LocalDatabase` runs them, adds transactions, savepoints, `watch` and a
-  write lock that keeps the worker isolate from deadlocking.
-- **Key-value API** (`LocalDB`, `LocalDbService`, `lib/src/core/`): the 1.x
-  API, with conditional imports for native (`core/native/`) and web
-  (`core/web/`).
+- **One entry point, `LocalDB`** (`lib/src/local_db.dart`): `init` opens the
+  tables (a db_dsl `Database` on the bundled engine) and the key-value
+  records (`LocalDbService` → `lib/src/core/`, not exported) in one file.
+  Records are the 1.x API, with conditional imports for native
+  (`core/native/`) and web (`core/web/`, IndexedDB).
+- **Query API**: from [db_dsl](../db_dsl), re-exported. A model carries its
+  table (`static final table = DbTable<T>('name', key: ..., fromJson:
+  T.fromJson)`); tables define themselves on the database of `LocalDB.init`
+  on first use (no list); queries run when awaited, on the database of the
+  table or the transaction around them. Typed fields (`t.done`) are an
+  `extension <T>Fields on DbTable<T>` written and checked by the
+  db_dsl_lints analyzer plugin — check it with `dart analyze`, since
+  `flutter analyze` does not report plugin diagnostics.
 - **Native layer** (`lib/src/native/`): `bindings.dart` declares the C ABI
   with `@Native`, resolved against the code asset of `hook/build.dart`;
-  `NativeWorker` runs every call on one worker isolate.
+  db_dsl's `NativeWorker` runs every call on one worker isolate, which stops
+  when the last database closes.
 - **Native libraries** (`native/<os>/<architecture>/`): prebuilt, from an
   offline_first_core release. Replace them with `tool/update_native.sh
   <version>`, never by hand; the hook picks the file of the build target.

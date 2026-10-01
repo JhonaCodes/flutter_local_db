@@ -8,8 +8,8 @@ import 'package:sembast/sembast_io.dart' as sembast;
 import 'package:sqlite3/sqlite3.dart' as sql;
 
 /// A database under benchmark. Every engine stores the same rows and answers
-/// the same operations; see `Workload`.
-abstract interface class Engine {
+/// the same operations; see `Benchmark`.
+abstract interface class BenchmarkEngine {
   /// Name shown in the results.
   String get name;
 
@@ -45,57 +45,42 @@ abstract interface class Engine {
   Future<void> close();
 }
 
-/// A row of the `users` table of flutter_local_db.
+/// A row of the `users` table of flutter_local_db: the benchmark keeps rows
+/// as plain JSON, and its serializer is `json`, passed as `toJson`.
 final class UserRow {
   /// Wraps the stored JSON.
   const UserRow(this.json);
 
   /// The stored JSON.
-  final Map<String, dynamic> json;
+  final Map<String, Object?> json;
 }
 
-/// The `users` table, with the index the query and the count use.
-final class UsersTable extends Table<UserRow> {
-  /// Creates the table definition.
-  UsersTable() : super('users');
-
-  /// Primary key.
-  late final id = integer('id');
-
-  /// City.
-  late final city = text('city');
-
-  /// Age.
-  late final age = integer('age');
-
-  @override
-  Column<Object> get primaryKey => id;
-
-  @override
-  List<Index> get indexes => [
-    Index('by_city_age', [city, age]),
-  ];
-
-  @override
-  UserRow fromJson(Map<String, dynamic> json) => UserRow(json);
-
-  @override
-  Map<String, dynamic> toJson(UserRow row) => row.json;
-}
-
-/// flutter_local_db 2.0 through its Diesel-style API.
-final class LocalDbEngine implements Engine {
+/// flutter_local_db 3.0 through `LocalDB`, as an app uses it: one `init`,
+/// then awaited queries.
+final class LocalDbEngine implements BenchmarkEngine {
   /// Opens with [mode].
   LocalDbEngine(this.mode);
 
   /// Durability of the commits.
   final Durability mode;
 
-  final UsersTable _users = UsersTable();
-  late LocalDatabase _db;
+  /// The `users` table, with the index the query and the count use.
+  final DbTable<UserRow> _users = DbTable<UserRow>(
+    'users',
+    key: 'id',
+    fromJson: UserRow.new,
+    toJson: (row) => row.json,
+    indexes: [
+      Index(['city', 'age']),
+    ],
+  );
+
+  late final Field<int> _id = _users.field<int>('id');
+  late final Field<String> _city = _users.field<String>('city');
+  late final Field<int> _age = _users.field<int>('age');
 
   @override
-  String get name => 'flutter_local_db 2.0 (${mode.wire})';
+  String get name => 'flutter_local_db 3.0 (${mode.wire})';
 
   @override
   String get durability => switch (mode) {
@@ -109,51 +94,53 @@ final class LocalDbEngine implements Engine {
 
   @override
   Future<void> open(String directory) async {
-    _db = await LocalDatabase.open(
-      path: '$directory/localdb',
-      tables: [_users],
-      options: LocalDbOptions(durability: mode),
+    _ok(
+      await LocalDB.init(
+        path: '$directory/localdb',
+        tables: [_users],
+        options: DbOptions(durability: mode),
+      ),
     );
   }
 
   @override
-  Future<void> insertBatch(List<Map<String, Object?>> rows) =>
-      _users.insert([for (final row in rows) UserRow(row)]).execute(_db);
+  Future<void> insertBatch(List<Map<String, Object?>> rows) async =>
+      _ok(await _users.insert([for (final row in rows) UserRow(row)]));
 
   @override
-  Future<void> insertOne(Map<String, Object?> row) =>
-      _users.insert([UserRow(row)]).execute(_db);
+  Future<void> insertOne(Map<String, Object?> row) async =>
+      _ok(await _users.insert([UserRow(row)]));
 
   @override
   Future<Map<String, Object?>?> find(int id) async =>
-      (await _users.find(id).first(_db))?.json;
+      _ok(await _users.find(id))?.json;
 
   @override
-  Future<int> query(String city, int minAge, int limit) async =>
-      (await _users
-              .filter(_users.city.eq(city) & _users.age.gt(minAge))
-              .limit(limit)
-              .load(_db))
-          .length;
+  Future<int> query(String city, int minAge, int limit) async => _ok(
+    await _users.filter(_city.eq(city).and(_age.gt(minAge))).limit(limit),
+  ).length;
 
   @override
-  Future<int> count(String city) =>
-      _users.filter(_users.city.eq(city)).count(_db);
+  Future<int> count(String city) async =>
+      _ok(await _users.filter(_city.eq(city)).count());
 
   @override
-  Future<void> updateAge(int id, int age) => _users
-      .update()
-      .filter(_users.id.eq(id))
-      .set(_users.age, age)
-      .execute(_db);
+  Future<void> updateAge(int id, int age) async =>
+      _ok(await _users.update().filter(_id.eq(id)).set(_age, age));
 
   @override
-  Future<void> close() => _db.close();
+  Future<void> close() async => _ok(await LocalDB.close());
+
+  /// The value of [result]; in a benchmark an error is a failed run.
+  static T _ok<T>(Result<T, DbError> result) => result.when(
+    ok: (value) => value,
+    err: (error) => throw StateError('flutter_local_db: $error'),
+  );
 }
 
 /// SQLite through `package:sqlite3`, with prepared statements and an index on
 /// `(city, age)`.
-final class SqliteEngine implements Engine {
+final class SqliteEngine implements BenchmarkEngine {
   /// With [durable], every commit is flushed (`synchronous=FULL`, and
   /// `fullfsync` on Apple); otherwise flushing is left to the OS
   /// (`synchronous=OFF`).
@@ -255,7 +242,7 @@ final class SqliteEngine implements Engine {
 
 /// Hive CE: an in-memory index of keys over an append-only file. Queries scan
 /// the values, since Hive has no secondary indexes.
-final class HiveEngine implements Engine {
+final class HiveEngine implements BenchmarkEngine {
   late Box<Map> _box;
 
   @override
@@ -307,7 +294,7 @@ final class HiveEngine implements Engine {
 }
 
 /// Sembast: every record in memory, persisted to an append-only file.
-final class SembastEngine implements Engine {
+final class SembastEngine implements BenchmarkEngine {
   late sembast.Database _db;
   final sembast.StoreRef<int, Map<String, Object?>> _store = sembast
       .intMapStoreFactory
@@ -380,7 +367,7 @@ final class _DriftDatabase extends drift.GeneratedDatabase {
 
 /// drift on SQLite in a background isolate (`createInBackground`), durable
 /// like [SqliteEngine] with `durable: true`.
-final class DriftEngine implements Engine {
+final class DriftEngine implements BenchmarkEngine {
   late _DriftDatabase _db;
 
   @override

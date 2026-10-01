@@ -40,22 +40,21 @@ class LocalDbService {
   }
 
   /// Initializes the database service with default settings
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>>
-  initialize() async {
+  static Future<Result<LocalDbService, ErrorLocalDb>> initialize() async {
     Log.i('Initializing LocalDbService with default settings');
 
     // Get default database path (Platform agnostic)
     final pathResult = await PathHelper.getDefaultDatabasePath();
     if (pathResult.isErr) {
-      return Err(pathResult.errOrNull!);
+      return Err(pathResult.errorOrNull!);
     }
 
-    final dbPath = pathResult.okOrNull!;
+    final dbPath = pathResult.data;
     return initializeWithPath(dbPath);
   }
 
   /// Initializes the database service with a custom path
-  static Future<LocalDbResult<LocalDbService, ErrorLocalDb>> initializeWithPath(
+  static Future<Result<LocalDbService, ErrorLocalDb>> initializeWithPath(
     String path,
   ) async {
     Log.i('Initializing LocalDbService with path: $path');
@@ -64,17 +63,17 @@ class LocalDbService {
       // Ensure database directory exists (Handled by PathHelper agnostic)
       final dirResult = await PathHelper.ensureDirectoryExists(path);
       if (dirResult.isErr) {
-        return Err(dirResult.errOrNull!);
+        return Err(dirResult.errorOrNull!);
       }
 
       // Create database core (native worker or IndexedDB)
       final coreResult = await DatabaseCore.create(path);
       if (coreResult.isErr) {
         Log.e('Failed to create database core');
-        return Err(coreResult.errOrNull!);
+        return Err(coreResult.errorOrNull!);
       }
 
-      final core = coreResult.okOrNull!;
+      final core = coreResult.data;
       final service = LocalDbService._(core);
 
       Log.i('LocalDbService initialized successfully');
@@ -93,7 +92,7 @@ class LocalDbService {
   }
 
   /// Stores data with the specified key
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> store(
+  Future<Result<LocalDbModel, ErrorLocalDb>> store(
     String key,
     LocalMethod method,
     Map<String, dynamic> data,
@@ -109,7 +108,7 @@ class LocalDbService {
   }
 
   /// Retrieves data by key
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> retrieve(String key) async {
+  Future<Result<LocalDbModel, ErrorLocalDb>> retrieve(String key) async {
     _ensureInitialized();
     Log.d('Retrieving data for key: $key');
 
@@ -117,7 +116,7 @@ class LocalDbService {
   }
 
   /// Updates existing data with new values
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> update(
+  Future<Result<LocalDbModel, ErrorLocalDb>> update(
     String key,
     Map<String, dynamic> updates,
   ) async {
@@ -131,22 +130,22 @@ class LocalDbService {
 
     if (existingResult.isOk) {
       // Merge with existing data
-      final existingData = existingResult.okOrNull!.data;
+      final existingData = existingResult.data.data;
       finalData = Map<String, dynamic>.from(existingData);
       finalData.addAll(updates);
-    } else if (existingResult.errOrNull!.type == LocalDbErrorType.notFound) {
+    } else if (existingResult.errorOrNull!.type == LocalDbErrorType.notFound) {
       // Create new record with update data
       finalData = updates;
     } else {
       // Return the error from retrieve operation
-      return Err(existingResult.errOrNull!);
+      return Err(existingResult.errorOrNull!);
     }
 
     return store(key, LocalMethod.update, finalData);
   }
 
   /// Removes a record by key
-  Future<LocalDbResult<void, ErrorLocalDb>> remove(String key) async {
+  Future<Result<void, ErrorLocalDb>> remove(String key) async {
     _ensureInitialized();
     Log.d(' Removing data for key: $key');
 
@@ -154,8 +153,7 @@ class LocalDbService {
   }
 
   /// Retrieves all data from the database
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
-  listAll() async {
+  Future<Result<Map<String, LocalDbModel>, ErrorLocalDb>> listAll() async {
     _ensureInitialized();
     Log.d(' Listing all data');
 
@@ -163,7 +161,7 @@ class LocalDbService {
   }
 
   /// Clears all data from the database
-  Future<LocalDbResult<void, ErrorLocalDb>> clearAll() async {
+  Future<Result<void, ErrorLocalDb>> clearAll() async {
     _ensureInitialized();
     Log.w(' Clearing all database data');
 
@@ -171,17 +169,12 @@ class LocalDbService {
   }
 
   /// Performs multiple store operations in sequence
-  Future<
-    LocalDbResult<
-      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
-      ErrorLocalDb
-    >
-  >
+  Future<Result<Map<String, Result<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
   storeMultiple(Map<String, Map<String, dynamic>> entries) async {
     _ensureInitialized();
     Log.d(' Storing ${entries.length} entries in batch');
 
-    final results = <String, LocalDbResult<LocalDbModel, ErrorLocalDb>>{};
+    final results = <String, Result<LocalDbModel, ErrorLocalDb>>{};
 
     for (final entry in entries.entries) {
       final result = await store(entry.key, LocalMethod.post, entry.value);
@@ -193,17 +186,12 @@ class LocalDbService {
   }
 
   /// Performs multiple retrieve operations in sequence
-  Future<
-    LocalDbResult<
-      Map<String, LocalDbResult<LocalDbModel, ErrorLocalDb>>,
-      ErrorLocalDb
-    >
-  >
+  Future<Result<Map<String, Result<LocalDbModel, ErrorLocalDb>>, ErrorLocalDb>>
   retrieveMultiple(List<String> keys) async {
     _ensureInitialized();
     Log.d(' Retrieving ${keys.length} entries in batch');
 
-    final results = <String, LocalDbResult<LocalDbModel, ErrorLocalDb>>{};
+    final results = <String, Result<LocalDbModel, ErrorLocalDb>>{};
 
     for (final key in keys) {
       final result = await retrieve(key);

@@ -8,3 +8,8 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+
+# Checks the tables against their models and writes their typed fields
+# (see lib/tasks.dart).
+plugins:
+  db_dsl_lints: ^0.1.0

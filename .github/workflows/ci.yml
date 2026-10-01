@@ -30,6 +30,12 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test hook example/lib example/integration_test benchmark/lib benchmark/integration_test benchmark/test_driver
       # Analyzes the package together with the example and the benchmark.
       - run: flutter analyze
+      # The example enables the db_dsl_lints plugin, which checks its
+      # TaskFields against Task; `flutter analyze` does not report plugin
+      # diagnostics, `dart analyze` does.
+      - name: Plugin diagnostics of the example
+        working-directory: example
+        run: dart analyze --fatal-infos
       # The build hook bundles the native library of the runner's platform, so
       # the host tests exercise the real engine.
       - run: flutter test

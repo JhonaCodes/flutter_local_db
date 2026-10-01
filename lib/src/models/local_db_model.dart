@@ -59,8 +59,8 @@ class LocalDbModel {
   /// When this model object was created.
   ///
   /// The key-value store does not persist it: a model read from the database
-  /// carries the time of the read. Keep your own timestamps in [data], or use
-  /// a `DateTimeColumn` of the query API.
+  /// carries the time of the read. Keep your own timestamps in [data], or store
+  /// the model in a table of the query API.
   final DateTime createdAt;
 
   /// When this model object was last changed.

@@ -20,7 +20,7 @@ void main() {
 
       final decoded = LocalDbExport.decode(LocalDbExport.encode(records));
 
-      final models = decoded.unwrapOr(const []);
+      final models = decoded.getOrDefault(const []);
       expect(models, hasLength(2));
       for (var i = 0; i < records.length; i++) {
         expect(models[i].id, records[i].id);
