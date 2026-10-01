@@ -419,7 +419,7 @@ key-value records (1.x API)          db_dsl: builders → JSON requests (protoco
   │                                   │
   └──────────────┬────────────────────┘
                  ▼
-   db_dsl's worker isolate            one per process; every call runs here,
+   db_dsl's worker isolate            one per isolate that uses it; every call runs here,
                  │                    never on the UI isolate
                  ▼  dart:ffi (@Native, resolved against the bundled library)
    offline_first_core (Rust)          planner, indexes, transactions
