@@ -334,6 +334,55 @@ StreamBuilder(
 `watch` emits the rows at once and again after every committed write to the
 table.
 
+## Offline-first sync
+
+Declare the remote on the table, and every write records its change in the
+same commit as the row: a crash, a rolled back transaction or a full disk
+can never keep the row and lose its pending change. Your code talks to the
+server; `LocalDB.sync` knows what is pending, what is being sent and what
+the server confirmed:
+
+```dart
+static final table = DbTable<Note>('notes', key: 'id', fromJson: Note.fromJson, syncWith: 'primary');
+
+await Note.table.insert([draft]);           // the change is recorded, same commit
+
+// Push: lease a batch, send it, record exactly what the server stored.
+if (await LocalDB.sync.claim('primary') case Ok(data: final batch) when !batch.isEmpty) {
+  final versions = await api.push(batch.envelopes);   // your HTTP: a version per envelope
+  await LocalDB.sync.applyPushResult('primary', PushResult(
+    leaseId: batch.leaseId,
+    acknowledged: [
+      for (final (i, envelope) in batch.envelopes.indexed)
+        SyncAcknowledgement.of(envelope, versions[i]),
+    ],
+  ));
+}
+
+// Pull: a page and its checkpoint are stored together, or not at all.
+if (await LocalDB.sync.status('primary') case Ok(data: final status)) {
+  await LocalDB.sync.applyRemote('primary', await api.pull(after: status.checkpoint));
+}
+```
+
+- An acknowledgement settles one mutation and revision: the ACK of
+  revision 7 never confirms revision 8 written while 7 was being sent.
+- Every retry sends the same envelope (`mutationId`, bytes, `baseVersion`),
+  so the server deduplicates by `mutationId`.
+- Server changes never come back as local changes; over a pending local
+  change they become a conflict (`LocalDB.sync.conflicts`), resolved with
+  `acceptRemote`, `keepLocal` or `merged`, only if the row did not change
+  since.
+- A deleted row keeps a tombstone until the server acknowledged the
+  deletion; recreating its key meanwhile answers `tombstonePending`.
+- `LocalDB.sync.stateOf(Note.table, id)` answers `pending`, `synced`,
+  `conflict`, `blocked` or `unknown`, with the revisions.
+
+The rules and every operation are in db_dsl's
+[PROTOCOL.md](https://github.com/JhonaCodes/db_dsl/blob/main/PROTOCOL.md)
+("Sync"); `MemoryEngine` follows them too, for tests. The web has no tables,
+so `LocalDB.sync` answers `unsupportedPlatform` there.
+
 ## Indexes and `explain`
 
 The planner looks rows up by primary key, or picks the index with the most
@@ -543,8 +592,6 @@ Both are in [MIGRATION.md](MIGRATION.md).
 Not in 3.0 yet, planned for later 3.x versions (none of them breaks the 3.0
 API):
 
-- Offline-first sync: a change log written in the same commit as each row,
-  acknowledged by revision, with tombstones and conflict policies.
 - A binary wire format and handles for the C ABI (the protocol is versioned,
   so the public API stays).
 - Tables on the web.

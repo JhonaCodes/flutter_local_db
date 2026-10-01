@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.0.4
+
+### Added
+- Offline-first sync: `DbTable(..., syncWith: 'primary')` records every
+  write of the table as a change in the same commit as the row, and
+  `LocalDB.sync` claims leased batches, records the server's answers by
+  mutation and revision, applies remote pages with their checkpoint
+  atomically, and keeps and resolves conflicts (db_dsl 0.2.4, see its
+  PROTOCOL.md, "Sync"). On the web it answers `unsupportedPlatform`.
+
+### Changed
+- Native libraries of offline_first_core 0.7.5 and db_dsl `^0.2.4`.
+
 ## 3.0.3
 
 ### Changed

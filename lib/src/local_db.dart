@@ -10,6 +10,8 @@ import 'services/local_db_service.dart';
 import 'utils/local_db_export.dart';
 import 'utils/path_helper.dart';
 
+part 'local_db_sync.dart';
+
 /// The database of the app: key-value records and typed tables, in one file.
 ///
 /// Key-value records work as in 1.x, without declaring anything:
@@ -117,6 +119,10 @@ abstract final class LocalDB {
   static Future<Result<List<int>, DbError>> atomicBatch(
     List<WriteQuery> writes,
   ) => _withDatabase((database) => database.atomicBatch(writes));
+
+  /// The offline-first sync of the tables declared with `syncWith` (see
+  /// [LocalDbSync]).
+  static const LocalDbSync sync = LocalDbSync._();
 
   /// Facts about the database and its engine.
   static Future<Result<EngineInfo, DbError>> info() =>
