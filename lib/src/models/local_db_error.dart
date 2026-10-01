@@ -63,7 +63,7 @@ enum LocalDbErrorType {
 /// Example:
 /// ```dart
 /// if (result.isErr) {
-///   final error = result.errOrNull!;
+///   final error = result.errorOrNull!;
 ///   print('Error type: ${error.type}');
 ///   print('Message: ${error.message}');
 ///   if (error.context != null) {
