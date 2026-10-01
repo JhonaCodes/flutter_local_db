@@ -254,6 +254,11 @@ final ana = await users.find(1); // Ok(null) when missing
 final average = await users.filter(city.eq('Lima')).avg(age);
 ```
 
+Many-to-many relations go through a bridge table: `Relation<User, Skill>`
+with `attach`, `detach`, `targetsOf` and `sourcesOf`, which read only the
+neighbours of a row (see db_dsl's
+[README](https://pub.dev/packages/db_dsl#many-to-many)).
+
 Comparisons follow SQL: a value only compares with values of its kind, and
 `NULL` or a missing field matches no comparison (use `isNull()`). Without
 `order`, the order of the rows is unspecified.

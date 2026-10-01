@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.3
+
+### Changed
+- Native libraries of offline_first_core 0.7.4: an `eqAny` on the primary
+  key or on the leading field of an index reads only the keys it names, so
+  `belongingTo` and `Relation` read only the neighbours of a row.
+- db_dsl `^0.2.3`: `Relation`, a many-to-many through a bridge table.
+- README: every isolate that uses the database gets a worker isolate of its
+  own (it said one per process).
+
 ## 3.0.2
 
 ### Fixed
