@@ -1,6 +1,6 @@
 name: flutter_local_db
 description: "Local database for Flutter on Rust and LMDB 1.0: tables from your own models, Diesel-style queries, joins, transactions and streams, plus simple key-value records."
-version: 3.0.1
+version: 3.0.2
 repository: https://github.com/JhonaCodes/flutter_local_db
 issue_tracker: https://github.com/JhonaCodes/flutter_local_db/issues
 

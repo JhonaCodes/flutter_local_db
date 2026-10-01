@@ -49,6 +49,28 @@ void main() {
       expect(value(await LocalDB.GetAll()), isEmpty);
     });
 
+    test('a key with a NUL byte is rejected, never truncated', () async {
+      value(await LocalDB.init(path: at('app')));
+      const key = 'a\u0000b';
+
+      // The native lookups take the key as a C string, which ends at the
+      // first NUL: `a\u0000b` would silently read and delete `a`.
+      expect(
+        errorType(await LocalDB.Post(key, {'n': 1})),
+        LocalDbErrorType.validation,
+      );
+      expect(
+        errorType(await LocalDB.GetById(key)),
+        LocalDbErrorType.validation,
+      );
+      expect(
+        errorType(await LocalDB.Put(key, {'n': 2})),
+        LocalDbErrorType.validation,
+      );
+      expect(errorType(await LocalDB.Delete(key)), LocalDbErrorType.validation);
+      expect(value(await LocalDB.GetAll()), isEmpty, reason: 'nothing written');
+    });
+
     test('exported by 1.6 are imported', () async {
       value(await LocalDB.init(path: at('app')));
       final export = LocalDbExport.encode([
@@ -238,6 +260,10 @@ T value<T, E>(Result<T, E> result) =>
 /// The code of an `Err`; fails the test on an `Ok`.
 DbErrorCode code<T>(Result<T, DbError> result) =>
     result.when(ok: (data) => fail('Ok: $data'), err: (error) => error.code);
+
+/// The type of a key-value `Err`; fails the test on an `Ok`.
+LocalDbErrorType errorType<T>(Result<T, ErrorLocalDb> result) =>
+    result.when(ok: (data) => fail('Ok: $data'), err: (error) => error.type);
 
 /// A user, as an app models it.
 final class User {

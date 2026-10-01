@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.0.2
+
+### Fixed
+- A record key with a NUL character is rejected (`validation`) by `Post`,
+  `Put`, `GetById` and `Delete`. Before, `Post` stored it while the native
+  lookups cut it at the NUL: `GetById('a\u0000b')` read the record `a`, and
+  `Delete('a\u0000b')` deleted it.
+- The key rule is the same on every platform: 1 to 511 bytes of UTF-8. The
+  web counted characters, so it accepted keys of up to three times as many
+  bytes as the native stores.
+- `GetAll` (and `exportAll`) no longer leave out a stored record they cannot
+  read: they answer an `Err` naming it (offline_first_core 0.7.2).
+
+### Changed
+- Native libraries of offline_first_core 0.7.2.
+
 ## 3.0.1
 
 Documentation and CI; no change in behaviour.

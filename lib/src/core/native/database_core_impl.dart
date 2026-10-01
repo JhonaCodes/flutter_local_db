@@ -6,6 +6,7 @@ import 'package:logger_rs/logger_rs.dart';
 import 'package:result_controller/result_controller.dart';
 
 import '../../models/local_db_error.dart';
+import '../local_db_keys.dart';
 import '../../models/local_db_model.dart';
 import '../../native/offline_first_core.dart';
 
@@ -90,24 +91,12 @@ class DatabaseCore {
     };
   }
 
-  Result<void, ErrorLocalDb> _validate(String key) {
-    if (key.isEmpty || utf8.encode(key).length > 511) {
-      return Err(
-        ErrorLocalDb.validationError(
-          'Keys must be 1 to 511 bytes long',
-          context: key,
-        ),
-      );
-    }
-    return Ok(null);
-  }
-
   Future<Result<LocalDbModel, ErrorLocalDb>> _write(
     KeyValueCall function,
     String key,
     Map<String, dynamic> data,
   ) async {
-    final validation = _validate(key);
+    final validation = LocalDbKeys.validate(key);
     if (validation.isErr) {
       return Err(validation.errorOrNull!);
     }
@@ -144,7 +133,7 @@ class DatabaseCore {
 
   /// The record [key]; fails with `notFound` when it does not exist.
   Future<Result<LocalDbModel, ErrorLocalDb>> get(String key) async {
-    final validation = _validate(key);
+    final validation = LocalDbKeys.validate(key);
     if (validation.isErr) {
       return Err(validation.errorOrNull!);
     }
@@ -173,7 +162,7 @@ class DatabaseCore {
 
   /// Deletes the record [key]; succeeds when it did not exist.
   Future<Result<void, ErrorLocalDb>> delete(String key) async {
-    final validation = _validate(key);
+    final validation = LocalDbKeys.validate(key);
     if (validation.isErr) {
       return Err(validation.errorOrNull!);
     }

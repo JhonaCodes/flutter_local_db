@@ -10,11 +10,11 @@ import 'package:web/web.dart' as web;
 import 'package:result_controller/result_controller.dart';
 import '../../models/local_db_error.dart';
 import '../../models/local_db_model.dart';
+import '../local_db_keys.dart';
 import 'package:logger_rs/logger_rs.dart';
 
 /// Core database operations engine (Web IndexedDB)
 class DatabaseCore {
-  static const int _maxKeyLength = 511;
   static const int _maxValueSize = 10 * 1024 * 1024; // 10MB
 
   final web.IDBDatabase _db;
@@ -178,7 +178,7 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    final keyValidation = _validateKey(key);
+    final keyValidation = LocalDbKeys.validate(key);
     if (keyValidation.isErr) {
       return Err(keyValidation.errorOrNull!);
     }
@@ -231,7 +231,7 @@ class DatabaseCore {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    final keyValidation = _validateKey(key);
+    final keyValidation = LocalDbKeys.validate(key);
     if (keyValidation.isErr) {
       return Err(keyValidation.errorOrNull!);
     }
@@ -373,33 +373,11 @@ class DatabaseCore {
     );
   }
 
-  Result<void, ErrorLocalDb> _validateKey(String key) {
-    if (key.isEmpty) {
-      return Err(
-        ErrorLocalDb.validationError(
-          'Key cannot be empty',
-          context: 'key_validation',
-        ),
-      );
-    }
-
-    if (key.length > _maxKeyLength) {
-      return Err(
-        ErrorLocalDb.validationError(
-          'Key exceeds maximum length ($_maxKeyLength bytes)',
-          context: 'key: $key',
-        ),
-      );
-    }
-
-    return Ok(null);
-  }
-
   Result<void, ErrorLocalDb> _validateKeyAndData(
     String key,
     Map<String, dynamic> data,
   ) {
-    final keyValidation = _validateKey(key);
+    final keyValidation = LocalDbKeys.validate(key);
     if (keyValidation.isErr) {
       return keyValidation;
     }

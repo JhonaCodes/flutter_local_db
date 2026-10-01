@@ -102,6 +102,15 @@ await LocalDB.Delete('settings');
 final all = await LocalDB.GetAll();
 ```
 
+- **A key is 1 to 511 bytes of UTF-8, without a NUL character**, on every
+  platform; anything else answers a `validation` error before touching the
+  database. (The native lookups take the key as a C string: a NUL would cut
+  it short and reach another record.)
+- **`GetAll` never leaves a record out.** A stored record that cannot be
+  read makes it answer an `Err` naming that record, instead of a shorter
+  list that looks complete; delete that key to recover. `exportAll` behaves
+  the same.
+
 ## Tables from your models
 
 ```dart
