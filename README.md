@@ -400,6 +400,70 @@ switch (await users.insert([ana])) {
 `mapFull`, `legacyFormat`, `notOpen`, `tableNotReady` and the rest listed in
 the API docs.
 
+## How it works
+
+```
+your code
+  │  LocalDB.Post / GetById …        await users.filter(…)
+  ▼                                   ▼
+key-value records (1.x API)          db_dsl: builders → JSON requests (protocol v1)
+  │                                   │
+  └──────────────┬────────────────────┘
+                 ▼
+   db_dsl's worker isolate            one per process; every call runs here,
+                 │                    never on the UI isolate
+                 ▼  dart:ffi (@Native, resolved against the bundled library)
+   offline_first_core (Rust)          planner, indexes, transactions
+                 │
+                 ▼
+   LMDB 1.0.2 (natdb)                 one file: <path>.lmdb
+     main               the key-value records
+     t:<table>          the rows of each table, by primary key
+     i:<table>:<index>  each secondary index
+```
+
+- **One file, two APIs.** `LocalDB.init` opens the tables (a db_dsl
+  `Database` on the native engine) and then the key-value records, on the
+  same `<path>.lmdb`; they live in separate LMDB databases, so they never
+  collide.
+- **The native library ships with the app.** `hook/build.dart` picks the
+  prebuilt offline_first_core of the target (`native/<os>/<architecture>/`)
+  and declares it as a code asset; Flutter bundles it and the `@Native`
+  bindings resolve against it. Nothing is loaded by path.
+- **Queries are planned in Rust.** A filter, an order or a count is one
+  request; the engine looks rows up by key or through the best index and
+  returns only the result. `explain` shows the choice.
+- **Everything is a `Result`.** Native errors cross the FFI as JSON and
+  become a typed `DbError`; nothing throws for an outcome.
+- **On the web**, the key-value records use IndexedDB; tables need the
+  native engine and are not available there.
+
+## Using it well
+
+- **Call `LocalDB.init()` once, before `runApp`, and keep it open.** Tables
+  define themselves on it the first time they are used.
+- **Let the analyzer plugin write the typed fields**, and run `dart analyze`
+  in CI: `flutter analyze` does not show plugin diagnostics yet.
+- **Use a table once before its first transaction** (a screen usually
+  watches it first), or list it in `LocalDB.init(tables: [...])`: a first
+  use inside a transaction answers `tableNotReady`.
+- **Group writes** in `LocalDB.transaction` or `LocalDB.atomicBatch`: a
+  durable commit flushes the disk (milliseconds on Apple hardware).
+- **Index what you filter and order by**, and check it with `explain()`.
+- **Write `order` whenever order matters**; without it the order is
+  unspecified.
+- **Store dates in UTC** (`toUtc()`), or as numbers, to sort or range over
+  them.
+- **Show a `watch` stream** instead of reloading after each write: it emits
+  again after every committed write to its table.
+- **Handle `Err` by `DbError` kind and `error.code`** (a `switch` covers
+  them all), never by message.
+- **Do not store secrets** here: the file is readable on a rooted or
+  jailbroken device and in a desktop user directory. Use the platform
+  keychain.
+- **Test without a device** on the host (`flutter test` bundles the host
+  library), or on db_dsl's `MemoryEngine`.
+
 ## Platforms
 
 | Platform | Architectures | Minimum |
@@ -462,7 +526,8 @@ Both are in [MIGRATION.md](MIGRATION.md).
 
 ## Roadmap
 
-Not in 3.0, planned for later versions:
+Not in 3.0 yet, planned for later 3.x versions (none of them breaks the 3.0
+API):
 
 - Offline-first sync: a change log written in the same commit as each row,
   acknowledged by revision, with tombstones and conflict policies.

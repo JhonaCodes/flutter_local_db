@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.1
+
+Documentation and CI; no change in behaviour.
+
+- README: "How it works" (the two APIs on one file, the worker isolate, the
+  bundled native library, planning in Rust, the web) and "Using it well".
+- The roadmap is for later 3.x versions: none of them breaks the 3.0 API.
+- CI runs the example ahead of time (profile) on Linux, macOS and Windows,
+  including a program that only takes the addresses of the bindings.
+
 ## 3.0.0
 
 One entry point, tables from the app's own models, queries that run when
