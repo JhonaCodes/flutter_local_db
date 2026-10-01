@@ -6,7 +6,7 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import '../../models/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import '../../models/local_db_error.dart';
 import 'package:logger_rs/logger_rs.dart';
 
@@ -14,8 +14,7 @@ class PathHelper {
   static const String defaultDatabaseName = 'local_database.lmdb';
   static const String defaultSubdirectory = 'flutter_local_db';
 
-  static Future<LocalDbResult<String, ErrorLocalDb>>
-  getDefaultDatabasePath() async {
+  static Future<Result<String, ErrorLocalDb>> getDefaultDatabasePath() async {
     Log.i(
       '🗂️ Determining default database path for platform: ${Platform.operatingSystem}',
     );
@@ -49,14 +48,14 @@ class PathHelper {
     }
   }
 
-  static Future<LocalDbResult<String, ErrorLocalDb>> getCustomDatabasePath(
+  static Future<Result<String, ErrorLocalDb>> getCustomDatabasePath(
     String databaseName,
   ) async {
     Log.i('🗂️ Creating custom database path with name: $databaseName');
 
     final validation = _validateDatabaseName(databaseName);
     if (validation.isErr) {
-      return Err(validation.errOrNull!);
+      return Err(validation.errorOrNull!);
     }
 
     try {
@@ -86,7 +85,7 @@ class PathHelper {
     }
   }
 
-  static LocalDbResult<String, ErrorLocalDb> createCustomPath(
+  static Result<String, ErrorLocalDb> createCustomPath(
     String directory,
     String filename,
   ) {
@@ -94,12 +93,12 @@ class PathHelper {
 
     final dirValidation = _validateDirectory(directory);
     if (dirValidation.isErr) {
-      return Err(dirValidation.errOrNull!);
+      return Err(dirValidation.errorOrNull!);
     }
 
     final nameValidation = _validateDatabaseName(filename);
     if (nameValidation.isErr) {
-      return Err(nameValidation.errOrNull!);
+      return Err(nameValidation.errorOrNull!);
     }
 
     try {
@@ -118,7 +117,7 @@ class PathHelper {
     }
   }
 
-  static Future<LocalDbResult<String, ErrorLocalDb>> ensureDirectoryExists(
+  static Future<Result<String, ErrorLocalDb>> ensureDirectoryExists(
     String databasePath,
   ) async {
     Log.d('📁 Ensuring directory exists for: $databasePath');
@@ -137,7 +136,7 @@ class PathHelper {
 
       final writeableResult = await _verifyDirectoryWriteable(directory);
       if (writeableResult.isErr) {
-        return Err(writeableResult.errOrNull!);
+        return Err(writeableResult.errorOrNull!);
       }
 
       return Ok(directory);
@@ -154,8 +153,9 @@ class PathHelper {
     }
   }
 
-  static Future<LocalDbResult<Map<String, dynamic>, ErrorLocalDb>>
-  getStorageInfo(String databasePath) async {
+  static Future<Result<Map<String, dynamic>, ErrorLocalDb>> getStorageInfo(
+    String databasePath,
+  ) async {
     Log.d('💾 Getting storage information for: $databasePath');
 
     try {
@@ -199,7 +199,7 @@ class PathHelper {
     }
   }
 
-  static LocalDbResult<String, ErrorLocalDb> validatePath(String databasePath) {
+  static Result<String, ErrorLocalDb> validatePath(String databasePath) {
     Log.d('🔍 Validating database path: $databasePath');
 
     if (databasePath.isEmpty) {
@@ -254,9 +254,7 @@ class PathHelper {
     }
   }
 
-  static LocalDbResult<void, ErrorLocalDb> _validateDatabaseName(
-    String filename,
-  ) {
+  static Result<void, ErrorLocalDb> _validateDatabaseName(String filename) {
     if (filename.isEmpty) {
       return Err(
         ErrorLocalDb.validationError(
@@ -323,12 +321,10 @@ class PathHelper {
       }
     }
 
-    return const Ok(null);
+    return Ok(null);
   }
 
-  static LocalDbResult<void, ErrorLocalDb> _validateDirectory(
-    String directory,
-  ) {
+  static Result<void, ErrorLocalDb> _validateDirectory(String directory) {
     if (directory.isEmpty) {
       return Err(
         ErrorLocalDb.validationError(
@@ -347,10 +343,10 @@ class PathHelper {
       );
     }
 
-    return const Ok(null);
+    return Ok(null);
   }
 
-  static Future<LocalDbResult<void, ErrorLocalDb>> _verifyDirectoryWriteable(
+  static Future<Result<void, ErrorLocalDb>> _verifyDirectoryWriteable(
     String directory,
   ) async {
     try {
@@ -363,7 +359,7 @@ class PathHelper {
           ),
         );
       }
-      return const Ok(null);
+      return Ok(null);
     } catch (e) {
       return Err(
         ErrorLocalDb.platformError(
@@ -397,7 +393,7 @@ class PathHelper {
   /// Renames the files of the database at [databasePath] (`<path>.lmdb`) to
   /// `<path>.lmdb.1x-backup-<timestamp>` and returns the new location, so that
   /// a new database can be created there without losing the old files.
-  static Future<LocalDbResult<String, ErrorLocalDb>> moveAside(
+  static Future<Result<String, ErrorLocalDb>> moveAside(
     String databasePath,
   ) async {
     final directory = Directory('$databasePath.lmdb');

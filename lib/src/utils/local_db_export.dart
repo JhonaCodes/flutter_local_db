@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import '../models/local_db_error.dart';
 import '../models/local_db_model.dart';
-import '../models/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 
 /// Portable export of the records stored through [LocalDB].
 ///
@@ -36,7 +36,7 @@ abstract final class LocalDbExport {
   }
 
   /// Decodes an export document written by [encode].
-  static LocalDbResult<List<LocalDbModel>, ErrorLocalDb> decode(String json) {
+  static Result<List<LocalDbModel>, ErrorLocalDb> decode(String json) {
     try {
       final document = jsonDecode(json);
       if (document is! Map<String, dynamic> ||

@@ -1,6 +1,6 @@
 # flutter_local_db benchmark
 
-Runs the same workload on flutter_local_db 2.0 and on the databases Flutter
+Runs the same workload on flutter_local_db 3.0 and on the databases Flutter
 apps use most: SQLite (`package:sqlite3`, on the calling isolate), drift (on a
 background isolate), Hive CE and Sembast.
 

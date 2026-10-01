@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_db/flutter_local_db.dart';
 
 import 'tasks.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final store = await TaskStore.open();
-  runApp(TasksApp(store: store));
+  final opened = await TaskStore.open();
+
+  runApp(
+    opened.when(
+      ok: (store) => TasksApp(store: store),
+      err: (error) => StartupErrorApp(error: error),
+    ),
+  );
+}
+
+/// Shown when the database cannot be opened.
+class StartupErrorApp extends StatelessWidget {
+  const StartupErrorApp({super.key, required this.error});
+
+  final DbError error;
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    home: Scaffold(
+      body: Center(child: Text('Cannot open the database: $error')),
+    ),
+  );
 }
 
 /// The example app: a task list stored with flutter_local_db.
@@ -114,13 +135,16 @@ class TaskList extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder(
       stream: store.watchAll(),
-      builder: (context, snapshot) {
-        final tasks = snapshot.data ?? const [];
-        return ListView(
-          children: [
-            for (final task in tasks) TaskTile(store: store, task: task),
-          ],
-        );
+      builder: (context, snapshot) => switch (snapshot.data) {
+        null => const SizedBox.shrink(),
+        final Result<List<Task>, DbError> result => result.when(
+          ok: (tasks) => ListView(
+            children: [
+              for (final task in tasks) TaskTile(store: store, task: task),
+            ],
+          ),
+          err: (error) => Center(child: Text('$error')),
+        ),
       },
     );
   }

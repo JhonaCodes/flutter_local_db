@@ -1,5 +1,61 @@
 # Changelog
 
+## 3.0.0
+
+One entry point, tables from the app's own models, queries that run when
+awaited, and `Result` everywhere. The query language moved to
+[db_dsl](https://pub.dev/packages/db_dsl), which this package re-exports.
+Files of 2.0 open as they are; the API changes are in
+[MIGRATION.md](MIGRATION.md).
+
+### Changed
+- **`LocalDB` is the only entry point.** `LocalDB.init()` opens the
+  key-value records and the tables in one file; `LocalDB.transaction`,
+  `readTransaction`, `atomicBatch`, `info` and `open` (another database)
+  complete it. `LocalDatabase` was removed, and `LocalDbService` is no longer
+  exported.
+- **Tables are not listed**: each defines itself on the database of
+  `LocalDB.init` the first time it is used. `tables:` defines them up front;
+  a table first used inside a transaction answers
+  `DbErrorCode.tableNotReady`.
+- **Tables are built from the app's models**: the model carries its table,
+  `static final table = DbTable<User>('users', key: 'id', fromJson:
+  User.fromJson)`. The row is stored as the model writes itself (its
+  `toJson()`); `toJson:` only for a serializer with another name. Table
+  classes (`Table<T>` with `integer`, `text`, ... columns) were removed.
+- **Typed fields written from the model**: `users.city` comes from an
+  `extension UserFields on DbTable<User>` that the
+  [db_dsl_lints](https://pub.dev/packages/db_dsl_lints) analyzer plugin
+  writes with one quick fix and checks against the model. Under it,
+  `table.field<V>('path')` works for any type, with enums by name,
+  `DateTime` as ISO 8601 and custom types through `encode:` / `decode:`.
+  `DateTimeColumn` and its microseconds format were removed.
+- **Queries run when awaited** (`await users.filter(...)`,
+  `await users.insert([ana])`), on the database of the table or the
+  transaction they are awaited in. `load(other)` / `execute(other)` remain
+  for another database.
+- Conditions combine with `.and()`, `.or()` and `.not()` (the operators `&`,
+  `|` and `~` were removed).
+- **`Result` instead of exceptions** (result_controller): `DbError` and
+  `DbErrorCode` replace `LocalDbException` and `LocalDbErrorCode`;
+  `transaction` commits on `Ok` and rolls back on `Err`. The key-value API
+  answers `Result` instead of `LocalDbResult`, and `LocalDB.init` answers a
+  `Result` instead of throwing. `DbOptions` replaces `LocalDbOptions`.
+
+### Added
+- `groupBy` with `count`, `countOf`, `sum`, `avg`, `min`, `max` and
+  `having`; `innerJoin` and `leftJoin`; projections (`pluck`, `project`,
+  `distinct`); `update().increment()`.
+- `LocalDB.init` takes `path:`, `options:` and, optionally, `tables:`;
+  calling it again adds tables.
+- The example app enables db_dsl_lints and keeps its `TaskFields` checked.
+
+### Fixed
+- A program that closes its databases ends: the native worker isolate stops
+  when the last database closes.
+- The options given to `LocalDB.init` (durability, map size) apply even when
+  the key-value records share the file.
+
 ## 2.0.0
 
 A Diesel-style query API on a new engine, and Windows support. Migrating from

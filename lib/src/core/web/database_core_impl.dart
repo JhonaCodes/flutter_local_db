@@ -7,7 +7,7 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 
-import '../../models/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import '../../models/local_db_error.dart';
 import '../../models/local_db_model.dart';
 import 'package:logger_rs/logger_rs.dart';
@@ -24,9 +24,7 @@ class DatabaseCore {
   DatabaseCore._(this._db, this._storeName);
 
   /// Creates a new database instance (Web)
-  static Future<LocalDbResult<DatabaseCore, ErrorLocalDb>> create(
-    String path,
-  ) async {
+  static Future<Result<DatabaseCore, ErrorLocalDb>> create(String path) async {
     Log.i('Initializing Web Database (IndexedDB): $path');
 
     if (path.isEmpty) {
@@ -41,7 +39,7 @@ class DatabaseCore {
     final dbName = path.replaceAll('/', '_');
     final storeName = 'records';
 
-    final completer = Completer<LocalDbResult<DatabaseCore, ErrorLocalDb>>();
+    final completer = Completer<Result<DatabaseCore, ErrorLocalDb>>();
 
     final request = web.window.indexedDB.open(dbName, 1);
 
@@ -77,7 +75,7 @@ class DatabaseCore {
     return completer.future;
   }
 
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     String key,
     Map<String, dynamic> data,
   ) async {
@@ -87,7 +85,7 @@ class DatabaseCore {
 
     final validation = _validateKeyAndData(key, data);
     if (validation.isErr) {
-      return Err(validation.errOrNull!);
+      return Err(validation.errorOrNull!);
     }
 
     try {
@@ -98,7 +96,7 @@ class DatabaseCore {
       final store = transaction.objectStore(_storeName);
       final request = store.put(jsData);
 
-      final completer = Completer<LocalDbResult<LocalDbModel, ErrorLocalDb>>();
+      final completer = Completer<Result<LocalDbModel, ErrorLocalDb>>();
 
       request.onsuccess = (web.Event e) {
         completer.complete(Ok(model));
@@ -129,14 +127,14 @@ class DatabaseCore {
     }
   }
 
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     String key,
     Map<String, dynamic> data,
   ) {
     return put(key, data);
   }
 
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> update(
+  Future<Result<LocalDbModel, ErrorLocalDb>> update(
     String key,
     Map<String, dynamic> data,
   ) async {
@@ -149,12 +147,12 @@ class DatabaseCore {
     return put(key, data);
   }
 
-  Future<LocalDbResult<void, ErrorLocalDb>> reset(String name) async {
+  Future<Result<void, ErrorLocalDb>> reset(String name) async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
-    final completer = Completer<LocalDbResult<void, ErrorLocalDb>>();
+    final completer = Completer<Result<void, ErrorLocalDb>>();
 
     _db.close();
     _isClosed = true;
@@ -163,7 +161,7 @@ class DatabaseCore {
     final request = web.window.indexedDB.deleteDatabase(_db.name);
 
     request.onsuccess = (web.Event e) {
-      completer.complete(const Ok(null));
+      completer.complete(Ok(null));
     }.toJS;
 
     request.onerror = (web.Event e) {
@@ -175,14 +173,14 @@ class DatabaseCore {
     return completer.future;
   }
 
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> get(String key) async {
+  Future<Result<LocalDbModel, ErrorLocalDb>> get(String key) async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
     final keyValidation = _validateKey(key);
     if (keyValidation.isErr) {
-      return Err(keyValidation.errOrNull!);
+      return Err(keyValidation.errorOrNull!);
     }
 
     try {
@@ -190,7 +188,7 @@ class DatabaseCore {
       final store = transaction.objectStore(_storeName);
       final request = store.get(key.toJS);
 
-      final completer = Completer<LocalDbResult<LocalDbModel, ErrorLocalDb>>();
+      final completer = Completer<Result<LocalDbModel, ErrorLocalDb>>();
 
       request.onsuccess = (web.Event e) {
         final result = request.result;
@@ -228,14 +226,14 @@ class DatabaseCore {
     }
   }
 
-  Future<LocalDbResult<void, ErrorLocalDb>> delete(String key) async {
+  Future<Result<void, ErrorLocalDb>> delete(String key) async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
 
     final keyValidation = _validateKey(key);
     if (keyValidation.isErr) {
-      return Err(keyValidation.errOrNull!);
+      return Err(keyValidation.errorOrNull!);
     }
 
     try {
@@ -243,10 +241,10 @@ class DatabaseCore {
       final store = transaction.objectStore(_storeName);
       final request = store.delete(key.toJS);
 
-      final completer = Completer<LocalDbResult<void, ErrorLocalDb>>();
+      final completer = Completer<Result<void, ErrorLocalDb>>();
 
       request.onsuccess = (web.Event e) {
-        completer.complete(const Ok(null));
+        completer.complete(Ok(null));
       }.toJS;
 
       request.onerror = (web.Event e) {
@@ -263,8 +261,7 @@ class DatabaseCore {
     }
   }
 
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
-  getAll() async {
+  Future<Result<Map<String, LocalDbModel>, ErrorLocalDb>> getAll() async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
@@ -275,12 +272,12 @@ class DatabaseCore {
       final request = store.getAll(null);
 
       final completer =
-          Completer<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>();
+          Completer<Result<Map<String, LocalDbModel>, ErrorLocalDb>>();
 
       request.onsuccess = (web.Event e) {
         final result = request.result;
         if (result == null || result.isUndefined || result.isNull) {
-          completer.complete(const Ok({}));
+          completer.complete(Ok({}));
           return;
         }
 
@@ -312,7 +309,7 @@ class DatabaseCore {
     }
   }
 
-  Future<LocalDbResult<void, ErrorLocalDb>> clear() async {
+  Future<Result<void, ErrorLocalDb>> clear() async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
@@ -322,10 +319,10 @@ class DatabaseCore {
       final store = transaction.objectStore(_storeName);
       final request = store.clear();
 
-      final completer = Completer<LocalDbResult<void, ErrorLocalDb>>();
+      final completer = Completer<Result<void, ErrorLocalDb>>();
 
       request.onsuccess = (web.Event e) {
-        completer.complete(const Ok(null));
+        completer.complete(Ok(null));
       }.toJS;
 
       request.onerror = (web.Event e) {
@@ -376,7 +373,7 @@ class DatabaseCore {
     );
   }
 
-  LocalDbResult<void, ErrorLocalDb> _validateKey(String key) {
+  Result<void, ErrorLocalDb> _validateKey(String key) {
     if (key.isEmpty) {
       return Err(
         ErrorLocalDb.validationError(
@@ -395,10 +392,10 @@ class DatabaseCore {
       );
     }
 
-    return const Ok(null);
+    return Ok(null);
   }
 
-  LocalDbResult<void, ErrorLocalDb> _validateKeyAndData(
+  Result<void, ErrorLocalDb> _validateKeyAndData(
     String key,
     Map<String, dynamic> data,
   ) {
@@ -427,6 +424,6 @@ class DatabaseCore {
       );
     }
 
-    return const Ok(null);
+    return Ok(null);
   }
 }

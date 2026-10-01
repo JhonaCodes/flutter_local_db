@@ -1,22 +1,23 @@
 import 'dart:convert';
 
+import 'package:db_dsl/db_dsl.dart' show DbErrorCode;
+import 'package:db_dsl/native.dart';
 import 'package:logger_rs/logger_rs.dart';
+import 'package:result_controller/result_controller.dart';
 
 import '../../models/local_db_error.dart';
 import '../../models/local_db_model.dart';
-import '../../models/local_db_result.dart';
-import '../../native/native_worker.dart';
+import '../../native/offline_first_core.dart';
 
 /// The key-value storage of [LocalDB] on native platforms.
 ///
-/// Every call runs in the database worker isolate (see [NativeWorker]), so it
-/// never blocks the UI isolate, and every response is released by the native
-/// library. Records keep the layout of 1.x: one JSON document per key.
+/// Every call runs on the worker isolate of db_dsl (see [NativeKeyValueStore]),
+/// so it never blocks the UI isolate, and every response is released by the
+/// native library. Records keep the layout of 1.x: one JSON document per key.
 class DatabaseCore {
-  DatabaseCore._(this._worker, this._handle);
+  DatabaseCore._(this._store);
 
-  final NativeWorker _worker;
-  final int _handle;
+  final NativeKeyValueStore _store;
   bool _isClosed = false;
 
   /// Opens the database at `<path>.lmdb`.
@@ -24,63 +25,56 @@ class DatabaseCore {
   /// Fails with [LocalDbErrorType.legacyFormat] for a database written by
   /// flutter_local_db 1.x, which LMDB 1.0 cannot read (the files are left
   /// untouched).
-  static Future<LocalDbResult<DatabaseCore, ErrorLocalDb>> create(
-    String path,
-  ) async {
-    try {
-      final worker = await NativeWorker.shared();
-      final (handle, response) = await worker.open(path, null);
-      if (handle == 0) {
-        final error =
-            (jsonDecode(response) as Map<String, dynamic>)['error']
-                as Map<String, dynamic>?;
-        final code = error?['code'] as String?;
-        final message = error?['message'] as String? ?? response;
-        return Err(
-          code == 'LegacyFormat'
-              ? ErrorLocalDb.legacyFormat(message, context: path)
-              : ErrorLocalDb.initialization(message, context: path),
-        );
-      }
-      Log.i('Database opened at $path');
-      return Ok(DatabaseCore._(worker, handle));
-    } on Object catch (e, stackTrace) {
-      return Err(
-        ErrorLocalDb.ffiError(
-          'Cannot open the database',
-          context: path,
-          cause: e,
-          stackTrace: stackTrace,
-        ),
+  static Future<Result<DatabaseCore, ErrorLocalDb>> create(String path) async =>
+      (await NativeKeyValueStore.open(OfflineFirstCore.symbols, path)).when(
+        ok: (store) {
+          Log.d('Key-value database opened at $path');
+          return Ok(DatabaseCore._(store));
+        },
+        err: (error) => Err(switch (error.code) {
+          DbErrorCode.legacyFormat => ErrorLocalDb.legacyFormat(
+            error.message,
+            context: path,
+          ),
+          _ => ErrorLocalDb.initialization(error.message, context: path),
+        }),
       );
-    }
-  }
 
   /// Calls a function of the key-value C API and splits its envelope
   /// `{"<Variant>": "<payload>"}`.
-  Future<LocalDbResult<(String, String), ErrorLocalDb>> _call(
-    String function,
+  Future<Result<(String, String), ErrorLocalDb>> _call(
+    KeyValueCall call,
     String? argument,
     String context,
   ) async {
     if (_isClosed) {
       return Err(ErrorLocalDb.databaseError('Database is closed'));
     }
-    try {
-      final response = await _worker.legacy(_handle, function, argument);
-      final envelope = jsonDecode(response) as Map<String, dynamic>;
-      final MapEntry(:key, :value) = envelope.entries.single;
-      return Ok((key, value.toString()));
-    } on Object catch (e, stackTrace) {
-      return Err(
+
+    return (await _store.call(call, argument)).when(
+      ok: (response) {
+        try {
+          final envelope = jsonDecode(response) as Map<String, dynamic>;
+          final MapEntry(:key, :value) = envelope.entries.single;
+          return Ok((key, value.toString()));
+        } on Object catch (e, stackTrace) {
+          return Err(
+            ErrorLocalDb.ffiError(
+              'Unexpected answer of ${call.name}',
+              context: context,
+              cause: e,
+              stackTrace: stackTrace,
+            ),
+          );
+        }
+      },
+      err: (error) => Err(
         ErrorLocalDb.ffiError(
-          'Native call $function failed',
+          'Native call ${call.name} failed: ${error.message}',
           context: context,
-          cause: e,
-          stackTrace: stackTrace,
         ),
-      );
-    }
+      ),
+    );
   }
 
   ErrorLocalDb _failure(String variant, String payload, String context) {
@@ -96,7 +90,7 @@ class DatabaseCore {
     };
   }
 
-  LocalDbResult<void, ErrorLocalDb> _validate(String key) {
+  Result<void, ErrorLocalDb> _validate(String key) {
     if (key.isEmpty || utf8.encode(key).length > 511) {
       return Err(
         ErrorLocalDb.validationError(
@@ -105,17 +99,17 @@ class DatabaseCore {
         ),
       );
     }
-    return const Ok(null);
+    return Ok(null);
   }
 
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> _write(
-    String function,
+  Future<Result<LocalDbModel, ErrorLocalDb>> _write(
+    KeyValueCall function,
     String key,
     Map<String, dynamic> data,
   ) async {
     final validation = _validate(key);
     if (validation.isErr) {
-      return Err(validation.errOrNull!);
+      return Err(validation.errorOrNull!);
     }
     final model = LocalDbModel(id: key, data: data);
     final result = await _call(function, model.toJson(), key);
@@ -131,30 +125,30 @@ class DatabaseCore {
   }
 
   /// Stores [data] under [key], replacing an existing record.
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> put(
+  Future<Result<LocalDbModel, ErrorLocalDb>> put(
     String key,
     Map<String, dynamic> data,
-  ) => _write('push_data', key, data);
+  ) => _write(KeyValueCall.push, key, data);
 
   /// Same as [put] (1.x semantics: `Post` replaces an existing record).
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> post(
+  Future<Result<LocalDbModel, ErrorLocalDb>> post(
     String key,
     Map<String, dynamic> data,
-  ) => _write('push_data', key, data);
+  ) => _write(KeyValueCall.push, key, data);
 
   /// Replaces the existing record [key]; fails with `notFound` otherwise.
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> update(
+  Future<Result<LocalDbModel, ErrorLocalDb>> update(
     String key,
     Map<String, dynamic> data,
-  ) => _write('update_data', key, data);
+  ) => _write(KeyValueCall.update, key, data);
 
   /// The record [key]; fails with `notFound` when it does not exist.
-  Future<LocalDbResult<LocalDbModel, ErrorLocalDb>> get(String key) async {
+  Future<Result<LocalDbModel, ErrorLocalDb>> get(String key) async {
     final validation = _validate(key);
     if (validation.isErr) {
-      return Err(validation.errOrNull!);
+      return Err(validation.errorOrNull!);
     }
-    final result = await _call('get_by_id', key, key);
+    final result = await _call(KeyValueCall.getById, key, key);
     return result.when(
       ok: (reply) {
         final (variant, payload) = reply;
@@ -178,17 +172,17 @@ class DatabaseCore {
   }
 
   /// Deletes the record [key]; succeeds when it did not exist.
-  Future<LocalDbResult<void, ErrorLocalDb>> delete(String key) async {
+  Future<Result<void, ErrorLocalDb>> delete(String key) async {
     final validation = _validate(key);
     if (validation.isErr) {
-      return Err(validation.errOrNull!);
+      return Err(validation.errorOrNull!);
     }
-    final result = await _call('delete_by_id', key, key);
+    final result = await _call(KeyValueCall.deleteById, key, key);
     return result.when(
       ok: (reply) {
         final (variant, payload) = reply;
         return variant == 'Ok' || variant == 'NotFound'
-            ? const Ok(null)
+            ? Ok(null)
             : Err(_failure(variant, payload, key));
       },
       err: Err.new,
@@ -196,9 +190,8 @@ class DatabaseCore {
   }
 
   /// Every record, by key.
-  Future<LocalDbResult<Map<String, LocalDbModel>, ErrorLocalDb>>
-  getAll() async {
-    final result = await _call('get_all', null, 'get_all');
+  Future<Result<Map<String, LocalDbModel>, ErrorLocalDb>> getAll() async {
+    final result = await _call(KeyValueCall.getAll, null, 'get_all');
     return result.when(
       ok: (reply) {
         final (variant, payload) = reply;
@@ -225,13 +218,13 @@ class DatabaseCore {
   }
 
   /// Deletes every record.
-  Future<LocalDbResult<void, ErrorLocalDb>> clear() async {
-    final result = await _call('clear_all_records', null, 'clear');
+  Future<Result<void, ErrorLocalDb>> clear() async {
+    final result = await _call(KeyValueCall.clear, null, 'clear');
     return result.when(
       ok: (reply) {
         final (variant, payload) = reply;
         return variant == 'Ok'
-            ? const Ok(null)
+            ? Ok(null)
             : Err(_failure(variant, payload, 'clear'));
       },
       err: Err.new,
@@ -247,6 +240,6 @@ class DatabaseCore {
       return;
     }
     _isClosed = true;
-    _worker.close(_handle).ignore();
+    _store.close().ignore();
   }
 }

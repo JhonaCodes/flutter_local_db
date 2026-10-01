@@ -65,7 +65,7 @@ abstract final class Benchmark {
   static const List<String> cities = ['Bogotá', 'Auckland', 'Lima', 'Madrid'];
 
   /// Engines, in the order of the results.
-  static List<Engine Function()> get engines => [
+  static List<BenchmarkEngine Function()> get engines => [
     () => LocalDbEngine(Durability.full),
     () => SqliteEngine(durable: true),
     DriftEngine.new,
@@ -116,7 +116,7 @@ abstract final class Benchmark {
     return results;
   }
 
-  static Future<Map<Operation, double>> _measure(Engine engine) async {
+  static Future<Map<Operation, double>> _measure(BenchmarkEngine engine) async {
     final data = [for (var id = 0; id < rows; id++) row(id)];
     final times = <Operation, double>{};
     Future<void> time(

@@ -3,7 +3,7 @@
 // ║                  Web Platform Path Management Utilities                      ║
 // ║══════════════════════════════════════════════════════════════════════════════║
 
-import '../../models/local_db_result.dart';
+import 'package:result_controller/result_controller.dart';
 import '../../models/local_db_error.dart';
 import 'package:logger_rs/logger_rs.dart';
 
@@ -11,21 +11,20 @@ class PathHelper {
   static const String defaultDatabaseName = 'local_database';
   static const String defaultSubdirectory = 'flutter_local_db';
 
-  static Future<LocalDbResult<String, ErrorLocalDb>>
-  getDefaultDatabasePath() async {
+  static Future<Result<String, ErrorLocalDb>> getDefaultDatabasePath() async {
     Log.i('🌐 Determining default database name for Web');
     // On Web, "Path" is just the database name for IndexedDB
-    return const Ok(defaultDatabaseName);
+    return Ok(defaultDatabaseName);
   }
 
-  static Future<LocalDbResult<String, ErrorLocalDb>> getCustomDatabasePath(
+  static Future<Result<String, ErrorLocalDb>> getCustomDatabasePath(
     String databaseName,
   ) async {
     Log.i('🌐 Using custom database name for Web: $databaseName');
     return Ok(databaseName);
   }
 
-  static LocalDbResult<String, ErrorLocalDb> createCustomPath(
+  static Result<String, ErrorLocalDb> createCustomPath(
     String directory,
     String filename,
   ) {
@@ -34,18 +33,19 @@ class PathHelper {
     return Ok(filename);
   }
 
-  static Future<LocalDbResult<String, ErrorLocalDb>> ensureDirectoryExists(
+  static Future<Result<String, ErrorLocalDb>> ensureDirectoryExists(
     String databasePath,
   ) async {
     // No directories on Web IndexedDB
-    return const Ok('');
+    return Ok('');
   }
 
-  static Future<LocalDbResult<Map<String, dynamic>, ErrorLocalDb>>
-  getStorageInfo(String databasePath) async {
+  static Future<Result<Map<String, dynamic>, ErrorLocalDb>> getStorageInfo(
+    String databasePath,
+  ) async {
     // Web Storage Manager API could be used here in future,
     // but for now return basic info
-    return const Ok({
+    return Ok({
       'type': 'IndexedDB',
       'path': 'browser_storage',
       'writable': true,
@@ -53,7 +53,7 @@ class PathHelper {
     });
   }
 
-  static LocalDbResult<String, ErrorLocalDb> validatePath(String databasePath) {
+  static Result<String, ErrorLocalDb> validatePath(String databasePath) {
     if (databasePath.isEmpty) {
       return Err(
         ErrorLocalDb.validationError(
@@ -67,7 +67,7 @@ class PathHelper {
 
   /// Browsers keep 1.x data readable (IndexedDB did not change): there is
   /// nothing to move aside.
-  static Future<LocalDbResult<String, ErrorLocalDb>> moveAside(
+  static Future<Result<String, ErrorLocalDb>> moveAside(
     String databasePath,
   ) async {
     return Err(ErrorLocalDb.platformError('Nothing to migrate on the web'));

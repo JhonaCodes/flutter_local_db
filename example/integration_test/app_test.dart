@@ -9,38 +9,41 @@ import 'package:path_provider/path_provider.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('the query API works with the bundled library', (tester) async {
+  tearDown(LocalDB.close);
+
+  testWidgets('tables work with the bundled library', (tester) async {
     final directory = await getApplicationSupportDirectory();
-    final db = await LocalDatabase.open(
-      path:
-          '${directory.path}/integration_${DateTime.now().microsecondsSinceEpoch}',
-      tables: [TaskStore.tasks],
+    // No table listed: `tasks` defines itself on its first use.
+    value(
+      await LocalDB.init(
+        path:
+            '${directory.path}/integration_${DateTime.now().microsecondsSinceEpoch}',
+      ),
     );
-    final store = TaskStore(db);
-    final tasks = TaskStore.tasks;
+    const store = TaskStore();
+    final tasks = Task.table;
 
-    await store.add('write the docs');
-    await store.add('publish');
-    final all = await tasks.all().order(tasks.id.asc()).load(db);
-    expect(all.map((t) => t.title), ['write the docs', 'publish']);
+    value(await store.add('write the docs'));
+    value(await store.add('publish'));
+    final all = value(await tasks.all().order(tasks.id.asc()));
+    expect(all.map((task) => task.title), ['write the docs', 'publish']);
 
-    await store.toggle(all.first);
-    expect(await tasks.filter(tasks.done.eq(true)).count(db), 1);
-    expect(await store.clearDone(), 1);
-    expect(await tasks.all().count(db), 1);
-
-    final info = await db.info();
-    expect(info['lmdb'], '1.0.2');
-    await db.close();
+    expect(value(await store.toggle(all.first)), 1);
+    expect(value(await tasks.filter(tasks.done.eq(true)).count()), 1);
+    expect(value(await store.clearDone()), 1);
+    expect(value(await tasks.all().count()), 1);
+    expect(value(await LocalDB.info()).storage, '1.0.2');
   });
 
-  testWidgets('the key-value API works with the bundled library', (
-    tester,
-  ) async {
-    await LocalDB.init();
-    await LocalDB.Post('integration', {'value': 42});
-    final stored = await LocalDB.GetById('integration');
-    expect(stored.okOrNull?.data['value'], 42);
-    await LocalDB.Delete('integration');
+  testWidgets('records work with the bundled library', (tester) async {
+    value(await LocalDB.init());
+    value(await LocalDB.Post('integration', {'value': 42}));
+
+    expect(value(await LocalDB.GetById('integration'))?.data['value'], 42);
+    value(await LocalDB.Delete('integration'));
   });
 }
+
+/// The value of an `Ok`; fails the test on an `Err`.
+T value<T, E>(Result<T, E> result) =>
+    result.when(ok: (data) => data, err: (error) => fail('Err: $error'));

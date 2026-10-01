@@ -27,9 +27,15 @@ jobs:
           flutter pub get
           (cd example && flutter pub get)
           (cd benchmark && flutter pub get)
-      - run: dart format --output=none --set-exit-if-changed lib test hook example/lib example/integration_test benchmark/lib benchmark/integration_test benchmark/test_driver
+      - run: dart format --output=none --set-exit-if-changed lib test hook example/lib example/integration_test example/test_driver benchmark/lib benchmark/integration_test benchmark/test_driver
       # Analyzes the package together with the example and the benchmark.
       - run: flutter analyze
+      # The example enables the db_dsl_lints plugin, which checks its
+      # TaskFields against Task; `flutter analyze` does not report plugin
+      # diagnostics, `dart analyze` does.
+      - name: Plugin diagnostics of the example
+        working-directory: example
+        run: dart analyze --fatal-infos
       # The build hook bundles the native library of the runner's platform, so
       # the host tests exercise the real engine.
       - run: flutter test
@@ -63,11 +69,27 @@ jobs:
         shell: bash
         run: |
           flutter pub get
+          # One file per run: a second app launched by the same run loses its
+          # debug connection on desktop.
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a flutter test integration_test -d linux
+            xvfb-run -a flutter test integration_test/app_test.dart -d linux
           else
-            flutter test integration_test -d ${{ matrix.device }}
+            flutter test integration_test/app_test.dart -d ${{ matrix.device }}
           fi
+      # Ahead of time, as the app ships: a profile build compiles like a
+      # release one.
+      - name: Integration tests ahead of time (profile)
+        working-directory: example
+        shell: bash
+        run: |
+          for target in app_test aot_bindings_test; do
+            drive="flutter drive --profile -d ${{ matrix.device }} --driver test_driver/integration_test.dart --target integration_test/$target.dart"
+            if [ "$RUNNER_OS" = "Linux" ]; then
+              xvfb-run -a $drive
+            else
+              $drive
+            fi
+          done
 
   mobile-build:
     name: Mobile builds (Android, iOS simulator)

@@ -1,22 +1,15 @@
-// Models - Data structures and type definitions
-export 'src/models/local_db_result.dart';
+/// flutter_local_db: the db_dsl query language on the offline_first_core
+/// engine (Rust + LMDB 1.0) for Android, iOS, macOS, Linux and Windows, plus
+/// the key-value [LocalDB] API (also on the web, over IndexedDB).
+///
+/// Everything of db_dsl is exported: tables, columns, expressions, queries,
+/// transactions, `Result` with `Ok` and `Err`, and [DbError].
+library;
+
+export 'package:db_dsl/db_dsl.dart';
+
+export 'src/local_db.dart';
 export 'src/models/local_db_error.dart';
 export 'src/models/local_db_model.dart';
-
-// Services - High-level API for database operations
-export 'src/services/local_db_service.dart';
-
-// Utilities - Helper functions and utilities
-export 'src/utils/path_helper.dart';
 export 'src/utils/local_db_export.dart';
-
-// Api
-export 'src/local_db.dart';
-
-// Diesel-style query API (native platforms).
-export 'src/database/errors.dart';
-export 'src/database/local_database.dart';
-export 'src/dsl/column.dart';
-export 'src/dsl/expression.dart';
-export 'src/dsl/statements.dart';
-export 'src/dsl/table.dart';
+export 'src/utils/path_helper.dart';
