@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.5
+
+### Fixed
+- Native libraries of offline_first_core 0.7.6:
+  - The memory map grows ahead of the writes. Before, every time it grew, the transaction in flight failed with `mapFull`; now only a transaction that alone writes more than half of the map can meet it, and running it again finds room.
+  - `LocalDB.sync` claims and acknowledges in constant time whatever the backlog (780 ms → 24 ms for 100 changes with 100 000 pending).
+- db_dsl `^0.2.6`.
+
 ## 3.0.4
 
 ### Added
