@@ -27,7 +27,7 @@ jobs:
           flutter pub get
           (cd example && flutter pub get)
           (cd benchmark && flutter pub get)
-      - run: dart format --output=none --set-exit-if-changed lib test hook example/lib example/integration_test benchmark/lib benchmark/integration_test benchmark/test_driver
+      - run: dart format --output=none --set-exit-if-changed lib test hook example/lib example/integration_test example/test_driver benchmark/lib benchmark/integration_test benchmark/test_driver
       # Analyzes the package together with the example and the benchmark.
       - run: flutter analyze
       # The example enables the db_dsl_lints plugin, which checks its
@@ -73,6 +73,18 @@ jobs:
             xvfb-run -a flutter test integration_test -d linux
           else
             flutter test integration_test -d ${{ matrix.device }}
+          fi
+      # Ahead of time, as the app ships: a profile build compiles like a
+      # release one.
+      - name: Integration tests ahead of time (profile)
+        working-directory: example
+        shell: bash
+        run: |
+          drive="flutter drive --profile -d ${{ matrix.device }} --driver test_driver/integration_test.dart --target integration_test/app_test.dart"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a $drive
+          else
+            $drive
           fi
 
   mobile-build:
