@@ -80,12 +80,14 @@ jobs:
         working-directory: example
         shell: bash
         run: |
-          drive="flutter drive --profile -d ${{ matrix.device }} --driver test_driver/integration_test.dart --target integration_test/app_test.dart"
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a $drive
-          else
-            $drive
-          fi
+          for target in app_test aot_bindings_test; do
+            drive="flutter drive --profile -d ${{ matrix.device }} --driver test_driver/integration_test.dart --target integration_test/$target.dart"
+            if [ "$RUNNER_OS" = "Linux" ]; then
+              xvfb-run -a $drive
+            else
+              $drive
+            fi
+          done
 
   mobile-build:
     name: Mobile builds (Android, iOS simulator)
